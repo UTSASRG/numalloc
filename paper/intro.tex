@@ -1,0 +1,20 @@
+\section{Introduction}
+
+How to design the new allocator?
+
+We will try to achieve the following target. 
+
+(1) The performance will be as efficient as possible. 
+(2) It is still 
+
+
+For information-computable, we will achieve the following targets:
+We should still use the address to infer the following information, such as the size of the object and the shadow memory placement.
+
+We don't support many bags for the same size class, just one big bag for each size class of each heap. Why it is necessary? 
+
+We would like to reduce the memory blowup as much as possible, where the memory will be returned back to the current thread's heap. 
+
+In order to support that, maybe we could have a big heap for the same size class, but different threads will start from different placement. 
+
+Is it good for the NUMA support in the future? For NUMA support, it is great if we can always return the memory back to its original 
