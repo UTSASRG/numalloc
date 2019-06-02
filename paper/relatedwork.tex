@@ -1,0 +1,26 @@
+\section{Related Work}
+
+\paragraph{General Purpose Allocators:}
+
+\paragraph{NUMA-aware Allocators:} 
+
+\todo{All of the following papers are not read carefully. Most sentences are copied from the abstract}
+~\cite{Ogasawara:2009:NMM:1640089.1640117}:
+
+
+~\cite{1419934}
+~\cite{tcmallocnew}
+
+~\cite{Majo:2011:MMN:1993478.1993481} :
+Observation: it should take both data locality and cache contention into account to achieve good performance, and memory management cannot be decoupled from process scheduling. 
+We describe two scheduling algorithms: maximum-local, which optimizes for maximum data locality, and its extension, N-MASS, which reduces data locality to avoid the performance degradation caused by cache contention. N-MASS is fine-tuned to support memory management on NUMA-multicores and improves performance up to 32\%, and 7\% on average, over the default setup in current Linux implementations.
+
+
+\paragraph{Other NUMA-related Systems:} 
+
+Memory system performance in a numa multicore multiprocessor
+
+~\cite{Majo:2015:LPC:2688500.2688509} proposes TBB-NUMA, a system that collaborates the resource management, task scheduling, and high-level parallel algorithm templates together  to achieve better performance. 
+
+~\cite{6704666} shows that a set of simple algorithmic changes coupled with commonly available OS functionality suffice to eliminate data sharing and to regularize the memory access patterns for a subset of the PARSEC parallel benchmarks. These simple source-level changes result in performance improvements of up to 3.1X, but more importantly, they lead to a fairer and more accurate performance evaluation on NUMA-multicore systems. In the defaultconfiguration, OSs (such as Linux) tend to change the thread-to-core mapping during the execution of programs, which result in large performance variations.
+

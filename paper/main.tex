@@ -46,6 +46,8 @@
 \newcommand{\DieHarder}{\texttt{DieHarder}}
 \newcommand{\DL}{\texttt{DLmalloc}}
 \newcommand{\JE}{\texttt{jemalloc}}
+\newcommand{\NA}{\texttt{numalloc}}
+
 
 \newcommand{\pthread}{\texttt{pthread}}
 \newcommand{\pthreads}{\texttt{pthreads}}
@@ -57,7 +59,7 @@
 
 \begin{document}
 
-\title{Designing An Efficient Information-Computable Allocator}
+\title{\NA{}: Node-Aware and Adaptive NUMA Memory Allocator}
 
 % Other names: Context-sensitive Overflow Detection (Efficient Context-Sensitive Intrusion Detection): context indicated calling context of allocation sites. 
 %  Context-based Overflow Detection
@@ -74,10 +76,11 @@
 
 %\input{introduction}
 \input{intro}
-
+\input{evaluation}
+\input{relatedwork}
 {
 \bibliographystyle{plain}
-\bibliography{tongping}
+\bibliography{ref,tongping}
 }
 
 \end{document}

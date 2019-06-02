@@ -1,0 +1,52 @@
+\begin{thebibliography}{1}
+
+\bibitem{tcmallocnew}
+Patryk Kaminski.
+\newblock "numa aware heap memory manager".
+\newblock
+  \url{http://amd-dev.wpengine.netdna-cdn.com/wordpress/media/2012/10/NUMA_aware_heap_memory_manager_article_final.pdf},
+  2012.
+
+\bibitem{6704666}
+Z.~Majo and T.~R. Gross.
+\newblock (mis)understanding the numa memory system performance of
+  multithreaded workloads.
+\newblock In {\em 2013 IEEE International Symposium on Workload
+  Characterization (IISWC)}, pages 11--22, Sept 2013.
+
+\bibitem{Majo:2011:MMN:1993478.1993481}
+Zoltan Majo and Thomas~R. Gross.
+\newblock Memory management in numa multicore systems: Trapped between cache
+  contention and interconnect overhead.
+\newblock In {\em Proceedings of the International Symposium on Memory
+  Management}, ISMM '11, pages 11--20, New York, NY, USA, 2011. ACM.
+
+\bibitem{Majo:2011:MSP:1987816.1987832}
+Zoltan Majo and Thomas~R. Gross.
+\newblock Memory system performance in a numa multicore multiprocessor.
+\newblock In {\em Proceedings of the 4th Annual International Conference on
+  Systems and Storage}, SYSTOR '11, pages 12:1--12:10, New York, NY, USA, 2011.
+  ACM.
+
+\bibitem{Majo:2015:LPC:2688500.2688509}
+Zoltan Majo and Thomas~R. Gross.
+\newblock A library for portable and composable data locality optimizations for
+  numa systems.
+\newblock In {\em Proceedings of the 20th ACM SIGPLAN Symposium on Principles
+  and Practice of Parallel Programming}, PPoPP 2015, pages 227--238, New York,
+  NY, USA, 2015. ACM.
+
+\bibitem{Ogasawara:2009:NMM:1640089.1640117}
+Takeshi Ogasawara.
+\newblock Numa-aware memory manager with dominant-thread-based copying gc.
+\newblock In {\em Proceedings of the 24th ACM SIGPLAN Conference on Object
+  Oriented Programming Systems Languages and Applications}, OOPSLA '09, pages
+  377--390, New York, NY, USA, 2009. ACM.
+
+\bibitem{1419934}
+M.~M. Tikir and J.~K. Hollingsworth.
+\newblock Numa-aware java heaps for server applications.
+\newblock In {\em 19th IEEE International Parallel and Distributed Processing
+  Symposium}, pages 108b--108b, April 2005.
+
+\end{thebibliography}

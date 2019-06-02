@@ -1,3 +1,5 @@
+\textbf{OOPSLA Deadline: 04-16-2018, OSDI:05-03/2018}
+
 \section{Introduction}
 
 How to design the new allocator?
@@ -6,8 +8,6 @@ We will try to achieve the following target.
 
 (1) The performance will be as efficient as possible. 
 (2) It is still 
-
-
 For information-computable, we will achieve the following targets:
 We should still use the address to infer the following information, such as the size of the object and the shadow memory placement.
 
@@ -18,3 +18,37 @@ We would like to reduce the memory blowup as much as possible, where the memory 
 In order to support that, maybe we could have a big heap for the same size class, but different threads will start from different placement. 
 
 Is it good for the NUMA support in the future? For NUMA support, it is great if we can always return the memory back to its original 
+
+
+Virtual address will be divided into multiple nodes. 
+
+Then inside each step, we will divide a sub-heap into multiple mini-heaps, where each mini-heap will support one thread. 
+
+
+Virtual address will be divided into multiple nodes. 
+
+Then inside each per-node heap, we will further divide it into multiple mini-heaps, where each mini-heap will support one thread in order to reduce the possible contention. 
+
+For each per-thread heap, we will have two free-lists for each size class. The first one will be used for the current thread, without the use of lock at all. The second one will be utilized for returning memory from other threads.  
+
+RTDSCP is a way to know where a thread is executed on. 
+
+%https://software.intel.com/en-us/forums/intel-isa-extensions/topic/280440
+
+\todo{Should we put the metadata into the corresponding node? We will minimize the lock uses for each node, since that will invoke unnecessary remote accesses as well. }
+
+
+% From Score: SCOREs runtime system will include a memory manager instrumented to track object ownership with low overhead by leveraging existing thread-local allocation buffers and using per-processor memory pools. The runtime system will sample memory access patterns to detect when memory should be relocated to or initially placed in memory closer to a specific processor
+
+\subsection{Novelty}
+
+\begin{itemize}
+\item We will design a node-aware memory allocator that could actually identify the memory placement by using the virtual address.
+\item We will minimize the synchronization, since that will impose unnecessary remote accesses. 
+\item We will minimize remote accesses by putting the metadata into multiple nodes. 
+\item We may support multiple types of allocation, such as block-wise false sharing memory accesses, or node-balanced memory accesses, relying on the indication from user space. 	
+\item We will balance the memory consumption over all nodes, in order to avoid the contention of memory controller~\cite{Majo:2011:MSP:1987816.1987832}.  At least, we could balance the memory consumption among all allocators. Ideally, it is better to balance the memory accesses. 
+\item We may track the relationship of all objects. Then those objects will be allocated correspondingly. For instance, if the objects are allocated in the main thread, we assume that they will be accessed as a shared mode. Then we would like to allocate in the node-balanced areana initially. 
+
+\end{itemize}
+
