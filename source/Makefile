@@ -18,14 +18,16 @@ INCS = dlist.h               \
 
 DEPS = $(SRCS) $(INCS)
 
-CXX = g++ 
+CXX = clang++ 
+
 
 #DNDEBUG
-CFLAGS = -g -Wno-unused-result -DNDEBUG -O2 -DNUMA_NODES=2
+CFLAGS = -g -std=c++11 -Wno-unused-result -DNDEBUG -O2 -DNUMA_NODES=2
+#CFLAGS = -g -std=c++14 -Wno-unused-result -DNDEBUG -O2 -DNUMA_NODES=2
 #CFLAGS = -g -Wno-unused-result -DNDEBUG -O2 -DNUMA_NODES=2
 #CFLAGS = -g -Wno-unused-result -DNDEBUG -O3 --std=c++11 -DNEW_BIG_HEAP -DNUMA_NODES=2
 
-INCLUDE_DIRS = -I. -I/usr/include/x86_64-linux-gnu/c++/4.8/ -I./rng
+INCLUDE_DIRS = -I.
 LIBS     := dl pthread
 
 TARGETS = libnumalloc.so
