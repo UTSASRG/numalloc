@@ -1,9 +1,6 @@
-\documentclass[10pt,preprint,numbers]{sigplanconf}
+\documentclass[sigconf]{acmart}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\documentclass[pageno]{sigplanconf}
 
-%\usepackage[normalem]{ulem}
 \usepackage{times}
 \usepackage{datetime}
 \usepackage{balance}  % to better equalize the last page
@@ -33,8 +30,6 @@
 
 \newcommand{\eurosyssubmissionnumber}{\#147, 12 pages}
 \newcommand{\todo}[1]{{\color{red}\bfseries [[#1]]}}
-\newcommand{\hongyu}[1]{{\color{red}\bfseries [[#1]]}}
-\newcommand{\HY}[1]{{\color{red}\bfseries [[#1]]}}
 \newcommand{\TP}[1]{{\color{red}\bfseries [[#1]]}}
 
 \newcommand{\Watcher}{{Watcher}}
@@ -47,6 +42,7 @@
 \newcommand{\DL}{\texttt{DLmalloc}}
 \newcommand{\JE}{\texttt{jemalloc}}
 \newcommand{\NA}{\texttt{numalloc}}
+\newcommand{\NM}{\texttt{numalloc}}
 
 
 \newcommand{\pthread}{\texttt{pthread}}
@@ -54,28 +50,30 @@
 \newcommand{\specialcell}[2][c]{%
   \begin{tabular}[#1]{@{}c@{}}#2\end{tabular}}
 
+%%
+%% \BibTeX command to typeset BibTeX logo in the docs
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    \normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX}}}
+
 
 % May send this work to Emery and Qiang zheng for their feedbacks. 
 
 \begin{document}
 
-\title{\NA{}: Node-Aware and Adaptive NUMA Memory Allocator}
-
-% Other names: Context-sensitive Overflow Detection (Efficient Context-Sensitive Intrusion Detection): context indicated calling context of allocation sites. 
-%  Context-based Overflow Detection
-%  
-
-% Paper number and no. of pages as author
-\authorinfo{\eurosyssubmissionnumber{}}
-
-\date{}
+\title{NUMALLOC: Adaptive NUMA Memory Allocator}
 
 \maketitle
 
-%\keywords{Memory Safety, Heap Allocator, Memory Vulnerabilities} %TODO
+\author{Anonymous}
 
-%\input{introduction}
+\date{}
+
+
+
 \input{intro}
+\input{overview}
+\input{implementation}
 \input{evaluation}
 \input{relatedwork}
 {
@@ -84,3 +82,4 @@
 }
 
 \end{document}
+he 

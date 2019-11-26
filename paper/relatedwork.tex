@@ -5,22 +5,36 @@
 \paragraph{NUMA-aware Allocators:} 
 
 \todo{All of the following papers are not read carefully. Most sentences are copied from the abstract}
-~\cite{Ogasawara:2009:NMM:1640089.1640117}:
+Ogasawara proposes a NUMA-aware memory allocation for Java virtual machine~\cite{Ogasawara:2009:NMM:1640089.1640117}. The basic idea is to identify the Dominant Thread (DoT) via thread stack, synchronization information, and object reference graph.  
 
+~\cite{wagle2015numa} focuses on the specific scenario, which is in-memory databases. 
 
 ~\cite{1419934}
-~\cite{tcmallocnew}
+Kaminski et al. proposes to make TCMalloc NUMA-aware~\cite{tcmallocnew}, with the very minimum effort. The idea is to maximize the local memory allocation with the node-based free list and page heap. However, this mechanism assumes that the memory deallocation from the current node will be always allocated from the local node. This is unfortunately not true for many cases, such as a producer-consumer model. Also, this allocator does not take advantage of 
 
 ~\cite{Majo:2011:MMN:1993478.1993481} :
 Observation: it should take both data locality and cache contention into account to achieve good performance, and memory management cannot be decoupled from process scheduling. 
 We describe two scheduling algorithms: maximum-local, which optimizes for maximum data locality, and its extension, N-MASS, which reduces data locality to avoid the performance degradation caused by cache contention. N-MASS is fine-tuned to support memory management on NUMA-multicores and improves performance up to 32\%, and 7\% on average, over the default setup in current Linux implementations.
+
+% http://memkind.github.io/memkind/ 
+% Use this to compare the performance difference
+% However, this will require the change of applications to use their library. 
+~\cite{cantalupo2015memkind} proposes a new library that allows users to manage their memory in very fine-granularity. However, they are not targeting for a general purpose allocator, which requires programmers to manage the memory explicitly. Unfortunately, this place unacceptable burden to programmers. More importantly, the explicit management based on one existing topology may not work well for a different topology. 
+
 
 
 \paragraph{Other NUMA-related Systems:} 
 
 Memory system performance in a numa multicore multiprocessor
 
-~\cite{Majo:2015:LPC:2688500.2688509} proposes TBB-NUMA, a system that collaborates the resource management, task scheduling, and high-level parallel algorithm templates together  to achieve better performance. 
+~\cite{Majo:2015:LPC:2688500.2688509} proposes TBB-NUMA, a system that mainly focuses on task scheduling on NUMA architecture to achieve better performance. \NM{} employs a similar mechanism as TBB-NUMA to manage threads explicitly, but without relying on the human hints. \NM{} also deals with the memory allocation that is not presented in TBB-NUMA. 
 
 ~\cite{6704666} shows that a set of simple algorithmic changes coupled with commonly available OS functionality suffice to eliminate data sharing and to regularize the memory access patterns for a subset of the PARSEC parallel benchmarks. These simple source-level changes result in performance improvements of up to 3.1X, but more importantly, they lead to a fairer and more accurate performance evaluation on NUMA-multicore systems. In the defaultconfiguration, OSs (such as Linux) tend to change the thread-to-core mapping during the execution of programs, which result in large performance variations.
 
+~\cite{Bui:2019:EPV:3302424.3303960} talks about the virtualization of NUMA.
+
+~\cite{jemalloc} introduces a round-robin fashion for arena allocation, and all locks and buffers will be local to the associated arena. Similarly, \NM{} also takes the similar approach. 
+
+Scalloc utilizes the same-sized spans in order to encourage memory reuses~\cite{Scalloc}, which is also the same for \NM{}. Salloc has another two contributions, a global backend developed by concurrent data structures, and a constant-time front which returns the spans to the backend. 
+
+Bolosky et. al. propose a simple mechanism to improve the performance by replicating read-only pages to multiple processors, moving pages to the processor that written them, and placing pages to the global memory if they are written by multiple processes ~\cite{Bolosky:1989:SBE:74850.74854}. bl
