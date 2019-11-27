@@ -47,8 +47,10 @@ typedef int (*main_fn_t)(int, char**, char**);
 extern "C" int __libc_start_main(main_fn_t, int, char**, void (*)(), void (*)(), void (*)(), void*) __attribute__((weak, alias("light_libc_start_main")));
 
 extern "C" int light_libc_start_main(main_fn_t main_fn, int argc, char** argv, void (*init)(), void (*fini)(), void (*rtld_fini)(), void* stack_end) {
-	  // real run
+    fprintf(stderr, "in the beginning of main\n");
+    // real run
   	auto real_libc_start_main = (decltype(__libc_start_main)*)dlsym(RTLD_NEXT, "__libc_start_main");
+    fprintf(stderr, "in the beginning of main\n");
   	return real_libc_start_main(main_fn, argc, argv, init, fini, rtld_fini, stack_end);
 }
 
@@ -121,6 +123,7 @@ void heapinitialize() {
     // Thread initialization, which can be occurred before or after numap heap initialization
 		xthread::getInstance().initialize();
 
+    fprintf(stderr, "in the end of heapinitialize()\n");
     heapInitStatus = E_HEAP_INIT_DONE;
 	} 
   else {

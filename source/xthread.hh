@@ -42,7 +42,7 @@ class xthread {
 #define MAX_ALIVE_THREADS 256
 
 	public:
-	static xthread& getInstance() {
+  static inline xthread& getInstance() {
     static char buf[sizeof(xthread)];
     static xthread* xthreadObject = new (buf) xthread();
     return *xthreadObject;

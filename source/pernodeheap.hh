@@ -217,12 +217,12 @@ class PerNodeHeap {
   }
 
   bool isSmallObject(size_t size) {
-    return size <= BIG_OBJECT_SIZE_THRESHOLD ? true : false;
+    return (size <= BIG_OBJECT_SIZE_THRESHOLD) ? true : false;
     // TODO: we should include BIG_OBJECT_SIZE_THRESHOLD!!!
   //  return size <= BIG_OBJECT_SIZE_THRESHOLD ? true : false;
   }
   
-  void * deallocate(int nodeindex, void * ptr) {
+  void deallocate(int nodeindex, void * ptr) {
      // Get the size of this object
      size_t size = getSize(ptr);
 

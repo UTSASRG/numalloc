@@ -193,7 +193,7 @@ public:
     unsigned long mbIndex = getMBIndex(ptr);
     unsigned long mbs = size >> SIZE_ONE_MB_SHIFT;
   
-    assert(size & SIZE_ONE_MB_MASK == 0);
+    assert((size & SIZE_ONE_MB_MASK) == 0);
 
 //   fprintf(stderr, "CHANGE ptr %p size %lx: mbindex %ld\n", ptr, size, mbIndex);
     for(int i = 0; i < mbs; i++) {
@@ -206,12 +206,13 @@ public:
     unsigned long mbIndex = getMBIndex(ptr);
     unsigned long mbs = size >> SIZE_ONE_MB_SHIFT;
   
-    assert(size & SIZE_ONE_MB_MASK == 0);
- //   if((size & SIZE_ONE_MB_MASK) != 0) {
- //     fprintf(stderr, "markPerMBInfo size is not aligned. size %lx\n", size);
- //     abort();
- //   }
-  // fprintf(stderr, "MARK ptr %p size %lx: mbindex %ld size %lx\n", ptr, size, mbIndex, objsize);
+  //  assert(size & SIZE_ONE_MB_MASK == 0);
+   if((size & SIZE_ONE_MB_MASK) != 0) {
+      fprintf(stderr, "markPerMBInfo size is not aligned. size %lx\n", size);
+      abort();
+    }
+ 
+   // fprintf(stderr, "MARK ptr %p size %lx: mbindex %ld size %lx\n", ptr, size, mbIndex, objsize);
     for(int i = 0; i < mbs; i++) {
       _info[mbIndex+i].size = objsize;
       // Now this object has been used right now

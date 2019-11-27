@@ -61,7 +61,7 @@ public:
   // Initialization of the NUMA Heap
   void initialize(void) {
     // We will allocate big chunks based on the number of nodes. 
-    // Based on our experiments, starting from 0x1000(8*0), there are 
+    // Based on our experiments, starting from 0x1000(8*0), there are 2^44 = 16TB 
     // 4TB*4 continuous memory, stopping at 0x5000(8*0). Let's just use this 
     // chunk as the heap memory. That is, we will have 16TB memory in total, which will be sufficient for 
     // 8 node machine, and up to 15 node machine.
@@ -70,8 +70,6 @@ public:
     // That is, each chunk will be 0x200 (8*0) (2^39)    
     unsigned long heapSize = (NUMA_NODES + 1) * SIZE_PER_NODE_HEAP;
    _heapBegin = (size_t) MM::mmapPrivateHugepages(heapSize*2, (void *)0x100000000000); 
-//   _heapBegin = (size_t) MM::mmapPrivateHugepages(heapSize, (void *)0x500000000000); 
-// _heapBegin = (size_t) MM::mmapPrivateHugepages(heapSize, (void *)0x580000000000); 
 
     // Setting the _heapEnd address
     _heapEnd = _heapBegin + heapSize;
@@ -90,6 +88,7 @@ public:
 
       pnheapPointer += SIZE_PER_NODE_HEAP;
     }
+ 
   }
   
   void * allocate(size_t size) {
