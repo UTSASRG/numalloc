@@ -48,9 +48,6 @@ public:
       //fprintf(stderr, "sz %lx __builin %d _scMagivValue %ld sc %d\n", sz, __builtin_clz(sz - 1), _scMagicValue, sc); 
     }
     
-    if(sz == 9604) {  
-      fprintf(stderr, "sz %lx __builin %d _scMagivValue %ld sc %d\n", sz, __builtin_clz(sz - 1), _scMagicValue, sc); 
-    }
     return &_sclass[sc];
   } 
 
