@@ -34,6 +34,7 @@
 #include <errno.h>
 #include "log.hh"
 #include "perthread.hh"
+#include "numatop.hh"
 #include "real.hh"
 #include "xdefines.hh"
 
@@ -81,6 +82,7 @@ class xthread {
       int cpu_now = 0; 
       // Making sure that the configuration is the same as the results of lscpu
       // Initialize the CPU set!! 
+#if 0
       for(int i = 0; i < NUMA_NODES; i++) {
 //        fprintf(stderr, "cpu_now is %d num_cpus %d\n", cpu_now, num_cpus);
         CPU_ZERO_S(size, cpusetp);
@@ -91,7 +93,18 @@ class xthread {
         pthread_attr_setaffinity_np(&_tattrs[i], size, cpusetp);
         cpu_now += num_cpus_per_node;
       }
+#else 
+      for (int i = 0; i < NUMA_NODES; i++) {
+				struct logic_cpu cpus = NumaTop::get_logic_cpu(i);
+				CPU_ZERO_S(size, cpusetp);
+        for (int j = 0; j < cpus.size; j++) {
+//      	fprintf(stderr, "Node %d: setcpu %d\n", i, cpus.cpus[j]);
+          CPU_SET_S(cpus.cpus[j], size, cpusetp);
+       	}
+        pthread_attr_setaffinity_np(&_tattrs[i], size, cpusetp);
+      }
 
+#endif
       // Initialize all threads's structure at once 
       thread_t * thread;
       for(int i = 0; i < MAX_ALIVE_THREADS; i++) {
