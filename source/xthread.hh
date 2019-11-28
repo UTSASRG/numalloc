@@ -34,7 +34,6 @@
 #include <errno.h>
 #include "log.hh"
 #include "perthread.hh"
-#include "numatop.hh"
 #include "real.hh"
 #include "xdefines.hh"
 
