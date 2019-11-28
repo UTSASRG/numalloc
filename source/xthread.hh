@@ -151,12 +151,14 @@ class xthread {
 	void initializeCurrentThread(thread_t * thread) {
     current = thread;
 		current->tid = syscall(__NR_gettid);
+    int realNodeIndex = getRealNodeIndex();
+    if(current->nindex != realNodeIndex) {
+      fprintf(stderr, "Thread index %d nodeindex %d actual node %d\n", current->index, current->nindex, getRealNodeIndex());
+      current->nindex = realNodeIndex;
+    }
 
     // Initialize the current heap
     initCurrentHeap(current->nindex); 
-
-    if(current->nindex != getRealNodeIndex())
-    fprintf(stderr, "Thread index %d nodeindex %d actual node %d\n", current->index, current->nindex, getRealNodeIndex());
   }
 
 	/// @ internal function: allocation a thread index when spawning.
@@ -187,7 +189,10 @@ class xthread {
     // Now we will create one more thread
     _alives++;
 
+   if(_alives >= _max) {
+    fprintf(stderr, "alives is %d _max is %d\n", _alives, _max); 
     assert(_alives < _max);
+   }
 
 		unlock();
     return index;
