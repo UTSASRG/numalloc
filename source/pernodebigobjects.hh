@@ -208,7 +208,7 @@ public:
   
   //  assert(size & SIZE_ONE_MB_MASK == 0);
    if((size & SIZE_ONE_MB_MASK) != 0) {
-      fprintf(stderr, "markPerMBInfo size is not aligned. size %lx\n", size);
+      fprintf(stderr, "markPerMBInfo markPerMBInfo size is not aligned. size %lx\n", size);
       abort();
     }
  
@@ -226,7 +226,7 @@ public:
   
    // assert(size & SIZE_ONE_MB_MASK == 0);
     if((size & SIZE_ONE_MB_MASK) != 0) {
-      fprintf(stderr, "markPerMBInfo size is not aligned. size %lx\n", size);
+      fprintf(stderr, "clearPerMBInfo markPerMBInfo size is not aligned. size %lx\n", size);
       abort();
     }
     
