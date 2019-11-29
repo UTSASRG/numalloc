@@ -82,7 +82,7 @@ class xthread {
       // Making sure that the configuration is the same as the results of lscpu
       // Initialize the CPU set!! 
       for(int i = 0; i < NUMA_NODES; i++) {
-//        fprintf(stderr, "cpu_now is %d num_cpus %d\n", cpu_now, num_cpus);
+//        fprintf(stderr, "i%d cpu_now %d num_cpus_pernode %d\n", i, cpu_now, num_cpus_per_node);
         CPU_ZERO_S(size, cpusetp);
         for (int cpu = cpu_now; cpu < cpu_now + num_cpus_per_node; cpu++) {
 //          fprintf(stderr, "Node %d: setcpu %d\n", i, cpu);
@@ -91,7 +91,7 @@ class xthread {
         pthread_attr_setaffinity_np(&_tattrs[i], size, cpusetp);
         cpu_now += num_cpus_per_node;
       }
-
+      
       // Initialize all threads's structure at once 
       thread_t * thread;
       for(int i = 0; i < MAX_ALIVE_THREADS; i++) {
@@ -151,12 +151,14 @@ class xthread {
 	void initializeCurrentThread(thread_t * thread) {
     current = thread;
 		current->tid = syscall(__NR_gettid);
+    int realNodeIndex = getRealNodeIndex();
+    if(current->nindex != realNodeIndex) {
+      fprintf(stderr, "Thread index %d nodeindex %d actual node %d\n", current->index, current->nindex, getRealNodeIndex());
+      current->nindex = realNodeIndex;
+    }
 
     // Initialize the current heap
     initCurrentHeap(current->nindex); 
-
-    if(current->nindex != getRealNodeIndex())
-    fprintf(stderr, "Thread index %d nodeindex %d actual node %d\n", current->index, current->nindex, getRealNodeIndex());
   }
 
 	/// @ internal function: allocation a thread index when spawning.
@@ -187,7 +189,10 @@ class xthread {
     // Now we will create one more thread
     _alives++;
 
+   if(_alives >= _max) {
+    fprintf(stderr, "alives is %d _max is %d\n", _alives, _max); 
     assert(_alives < _max);
+   }
 
 		unlock();
     return index;
