@@ -165,7 +165,7 @@ void heapinitialize() {
       break;
   
     }
-
+     fprintf(stderr, "xxmalloc size %ld ptr %p thread-id %d\n", size, ptr, current->index);
     return ptr;
 }
 
@@ -173,7 +173,7 @@ void heapinitialize() {
 		if(ptr == NULL) {
       return;
 		}
-   
+     fprintf(stderr, "xxfree ptr %p thread-id %d\n", ptr, current->index);
    if(heapInitStatus == E_HEAP_INIT_WORKING) { 
      Real::free(ptr);
    }
