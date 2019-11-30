@@ -94,8 +94,8 @@ inline void removeDLNode(dlist_t* list, dlist_t *node) {
   else {
     node->next->prev = node->prev;
   }
-  fprintf(stderr, "removeDLNode with _list pre:%p,next:%p.  node %p,ret node.prev %p, node.next %p\n", list->prev,
-            list->next, node, node->prev, node->next);
+//  fprintf(stderr, "removeDLNode with _list pre:%p,next:%p.  node %p,ret node.prev %p, node.next %p\n", list->prev,
+//            list->next, node, node->prev, node->next);
 
     return;
 }

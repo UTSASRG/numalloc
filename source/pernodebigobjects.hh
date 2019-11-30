@@ -281,8 +281,8 @@ public:
 
     // Change PerMBInfo in order to encourage the coalesce TODO:  
     clearPerMBInfo(ptr, size);
-    fprintf(stderr, "deallocate object pre:%p,next:%p.  _next:%d\n",
-            object->list.prev, object->list.next, _next);
+//    fprintf(stderr, "deallocate object pre:%p,next:%p.  _next:%d\n",
+//            object->list.prev, object->list.next, _next);
 
       unlock();
   }
@@ -290,12 +290,12 @@ public:
 private:
   void lock() {
       pthread_spin_lock(&_lock);
-      fprintf(stderr, "lock.  thread-id:%d\n", current->index);
+//      fprintf(stderr, "lock.  thread-id:%d\n", current->index);
   }
   
   void unlock() {
       pthread_spin_unlock(&_lock);
-      fprintf(stderr, "unlock.  thread-id:%d\n", current->index);
+//      fprintf(stderr, "unlock.  thread-id:%d\n", current->index);
   }
 
 };

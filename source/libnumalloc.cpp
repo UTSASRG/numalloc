@@ -175,7 +175,7 @@ void heapinitialize() {
 		if(ptr == NULL) {
       return;
 		}
-     fprintf(stderr, "xxfree ptr %p thread-id %d\n", ptr, current->index);
+//     fprintf(stderr, "xxfree ptr %p thread-id %d\n", ptr, current->index);
    if(heapInitStatus == E_HEAP_INIT_WORKING) { 
      Real::free(ptr);
    }
