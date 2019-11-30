@@ -71,11 +71,11 @@ public:
 
     // Initialize the _objects array
     _objects = (PerBigObject *) ptr;
-    memset(ptr, 0, sizeof(PER_NODE_MAX_BIG_OBJECTS * sizeof(PerBigObject)));
+    memset(ptr, 0, PER_NODE_MAX_BIG_OBJECTS * sizeof(PerBigObject));
 
     _mbs = heapsize >> SIZE_ONE_MB_SHIFT;
     // Initialize PerMBInfo
-    ptr += sizeof(PER_NODE_MAX_BIG_OBJECTS) * sizeof(PerBigObject);
+    ptr += PER_NODE_MAX_BIG_OBJECTS * sizeof(PerBigObject);
 
     // confirm why _info has been corrupted. 
     _info = (PerMBInfo *)ptr;
