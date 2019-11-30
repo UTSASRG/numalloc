@@ -70,7 +70,8 @@ public:
     }
 
   //  fprintf(stderr, "mmap from node %d size %lx\n", nodeindex, sz);
-    unsigned long mask = 1 << nodeindex; 
+    unsigned long mask = 1 << nodeindex;
+    // Currently, we only support up to 32 nodes. 
     if(mbind(ptr, size, MPOL_BIND, &mask, 32, 0) == -1) {
       fprintf(stderr, "Binding failure for address ptr %p, with error %s\n", ptr, strerror(errno));
     }
