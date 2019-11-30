@@ -51,7 +51,7 @@ class PerNodeHeap {
       // Getting the size for each freeArray. 
       unsigned long classSize = 16; 
       for(int i = 0; i < SMALL_SIZE_CLASSES; i++) { 
-        unsigned long numObjects = (SIZE_ONE_MB_BAG * 64)/classSize; 
+        unsigned long numObjects = (SIZE_ONE_MB_BAG * 128)/classSize; 
         if(numObjects < 2048) {
           numObjects = 2048;
         }
@@ -108,7 +108,7 @@ class PerNodeHeap {
       unsigned long classSize = 16; 
       unsigned long size; 
       for(int i = 0; i < SMALL_SIZE_CLASSES; i++) {
-        unsigned long numObjects = (SIZE_ONE_MB_BAG * 64)/classSize; 
+        unsigned long numObjects = (SIZE_ONE_MB_BAG * 128)/classSize; 
         if(numObjects < 2048) {
           numObjects = 2048;
         }
