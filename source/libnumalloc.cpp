@@ -165,7 +165,9 @@ void heapinitialize() {
       break;
   
     }
-     fprintf(stderr, "xxmalloc size %ld ptr %p thread-id %d\n", size, ptr, current->index);
+//     fprintf(stderr, "xxmalloc size %ld ptr %p thread-id %d\n", size, ptr);
+//     void *tem = (void *) ((long) ptr + size);
+//     fprintf(stderr, "xxmalloc ptr check %p %ld %c\n", ptr, size , (char *) tem);
     return ptr;
 }
 

@@ -145,7 +145,10 @@ class PerNodeHeap {
     ptr = allocateFromFreelist(size);
     if(ptr == NULL) {
       ptr = allocateFromBumppointer(size);
-      //fprintf(stderr, "allocateBigObject at node %d: From Bumppointer, ptr %p, size %lx\n", _nodeindex, ptr, size);
+//        void *tem = (void *) ((long) ptr + size);
+//        fprintf(stderr, "xxmalloc ptr check %p %ld %c\n", ptr, size , *(char *) tem);
+
+        //fprintf(stderr, "allocateBigObject at node %d: From Bumppointer, ptr %p, size %lx\n", _nodeindex, ptr, size);
       //fprintf(stderr, "Getting one block from the bump pointer\n");
     }
     else {
@@ -253,10 +256,12 @@ class PerNodeHeap {
 
    void lock() {
       pthread_spin_lock(_lock);
-    }
+//       fprintf(stderr, "bump lock.  thread-id:%d  node-id:%d\n", current->index, current->nindex);
+   }
 
     void unlock() {
       pthread_spin_unlock(_lock);
+//        fprintf(stderr, "bump unlock.  thread-id:%d  node-id:%d\n", current->index, current->nindex);
     }
 
 };
