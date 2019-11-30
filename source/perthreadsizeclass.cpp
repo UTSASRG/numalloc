@@ -78,7 +78,7 @@ void PerThreadSizeClass::deallocate(void *ptr) {
 #endif    
     // If there is no spot to hold next deallocation, contribute some objects to
     // PerNodeSizeClass 
-    if(_next == _max) {
+    if(_next >= _max) {
       int size;
       // We would like to maintain the same order. 
       int first = _next - _batch;   
