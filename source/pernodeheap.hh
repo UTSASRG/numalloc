@@ -51,7 +51,7 @@ class PerNodeHeap {
       // Getting the size for each freeArray. 
       unsigned long classSize = 16; 
       for(int i = 0; i < SMALL_SIZE_CLASSES; i++) { 
-        unsigned long numObjects = (SIZE_ONE_MB_BAG * 32)/classSize; 
+        unsigned long numObjects = (SIZE_ONE_MB_BAG * 64)/classSize; 
         if(numObjects < 2048) {
           numObjects = 2048;
         }
@@ -76,9 +76,10 @@ class PerNodeHeap {
       size_t metasize = computeMetadataSize(heapsize);
       _scMagicValue = 32 - LOG2(SIZE_CLASS_START_SIZE);
 
-      //fprintf(stderr, "Initialize pernodeheap with size %lx\n", metasize);
       // Binding the memory to the specified node.
       char * ptr = (char *)MM::mmapFromNode(alignup(metasize, PAGE_SIZE), nodeindex);
+      
+      fprintf(stderr, "Initialize pernodeheap's metadata from %p to %p\n", ptr, ptr+metasize);
 
       // Initialization right now.
       _lock = (pthread_spinlock_t *)ptr; 
@@ -107,7 +108,7 @@ class PerNodeHeap {
       unsigned long classSize = 16; 
       unsigned long size; 
       for(int i = 0; i < SMALL_SIZE_CLASSES; i++) {
-        unsigned long numObjects = (SIZE_ONE_MB_BAG * 32)/classSize; 
+        unsigned long numObjects = (SIZE_ONE_MB_BAG * 64)/classSize; 
         if(numObjects < 2048) {
           numObjects = 2048;
         }

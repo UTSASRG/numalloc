@@ -85,6 +85,7 @@ void PerThreadSizeClass::deallocate(void *ptr) {
       size = NumaHeap::getInstance().deallocateBatchToNodeFreelist(getNodeIndex(), _sc, _batch, &_freeArray[first]);
       _avails -= size;
       _next -= size;
+      assert(size != 0);
     }
 
     return; 
