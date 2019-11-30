@@ -17,6 +17,9 @@ public:
     unsigned long classSize = 16;
     unsigned long size = 0; 
     for(i = 0; i < SMALL_SIZE_CLASSES; i++) {
+      // Size is the total size of array for each size class. 
+      // Each perthreadsizeclass will hold 2M/classSize number of objects
+      // When perthreadsizeclass has too many freed objects, the objects will be putted into pernodesizeclass
       size += (SIZE_ONE_MB_BAG * 2 * sizeof(void *))/classSize;
       classSize *= 2;
     }
