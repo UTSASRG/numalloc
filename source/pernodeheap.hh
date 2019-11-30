@@ -16,6 +16,7 @@
 // Second, we will use all read-only values, so that even there are some writes remotely,
 // the cache line won't need to be invalidated. 
 class PerNodeHeap {
+#define TIMES_MB 64
   private:
     char * _begin;
     char * _end;
@@ -51,7 +52,7 @@ class PerNodeHeap {
       // Getting the size for each freeArray. 
       unsigned long classSize = 16; 
       for(int i = 0; i < SMALL_SIZE_CLASSES; i++) { 
-        unsigned long numObjects = (SIZE_ONE_MB_BAG * 128)/classSize; 
+        unsigned long numObjects = (SIZE_ONE_MB_BAG * TIMES_MB)/classSize; 
         if(numObjects < 2048) {
           numObjects = 2048;
         }
@@ -108,7 +109,7 @@ class PerNodeHeap {
       unsigned long classSize = 16; 
       unsigned long size; 
       for(int i = 0; i < SMALL_SIZE_CLASSES; i++) {
-        unsigned long numObjects = (SIZE_ONE_MB_BAG * 128)/classSize; 
+        unsigned long numObjects = (SIZE_ONE_MB_BAG * TIMES_MB)/classSize; 
         if(numObjects < 2048) {
           numObjects = 2048;
         }

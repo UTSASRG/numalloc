@@ -64,18 +64,20 @@ void * PerThreadSizeClass::allocate() {
  
   // Return an object starting with ptr to the PerThreadSizeClass
 void PerThreadSizeClass::deallocate(void *ptr) {
+    if(_discard == true) {
+      if(_next < _max) {
+        _discard = false;
+      }
+      else {
+        return;
+      }
+    }
+
     _freeArray[_next] = ptr;
 
     _next++;
     _avails++;
 
-#if 0
-    if(_size == 0x10000 && (getThreadIndex() == 17) ) {
-      //&& (_next==7 ||  _next == 6)) {
-      fprintf(stderr, "deallocation: adding ptr %p to the freelist with _next %ld. _avails %ld, _max %ld\n", ptr, _next-1, _avails, _max);
-      fprintf(stderr, "freeArray[6]: %p (at %p), freeArray[7]: %p (at %p), freeArray[8]:%p\n", _freeArray[6], &_freeArray[6], _freeArray[7], &_freeArray[7], _freeArray[8]);
-   }
-#endif    
     // If there is no spot to hold next deallocation, put some objects to PerNodeSizeClass 
     if(_next >= _max) {
       int size;
@@ -86,7 +88,7 @@ void PerThreadSizeClass::deallocate(void *ptr) {
       _next -= size;
       if(size == 0) {
         fprintf(stderr, "Increase the size for PerNodeSizeClass or PerThreadSizeCalss for _sc %ld\n", _sc);
-        abort();
+        _discard = true;
         //assert(size != 0);
       }
     }
