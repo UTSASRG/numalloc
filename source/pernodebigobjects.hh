@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include "dlist.h"
 #include "xdefines.hh"
+#include "perthread.hh"
 
 // We should support the transfer between big objects and small objects 
 // We will maintain a freelist for big objects, with array 
@@ -288,11 +289,13 @@ public:
 
 private:
   void lock() {
-    pthread_spin_lock(&_lock);
+      fprintf(stderr, "lock.  thread-id:%d\n", current->index);
+      pthread_spin_lock(&_lock);
   }
   
   void unlock() {
-    pthread_spin_unlock(&_lock);
+      fprintf(stderr, "unlock.  thread-id:%d\n", current->index);
+      pthread_spin_unlock(&_lock);
   }
 
 };
