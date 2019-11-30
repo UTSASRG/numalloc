@@ -157,8 +157,10 @@ class xthread {
       current->nindex = realNodeIndex;
     }
 
+    fprintf(stderr, "Initialize thread index %d nodeindex %d\n", current->index, current->nindex);
     // Initialize the current heap
-    initCurrentHeap(current->nindex); 
+    initCurrentHeap(current->index, current->nindex); 
+    fprintf(stderr, "After initialize thread index %d nodeindex %d\n", current->index, current->nindex);
   }
 
 	/// @ internal function: allocation a thread index when spawning.
@@ -275,7 +277,7 @@ class xthread {
 	
 private:
 
-  void initCurrentHeap(int nindex) {
+  void initCurrentHeap(int tindex, int nindex) {
     // Allocate a big chunk of memory from the local node
     size_t size = LOG_SIZE + sizeof(PerThreadHeap); 
     size = alignup(size, PAGE_SIZE);
@@ -288,7 +290,7 @@ private:
     current->ptheap = (PerThreadHeap *)ptr;
 
     // Initialize the current thread's heap
-    current->ptheap->initialize(nindex);
+    current->ptheap->initialize(tindex, nindex);
   }
 
 	inline void spin_lock() {

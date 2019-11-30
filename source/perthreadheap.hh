@@ -11,7 +11,7 @@ private:
   PerThreadSizeClass _sclass[SMALL_SIZE_CLASSES];
 
 public:
-  void initialize(int nindex) {
+  void initialize(int tindex, int nindex) {
     int i;
 
     unsigned long classSize = 16;
@@ -24,8 +24,8 @@ public:
       classSize *= 2;
     }
 
-    //fprintf(stderr, "PerThreadHeap initialize size %lx\n", size); 
     char * ptr = (char *)MM::mmapFromNode(alignup(size, PAGE_SIZE), nindex); 
+    fprintf(stderr, "PerThreadHeap %d initialization nindex %d from %p to %p\n", tindex, nindex, ptr, ptr + size ); 
     classSize = 16; 
     for(i = 0; i < SMALL_SIZE_CLASSES; i++) {
       unsigned int objects = SIZE_ONE_MB_BAG * 2/classSize;;
