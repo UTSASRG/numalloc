@@ -157,10 +157,8 @@ class xthread {
       current->nindex = realNodeIndex;
     }
 
-    fprintf(stderr, "Initialize thread index %d nodeindex %d\n", current->index, current->nindex);
     // Initialize the current heap
     initCurrentHeap(current->index, current->nindex); 
-    fprintf(stderr, "After initialize thread index %d nodeindex %d\n", current->index, current->nindex);
   }
 
 	/// @ internal function: allocation a thread index when spawning.
