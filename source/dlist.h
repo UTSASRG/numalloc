@@ -78,6 +78,9 @@ inline void insertDLBegin(dlist_t * list, dlist_t * node) {
   }
   node->prev = list;
   list->next = node;
+  fprintf(stderr, "insertDLBegin with _list pre:%p,next:%p.  node %p,ret node.prev %p, node.next %p\n", list->prev,
+            list->next, node, node->prev, node->next);
+
 }
 
 // Delete an entry and re-initialize it.
@@ -90,9 +93,11 @@ inline void removeDLNode(dlist_t* list, dlist_t *node) {
   }
   else {
     node->next->prev = node->prev;
-  } 
-	
-	return;
+  }
+  fprintf(stderr, "removeDLNode with _list pre:%p,next:%p.  node %p,ret node.prev %p, node.next %p\n", list->prev,
+            list->next, node, node->prev, node->next);
+
+    return;
 }
 
 #endif

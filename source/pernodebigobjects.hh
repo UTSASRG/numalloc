@@ -280,7 +280,10 @@ public:
 
     // Change PerMBInfo in order to encourage the coalesce TODO:  
     clearPerMBInfo(ptr, size);
-    unlock(); 
+    fprintf(stderr, "deallocate object pre:%p,next:%p.  _next:%d\n",
+            object->list.prev, object->list.next, _next);
+
+      unlock();
   }
 
 private:
