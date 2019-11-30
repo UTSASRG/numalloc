@@ -289,13 +289,13 @@ public:
 
 private:
   void lock() {
-      fprintf(stderr, "lock.  thread-id:%d\n", current->index);
       pthread_spin_lock(&_lock);
+      fprintf(stderr, "lock.  thread-id:%d\n", current->index);
   }
   
   void unlock() {
-      fprintf(stderr, "unlock.  thread-id:%d\n", current->index);
       pthread_spin_unlock(&_lock);
+      fprintf(stderr, "unlock.  thread-id:%d\n", current->index);
   }
 
 };
