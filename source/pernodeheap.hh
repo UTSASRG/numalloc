@@ -40,14 +40,13 @@ class PerNodeHeap {
 
  public:
    size_t computeMetadataSize(size_t heapsize) {
-     size_t size = sizeof(pthread_spinlock_t); 
+     size_t size = sizeof(pthread_spinlock_t) + 4; 
 
       // Compute the size for _bigObjects. 
       size += sizeof(PerNodeBigObjects) + _bigObjects->computeImplicitSize(heapsize);
 
       // Compute the size for _classes
       size += (sizeof(PerNodeSizeClass) + sizeof(PerNodeSizeClass *)) * SMALL_SIZE_CLASSES;
-
 
       // Getting the size for each freeArray. 
       unsigned long classSize = 16; 
@@ -77,7 +76,6 @@ class PerNodeHeap {
       size_t metasize = computeMetadataSize(heapsize);
       _scMagicValue = 32 - LOG2(SIZE_CLASS_START_SIZE);
 
-
       //fprintf(stderr, "Initialize pernodeheap with size %lx\n", metasize);
       // Binding the memory to the specified node.
       char * ptr = (char *)MM::mmapFromNode(alignup(metasize, PAGE_SIZE), nodeindex);
@@ -86,7 +84,7 @@ class PerNodeHeap {
       _lock = (pthread_spinlock_t *)ptr; 
       pthread_spin_init(_lock, PTHREAD_PROCESS_PRIVATE);
       
-      ptr += sizeof(pthread_spinlock_t); 
+      ptr += sizeof(pthread_spinlock_t) +4; 
 
       // Initilize the PerNodeMBInfo
       // Initialize the _bigObjects
