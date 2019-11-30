@@ -76,8 +76,7 @@ void PerThreadSizeClass::deallocate(void *ptr) {
       fprintf(stderr, "freeArray[6]: %p (at %p), freeArray[7]: %p (at %p), freeArray[8]:%p\n", _freeArray[6], &_freeArray[6], _freeArray[7], &_freeArray[7], _freeArray[8]);
    }
 #endif    
-    // If there is no spot to hold next deallocation, contribute some objects to
-    // PerNodeSizeClass 
+    // If there is no spot to hold next deallocation, put some objects to PerNodeSizeClass 
     if(_next >= _max) {
       int size;
       // We would like to maintain the same order. 
@@ -85,7 +84,11 @@ void PerThreadSizeClass::deallocate(void *ptr) {
       size = NumaHeap::getInstance().deallocateBatchToNodeFreelist(getNodeIndex(), _sc, _batch, &_freeArray[first]);
       _avails -= size;
       _next -= size;
-      assert(size != 0);
+      if(size == 0) {
+        fprintf(stderr, "Increase the size for PerNodeSizeClass or PerThreadSizeCalss for _sc %ld\n", _sc);
+        abort();
+        //assert(size != 0);
+      }
     }
 
     return; 
