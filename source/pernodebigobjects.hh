@@ -62,7 +62,7 @@ public:
     _max = PER_NODE_MAX_BIG_OBJECTS - 1;
     
     _heapBegin = heapBegin;
-    fprintf(stderr, "_heapBegin %p is at %p\n", _heapBegin, &_heapBegin); 
+    fprintf(stderr, "_heapBegin %p is at %p size is %ld. _max is at %p\n", _heapBegin, &_heapBegin, sizeof(_heapBegin), &_max); 
     //_nindex = ??;
 
     // Initialize the _list and _lock

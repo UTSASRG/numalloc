@@ -25,7 +25,8 @@ public:
     }
 
     char * ptr = (char *)MM::mmapFromNode(alignup(size, PAGE_SIZE), nindex); 
-    //fprintf(stderr, "PerThreadHeap %d initialization nindex %d from %p to %p\n", tindex, nindex, ptr, ptr + size ); 
+    if(tindex == 0)
+    fprintf(stderr, "PerThreadHeap %d initialization nindex %d from %p to %p\n", tindex, nindex, ptr, ptr + size ); 
     classSize = 16; 
     for(i = 0; i < SMALL_SIZE_CLASSES; i++) {
       unsigned int objects = SIZE_ONE_MB_BAG * 2/classSize;;

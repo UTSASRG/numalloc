@@ -152,6 +152,7 @@ class xthread {
     current = thread;
 		current->tid = syscall(__NR_gettid);
     int realNodeIndex = getRealNodeIndex();
+   fprintf(stderr, "Thread index %d nodeindex %d actual node %d\n", current->index, current->nindex, getRealNodeIndex());
     if(current->nindex != realNodeIndex) {
       fprintf(stderr, "Thread index %d nodeindex %d actual node %d\n", current->index, current->nindex, getRealNodeIndex());
       current->nindex = realNodeIndex;

@@ -5,17 +5,11 @@
 // Allocate reversely. Since _next always points to
 // the next availabe slot, we will use the object pointed by _next-1
 void * PerThreadSizeClass::allocateOneIfAvailable() {
-    void * ptr = _freeArray[_next-1];
+    _next--;
+    void * ptr = _freeArray[_next];
 
     // Make _next point to the just allocated slot
-    _next--;
     _avails--;
-#if 0
-    if(_size == 0x10000 && (getThreadIndex() == 17)) {
-      fprintf(stderr, "allocateObject ptr %p from _size %lx.  _next %d freeArray(next)[%d]: %p (at %p). freeArray(next-1)[%d]: %p\n", ptr, _size, _next, _next, _freeArray[_next], &_freeArray[_next], _next-1, _freeArray[_next-1]);
-      fprintf(stderr, "allocateObject ptr %p from _size %lx, _next %d. freeArray[%d]: %p\n", ptr, _size, _next, _next-1, _freeArray[_next-1]);
-    }
-#endif
     return ptr;
 }
 
@@ -25,22 +19,25 @@ void * PerThreadSizeClass::allocate() {
 
     if(_avails > 0) {
       ptr = allocateOneIfAvailable(); 
-      if(ptr == NULL) { 
-        fprintf(stderr, "Thread%d: ptr %p when _avails is larger than 0 (%ld). FreeArray %p\n", getThreadIndex(), ptr, _avails, _freeArray[_avails-1]); 
-        abort();
-      } 
       return ptr;
     }
+ #if 1
     else {
       
       // If no available objects, allocate objects from the node's freelist 
       _avails = NumaHeap::getInstance().allocateBatchFromNodeFreelist(getNodeIndex(), _sc, _batch, &_freeArray[_next]);
+
+      //TODO
+      //We should get the allocation from the bumppointers at first, and then get batch from NodeFreelist
+      //if(getThreadIndex() == 0)
+      //fprintf(stderr, "thread %d get batches from node %d\n", _avails);
 
       if(_avails > 0) {
         _next += _avails;
         ptr = allocateOneIfAvailable(); 
       }
     }
+#endif
 
     if(ptr == NULL) {
       // Now allocate from the never used ones

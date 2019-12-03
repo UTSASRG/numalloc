@@ -63,6 +63,7 @@ public:
     if(sz >= SIZE_ONE_MB_BAG) {
       size = alignup(sz, SIZE_HUGE_PAGE);
       ptr = mmapPrivateHugepages(size);
+      //ptr = mmapAllocatePrivate(sz);
     }
     else {
       size = sz;

@@ -13,7 +13,8 @@ private:
   unsigned long _max;   // How many entries in the array 
   unsigned long _next;    // Point to the next available slot 
   unsigned long _avails; // Available objects in the array. 
-
+  
+  bool _discard;
   // Freelist will be tracked with one circular array.
   void ** _freeArray;
 
@@ -24,6 +25,7 @@ public:
     _max = numObjects;
     _size = size;
     _sc = sc;
+    _discard = false;
 
     // Allocate a chunk of memory for the array.
     size_t sz = numObjects * sizeof(void *);
@@ -31,7 +33,7 @@ public:
     // Map a chunk of memory in the local node
     _freeArray = (void **)pointer;
 
-    _batch = 0.3 * numObjects;
+    _batch = 0.5 * numObjects;
 
     _bumpPointer = NULL;
     _bumpPointerEnd = _bumpPointer; 
