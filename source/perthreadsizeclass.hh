@@ -5,14 +5,14 @@
 
 class PerThreadSizeClass {
 private:
+  size_t        _batch; // Allocate or contribute this number if necessary 
   char        * _bumpPointer; 
   char        * _bumpPointerEnd;
-  size_t        _batch; // Allocate or contribute this number if necessary 
-  unsigned long _sc; 
+  unsigned long _avails; // Available objects in the array. 
   unsigned long _size;  // How big for each object
+  unsigned long _sc; 
   unsigned long _max;   // How many entries in the array 
   unsigned long _next;    // Point to the next available slot 
-  unsigned long _avails; // Available objects in the array. 
   
   bool _discard;
   // Freelist will be tracked with one circular array.

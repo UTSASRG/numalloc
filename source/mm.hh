@@ -89,7 +89,7 @@ private:
     sharedInfo |= MAP_NORESERVE;
 
     if(isHugePage) {
-      sharedInfo |= MAP_HUGETLB;
+     sharedInfo |= MAP_HUGETLB;
       //sharedInfo |= MAP_HUGETLB | MAP_HUGE_2MB;
     }
 

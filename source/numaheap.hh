@@ -95,7 +95,7 @@ public:
     void * ptr = NULL; 
 
   // if(current->index == 0)
-   //fprintf(stderr, "Thread %d at node %d: allocation size %ld\n", current->index, current->nindex, size);
+//   fprintf(stderr, "Thread %d at node %d: allocation size %ld\n", current->index, current->nindex, size);
 
     // Check the size information. 
     if(size <= BIG_OBJECT_SIZE_THRESHOLD) {

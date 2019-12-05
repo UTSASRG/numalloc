@@ -17,11 +17,15 @@ void * PerThreadSizeClass::allocateOneIfAvailable() {
 void * PerThreadSizeClass::allocate() {
     void * ptr = NULL; 
 
+    //if(_sc == 2) {
+    //  fprintf(stderr, "_avails at %p, _size %p, _pointer at %p, _pointerEnd at %p\n", &_avails, &_size, &_bumpPointer, &_bumpPointerEnd);
+   // }
     if(_avails > 0) {
       ptr = allocateOneIfAvailable(); 
       return ptr;
     }
- #if 1
+ #if 0
+    // TODO: switch with the bumppointer
     else {
       
       // If no available objects, allocate objects from the node's freelist 
@@ -43,6 +47,7 @@ void * PerThreadSizeClass::allocate() {
       // Now allocate from the never used ones
       // We don't need to change _avails and _next any more
       if(_bumpPointer < _bumpPointerEnd) {
+//        fprintf(stderr, "ALLOCATE from bump pointer\n");
         ptr = _bumpPointer;
         _bumpPointer += _size; 
       }
@@ -51,6 +56,7 @@ void * PerThreadSizeClass::allocate() {
         _bumpPointer = NumaHeap::getInstance().allocateOnembFromNode(getNodeIndex(), _size); 
         _bumpPointerEnd = _bumpPointer + SIZE_ONE_MB_BAG;
 
+      //  fprintf(stderr, "Getting one mb now\n");
         // Now perform the allocation
         ptr = _bumpPointer;
         _bumpPointer += _size; 
