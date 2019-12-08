@@ -24,7 +24,7 @@ void * PerThreadSizeClass::allocate() {
       ptr = allocateOneIfAvailable(); 
       return ptr;
     }
- #if 0
+ #if 1
     // TODO: switch with the bumppointer
     else {
       
