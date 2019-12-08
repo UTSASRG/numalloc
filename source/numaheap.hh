@@ -60,37 +60,58 @@ public:
 
   // Initialization of the NUMA Heap
   void initialize(void) {
-    // We will allocate big chunks based on the number of nodes. 
-    // Based on our experiments, starting from 0x1000(8*0), there are 2^44 = 16TB 
-    // 4TB*4 continuous memory, stopping at 0x5000(8*0). Let's just use this 
-    // chunk as the heap memory. That is, we will have 16TB memory in total, which will be sufficient for 
-    // 8 node machine, and up to 15 node machine.
-    // That is, each node will have 1 TB memory, which should be 0x400(8*0) (2^40)
-    // For this 1TB memory, we will divide into two blocks, one for huge page and one for small page. 
-    // That is, each chunk will be 0x200 (8*0) (2^39)    
-    unsigned long heapSize = (NUMA_NODES + 1) * SIZE_PER_NODE_HEAP;
-   _heapBegin = (size_t) MM::mmapPrivateHugepages(heapSize*2, (void *)0x100000000000); 
+    //unsigned long heapSize = (NUMA_NODES + 1) * SIZE_PER_NODE;
+    unsigned long heapSize = NUMA_NODES * SIZE_PER_NODE;
+    _heapBegin = 0x100000000000; 
+   //_heapBegin = 0x100000000000-SIZE_PER_NODE; 
 
+  // fprintf(stderr, "_heapBegin is %lx\n", _heapBegin);
     // Setting the _heapEnd address
     _heapEnd = _heapBegin + heapSize;
 
-    char * pnheapPointer = (char *)_heapBegin;
+    char * pnheapPointer =(char *)_heapBegin;
 
+    // Initialize the memory for the main thread
+    // The main thread's memory is always located in the beginning of the heap
+    // For it, we will maintain the memory location for each page, so that the memory can be re-utilized.
+    //initMainThreadMemory(_heapBegin); 
+    
     // Initialize for each PerNodeHeap right now. 
     for(int i = 0; i < NUMA_NODES; i++) {
-      _nodes[i].initialize(i, pnheapPointer, SIZE_PER_NODE_HEAP); 
+      _nodes[i].initialize(i, pnheapPointer, SIZE_PER_NODE); 
 
       // Binding the memory to the specific node
       unsigned long mask = 1 << i;
-      if(mbind(pnheapPointer, SIZE_PER_NODE_HEAP, MPOL_PREFERRED, &mask, 32, 0) == -1) {
+      if(mbind(pnheapPointer, SIZE_PER_NODE, MPOL_PREFERRED, &mask, 32, 0) == -1) {
         fprintf(stderr, "Binding failure for address ptr %p, with error %s\n", pnheapPointer, strerror(errno));
       }
 
-      pnheapPointer += SIZE_PER_NODE_HEAP;
+      pnheapPointer += SIZE_PER_NODE;
     }
  
   }
-  
+ 
+  void initMainThreadMemory(void * start)
+  {
+    // The first half of the perfthreadheap will be 
+    // completely interleaved, while the second half 
+    // will be block-wise interleaved method
+
+    // For the first half, if the size is smaller than 4K, then it will
+    // be deallocated to its owner. If the size is larger than 4K, but smaller
+    // than 4K*NUM_NODES, then it will be putted to its owner. 
+
+    // If the size is larger than 4K*NUM_NODES, then the object is 
+    // will be block-wise interleaved method, which could be placed to the 
+    // current thread or its original owner (it doesn't matter).
+   
+    // If the size is larger than 2M*NUM_NODES, we will utilize the large page and 
+    //  the block-wise interleaved method
+    
+
+  }
+
+
   void * allocate(size_t size) {
     void * ptr = NULL; 
 
@@ -139,7 +160,7 @@ public:
     size_t offset = (size_t)ptr - _heapBegin;
 
     // Compute the node index by the offset
-    int index = offset >> SIZE_PER_NODE_HEAP_SHIFT;
+    int index = offset >> SIZE_PER_NODE_SHIFT;
 
     // Return it to the PerNodeHeap, since we will have to check PerOnembInfo to get the actual size. 
     // After that, the object  may return to the PerThreadHeap or PerNodeHeap
@@ -151,7 +172,7 @@ public:
     size_t offset = (size_t)ptr - _heapBegin;
 
     // Compute the node index by the offset
-    int index = offset >> SIZE_PER_NODE_HEAP_SHIFT;
+    int index = offset >> SIZE_PER_NODE_SHIFT;
 
     return _nodes[index].getSize(ptr);
   }

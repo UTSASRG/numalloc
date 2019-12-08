@@ -45,37 +45,37 @@ public:
     return allocate(true, false, sz, fd, startaddr);
   }
 
-  static void* mmapAllocatePrivate(size_t sz, void* startaddr = NULL, int fd = -1) {
-    return allocate(false, false, sz, fd, startaddr);
+  static void* mmapAllocatePrivate(size_t sz, void* startaddr = NULL, bool isHugePage = false, int fd = -1) {
+    return allocate(false, isHugePage, sz, fd, startaddr);
   }
   
-  static void* mmapPrivateHugepages(size_t sz, void* startaddr = NULL, int fd = -1) {
-    void * ptr = allocate(false, true, sz, fd, startaddr);
-		//madvise(ptr, sz, MADV_HUGEPAGE);
-		return ptr;
+  static void bindMemoryToNode(void * ptr, size_t size, int nodeindex) {
+    unsigned long mask = 1 << nodeindex;
+    // Binding the memory to a specific node before the actual access. 
+    if(mbind(ptr, size, MPOL_BIND, &mask, 32, 0) == -1) {
+      fprintf(stderr, "Binding failure for address ptr %p, with error %s\n", ptr, strerror(errno));
+    }
+    
+    return; 
   }
 
-  static void * mmapFromNode(size_t sz, int nodeindex) {
+  static void * mmapFromNode(size_t sz, int nodeindex, void * startaddr = NULL, bool isHugePage = false) {
     size_t size; 
     void * ptr; 
 
     // Check whether a block should be allocated from the big heap
     if(sz >= SIZE_ONE_MB_BAG) {
       size = alignup(sz, SIZE_HUGE_PAGE);
-      ptr = mmapPrivateHugepages(size);
+      ptr = mmapAllocatePrivate(size, startaddr, isHugePage);
       //ptr = mmapAllocatePrivate(sz);
     }
     else {
       size = sz;
-      ptr = mmapAllocatePrivate(sz);
+      ptr = mmapAllocatePrivate(size, startaddr, isHugePage);
     }
 
-  //  fprintf(stderr, "mmap from node %d size %lx\n", nodeindex, sz);
-    unsigned long mask = 1 << nodeindex;
-    // Currently, we only support up to 32 nodes. 
-    if(mbind(ptr, size, MPOL_BIND, &mask, 32, 0) == -1) {
-      fprintf(stderr, "Binding failure for address ptr %p, with error %s\n", ptr, strerror(errno));
-    }
+    // Binding mmap from the node
+    bindMemoryToNode(ptr, size, nodeindex);
     
     return ptr; 
   }

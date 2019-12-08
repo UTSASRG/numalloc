@@ -93,10 +93,14 @@ inline size_t aligndown(size_t addr, size_t alignto) { return (addr & ~(alignto 
 
 #include <sys/mman.h>
 
-#define SIZE_NORMAL_PAGES_PER_NODE_HEP 0x20000000000
-#define SIZE_HUGE_PAGES_PER_NODE_HEP 0x20000000000
-#define SIZE_PER_NODE_HEAP 0x40000000000 // 40 bits, 4TB
-#define SIZE_PER_NODE_HEAP_SHIFT 42
+#define SIZE_PER_TB 0x10000000000  // 0x100 8*0 
+#define SIZE_PER_SPAN (2*SIZE_PER_TB)
+#define SIZE_PER_NODE (2*SIZE_PER_SPAN)
+// Since there are 64TB continuous memory space, let's support up to 
+// 16 node machines. That is, each node will have 4TB memory, and the first 
+// thread will have the 4TB memory as well.
+//#define SIZE_PER_NODE_HEAP (4*SIZE_PER_TB) // 40 bits, 4TB
+#define SIZE_PER_NODE_SHIFT 42
 #define SIZE_ONE_MB_BAG 0x100000
 #define SIZE_ONE_MB_MASK 0xFFFF
 #define SIZE_HUGE_PAGE 0x200000

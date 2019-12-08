@@ -9,32 +9,39 @@
 #include "pernodesizeclass.hh"
 #include "perthread.hh"
 
-// Since the array of PerNodeHeap will be allocated from the stack, therefore, 
-// we will try to avoid false sharing issue as much as possible. 
-// There are two ways to avoid the performance issues: 
-// First, we will aligned to 64 bytes. But this really depends on the starting address.  
-// Second, we will use all read-only values, so that even there are some writes remotely,
-// the cache line won't need to be invalidated. 
-class PerNodeHeap {
-#define TIMES_MB 64
+/* Basic memory mechanism for main thread.
+ 
+   The memory management of the main thread is different from other threads,
+   mainly because the main thread typically prepare the data for its children 
+   threads. Therefore, the memory allocation of the main thread will come from two 
+   separate spans that are not always allocated locally. 
+   For those allocations, we are careful about the load balance issue.
+   However, if an object is larger than PAGE*NUMA_NODES, then we will utilize block-wise 
+   allocations, which has been observed by many existing work (such as Xu's PPoPP'14).
+  
+   Similar to other nodes' allocation, the allocation of main thread will be from two spans. 
+   The first half of the perfthreadheap will be completely interleaved, while 
+   the second half will be block-wise interleaved method.
+
+   For allocations with the size smaller than 4K, the object will be returned to the node.
+
+   For allocations with the size larger than 4K but smaller than 4K*NUM_NODES, then it will be putted to its owner.
+
+   If the size is larger than 4K*NUM_NODES, then the object will be block-wise interleaved method, which 
+   could be placed to the current thread or its original owner (it doesn't matter).
+
+   If the size is larger than 2M*NUM_NODES, we will utilize the large page and the block-wise interleaved method
+*/
+
+class MainNodeHeap {
   private:
-    char * _nodeBegin;
-    char * _nodeEnd;
-    
-    // _bpSmall points to the beginning of available objects. 
-    // Each allocation will be aligned to 1 MB (either for big objects and small objects).
-    // So that the big objects can be used for small objects, and vice versa.
-    // The lock is to protect the updates of _bpSmall
-    pthread_spinlock_t *_lockSmall;
-    pthread_spinlock_t *_lockBig;
-    char * _bpSmall;
-    char * _bpSmallEnd;
-    char * _bpBig;
-    char * _bpBigEnd;
+    char * _begin;
+    char * _end;
+   
+    char * _bumpPointer;
 
     size_t _scMagicValue; 
 
-    // _bigObjects will also maintain the PerMBINfo
     PerNodeBigObjects * _bigObjects;
 
     // Currently, size class is from 2^4 to 2^19 (512 KB), with 16 sizes in total.
@@ -45,7 +52,7 @@ class PerNodeHeap {
 
  public:
    size_t computeMetadataSize(size_t heapsize) {
-     size_t size = sizeof(pthread_spinlock_t) * 2; 
+     size_t size = sizeof(pthread_spinlock_t) + 4; 
 
       // Compute the size for _bigObjects. 
       size += sizeof(PerNodeBigObjects) + _bigObjects->computeImplicitSize(heapsize);
@@ -69,20 +76,13 @@ class PerNodeHeap {
    }
 
    void initialize(int nodeindex, char * start, size_t heapsize) {
+
       // Save the heap related information
-      _nodeBegin = start; 
-      _nodeEnd = start + heapsize;
+      _begin = start; 
+      _end = start + heapsize;
+      _bumpPointer = start;
       _nodeindex = nodeindex; 
       _numClasses = SMALL_SIZE_CLASSES;
-      
-      // Initialize the heap for small objects
-      _bpSmall = (char *)MM::mmapFromNode(SIZE_PER_SPAN, nodeindex, (void *)start, false); 
-      _bpSmallEnd = _bpSmall + SIZE_PER_SPAN;
-
-      // Initialize the heap for big objects, which will be allocated using huge pages.
-      _bpBig = (char *)MM::mmapFromNode(SIZE_PER_SPAN, nodeindex, _bpSmallEnd, false); 
-      _bpBigEnd = _bpBig + SIZE_PER_SPAN;
-
 
       // Compute the metadata size for PerNodeHeap
       size_t metasize = computeMetadataSize(heapsize);
@@ -90,16 +90,14 @@ class PerNodeHeap {
 
       // Binding the memory to the specified node.
       char * ptr = (char *)MM::mmapFromNode(alignup(metasize, PAGE_SIZE), nodeindex);
+      
+      fprintf(stderr, "Initialize pernodeheap's metadata from %p to %p\n", ptr, ptr+metasize);
 
       // Initialization right now.
-      _lockSmall = (pthread_spinlock_t *)ptr; 
-      pthread_spin_init(_lockSmall, PTHREAD_PROCESS_PRIVATE);
-      ptr += sizeof(pthread_spinlock_t); 
+      _lock = (pthread_spinlock_t *)ptr; 
+      pthread_spin_init(_lock, PTHREAD_PROCESS_PRIVATE);
       
-      _lockBig = (pthread_spinlock_t *)ptr; 
-      pthread_spin_init(_lockBig, PTHREAD_PROCESS_PRIVATE);
-      
-      ptr += sizeof(pthread_spinlock_t); 
+      ptr += sizeof(pthread_spinlock_t) +4; 
 
       // Initilize the PerNodeMBInfo
       // Initialize the _bigObjects
@@ -157,18 +155,9 @@ class PerNodeHeap {
     //fprintf(stderr, "allocateBigObject at node %d: size %lx\n", _nodeindex, size);
     ptr = allocateFromFreelist(size);
     if(ptr == NULL) {
-      // Now allocate from _bpBig
-      lockBigHeap();
-      ptr = (char *)_bpBig;
-      _bpBig += size;
-
-      // We should not consume all memory. If yes, then we should make the heap bigger.
-      // Since we don't check normally  to reduce the overhead, we will use the assertion here
-      assert(_bpBig < _bpBigEnd);
-      unlockBigHeap();
+      ptr = allocateFromBumppointer(size);
     }
 
-  //  fprintf(stderr, "allocateBigObject, ptr %p, size %lx\n", ptr, size);
     // Mark the object size
     markPerMBInfo(ptr, size, size);
 
@@ -196,14 +185,14 @@ class PerNodeHeap {
   char * allocateFromBumppointer(size_t size) {
     char * ptr = NULL; 
 
-    lockSmallHeap(); 
-    ptr = (char *)_bpSmall;
-    _bpSmall += size; 
+    lock(); 
+    ptr = (char *)_bumpPointer;
+    _bumpPointer += size; 
 
     // We should not consume all memory. If yes, then we should make the heap bigger.
     // Since we don't check normally  to reduce the overhead, we will use the assertion here
-    assert(_bpSmall < _bpSmallEnd);
-    unlockSmallHeap();
+    assert(_bumpPointer < _end);
+    unlock();
 
     return ptr;
   }
@@ -234,8 +223,6 @@ class PerNodeHeap {
 
   bool isSmallObject(size_t size) {
     return (size <= BIG_OBJECT_SIZE_THRESHOLD) ? true : false;
-    // TODO: we should include BIG_OBJECT_SIZE_THRESHOLD!!!
-  //  return size <= BIG_OBJECT_SIZE_THRESHOLD ? true : false;
   }
   
   void deallocate(int nodeindex, void * ptr) {
@@ -266,23 +253,6 @@ class PerNodeHeap {
        _bigObjects->deallocate(ptr, size);
      }
    }
-
-   void lockSmallHeap() {
-      pthread_spin_lock(_lockSmall);
-   }
-
-    void unlockSmallHeap() {
-      pthread_spin_unlock(_lockSmall);
-    }
-   
-    void lockBigHeap() {
-      pthread_spin_lock(_lockBig);
-   }
-
-    void unlockBigHeap() {
-      pthread_spin_unlock(_lockBig);
-    }
-
 
 };
 #endif

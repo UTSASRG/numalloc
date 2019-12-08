@@ -104,6 +104,8 @@ class xthread {
         // We will assign the thread to each node during the initialization.
         // There is no need to re-assign later 
         thread->nindex = _nodeIndex;
+        thread->inited = false;
+
         // Always makes the first thread to be the same node as the main thread
         if(i != 0) {
           _nodeIndex++;
@@ -152,14 +154,15 @@ class xthread {
     current = thread;
 		current->tid = syscall(__NR_gettid);
     int realNodeIndex = getRealNodeIndex();
-   fprintf(stderr, "Thread index %d nodeindex %d actual node %d\n", current->index, current->nindex, getRealNodeIndex());
+  // fprintf(stderr, "Thread index %d nodeindex %d actual node %d\n", current->index, current->nindex, getRealNodeIndex());
     if(current->nindex != realNodeIndex) {
       fprintf(stderr, "Thread index %d nodeindex %d actual node %d\n", current->index, current->nindex, getRealNodeIndex());
       current->nindex = realNodeIndex;
     }
 
     // Initialize the current heap
-    initCurrentHeap(current->index, current->nindex); 
+    if(current->inited == false) 
+      initCurrentHeap(current->index, current->nindex); 
   }
 
 	/// @ internal function: allocation a thread index when spawning.
@@ -283,6 +286,7 @@ private:
 
     //fprintf(stderr, "InitCurrentHeap with Size %lx", size);
     char * ptr = (char *)MM::mmapFromNode(size, current->nindex);
+    //fprintf(stderr, "InitCurrentHeap thread %d: with ptr %p\n", tindex, ptr);
     current->outputBuf = (char *)ptr;
     ptr += LOG_SIZE;
 
@@ -290,6 +294,7 @@ private:
 
     // Initialize the current thread's heap
     current->ptheap->initialize(tindex, nindex);
+    current->inited = true;
   }
 
 	inline void spin_lock() {

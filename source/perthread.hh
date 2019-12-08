@@ -6,6 +6,8 @@
 typedef void * threadFunction(void*);
 
 typedef struct thread {
+  bool inited;
+
   // Whether the entry is available so that allocThreadIndex can use this one
   bool available;
 
