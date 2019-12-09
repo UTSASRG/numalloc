@@ -12,8 +12,14 @@ private:
   unsigned long _size;  // How big for each object
   unsigned long _sc; 
   unsigned long _max;   // How many entries in the array 
-  unsigned long _next;    // Point to the next available slot 
-  
+  unsigned long _next;  // Point to the next available slot 
+
+  // During the allocation,  reutilizing freed objects in the same node will be at a higher priority. 
+  // However, we don't want to keep checking the per-node list if it fails. 
+  // Therefore, we will utilize some heuristics to avoid frequent checks. 
+  unsigned long _allocsBeforeCheck; 
+  unsigned long _allocs; 
+
   bool _discard;
   // Freelist will be tracked with one circular array.
   void ** _freeArray;
@@ -34,6 +40,8 @@ public:
     _freeArray = (void **)pointer;
 
     _batch = 0.5 * numObjects;
+    _allocsBeforeCheck = _batch/4;
+    _allocs = 0;
 
     _bumpPointer = NULL;
     _bumpPointerEnd = _bumpPointer; 

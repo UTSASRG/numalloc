@@ -24,26 +24,28 @@ void * PerThreadSizeClass::allocate() {
       ptr = allocateOneIfAvailable(); 
       return ptr;
     }
- #if 1
-    // TODO: switch with the bumppointer
-    else {
       
+    if(_allocs >= _allocsBeforeCheck) {
+      _allocs = 0;
       // If no available objects, allocate objects from the node's freelist 
       _avails = NumaHeap::getInstance().allocateBatchFromNodeFreelist(getNodeIndex(), _sc, _batch, &_freeArray[_next]);
 
-      //TODO
       //We should get the allocation from the bumppointers at first, and then get batch from NodeFreelist
-      //if(getThreadIndex() == 0)
-      //fprintf(stderr, "thread %d get batches from node %d\n", _avails);
-
       if(_avails > 0) {
         _next += _avails;
         ptr = allocateOneIfAvailable(); 
       }
+      else {
+       // fprintf(stderr, "Getting from pernode freelist failed. _allocsBeforeCheck %ld\n", _allocsBeforeCheck);
+        // Can't find available objects in PerNodeFreeList, then we will 
+        // check less frequently. 
+        _allocsBeforeCheck *= 2;
+      }
     }
-#endif
+
 
     if(ptr == NULL) {
+      _allocs++;
       // Now allocate from the never used ones
       // We don't need to change _avails and _next any more
       if(_bumpPointer < _bumpPointerEnd) {
