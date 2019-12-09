@@ -34,9 +34,10 @@ void * PerThreadSizeClass::allocate() {
       if(_avails > 0) {
         _next += _avails;
         ptr = allocateOneIfAvailable(); 
+        _allocsBeforeCheck /= 2;
       }
       else {
-       // fprintf(stderr, "Getting from pernode freelist failed. _allocsBeforeCheck %ld\n", _allocsBeforeCheck);
+      // fprintf(stderr, "Getting from pernode freelist failed. _allocsBeforeCheck %ld\n", _allocsBeforeCheck);
         // Can't find available objects in PerNodeFreeList, then we will 
         // check less frequently. 
         _allocsBeforeCheck *= 2;
