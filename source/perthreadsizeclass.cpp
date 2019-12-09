@@ -40,6 +40,9 @@ void * PerThreadSizeClass::allocate() {
         // Can't find available objects in PerNodeFreeList, then we will 
         // check less frequently. 
         _allocsBeforeCheck *= 2;
+        if(_allocsBeforeCheck > _max/2) {
+          _allocsBeforeCheck = _max/2;
+        }
       }
     }
 
