@@ -11,6 +11,8 @@ typedef struct thread {
   // Whether the entry is available so that allocThreadIndex can use this one
   bool available;
 
+  bool hasChildrenthreads;
+
   // Identifications
   pid_t tid;
   pthread_t thread;

@@ -99,7 +99,8 @@ class xthread {
 
 			  // Those information that are only initialized once.
      	  thread->available = true;
-			  thread->index = i;
+        thread->hasChildrenthreads = false;
+        thread->index = i;
 
         // We will assign the thread to each node during the initialization.
         // There is no need to re-assign later 
@@ -205,7 +206,13 @@ class xthread {
   inline thread_t* getThread(int index) { return &_threads[index]; }
 
 	int thread_create(pthread_t * thread, const pthread_attr_t * attr, threadFunction * fn, void * arg) {
-		int tindex = allocThreadIndex();
+    // Since we will create the children threads, set this flag to be true. 
+    // This flag will change the allocation of the main thread, but should not affect
+    // other threads.
+    if(current->hasChildrenthreads == false)
+      current->hasChildrenthreads = true;
+
+    int tindex = allocThreadIndex();
 
 		// Acquire the thread structure.
 		thread_t* children = getThread(tindex);	

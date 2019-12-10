@@ -1,5 +1,5 @@
-#ifndef __PER_NODE_HEAP_HH__
-#define __PER_NODE_HEAP_HH__
+#ifndef __MAIN_HEAP_HH__
+#define __MAIN_HEAP_HH__
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -15,7 +15,9 @@
    mainly because the main thread typically prepare the data for its children 
    threads. Therefore, the memory allocation of the main thread will come from two 
    separate spans that are not always allocated locally. 
-   For those allocations, we are careful about the load balance issue.
+   In fact, we are more careful about the load balance issue, due to the fact that all children threads
+   are sharing with it.
+
    However, if an object is larger than PAGE*NUMA_NODES, then we will utilize block-wise 
    allocations, which has been observed by many existing work (such as Xu's PPoPP'14).
   
@@ -23,6 +25,7 @@
    The first half of the perfthreadheap will be completely interleaved, while 
    the second half will be block-wise interleaved method.
 
+   For simplicity, 
    For allocations with the size smaller than 4K, the object will be returned to the node.
 
    For allocations with the size larger than 4K but smaller than 4K*NUM_NODES, then it will be putted to its owner.
@@ -33,7 +36,7 @@
    If the size is larger than 2M*NUM_NODES, we will utilize the large page and the block-wise interleaved method
 */
 
-class MainNodeHeap {
+class MainHeap {
   private:
     char * _begin;
     char * _end;
