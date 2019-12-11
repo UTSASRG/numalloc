@@ -52,11 +52,67 @@ public:
   static void bindMemoryToNode(void * ptr, size_t size, int nodeindex) {
     unsigned long mask = 1 << nodeindex;
     // Binding the memory to a specific node before the actual access. 
-    if(mbind(ptr, size, MPOL_BIND, &mask, 32, 0) == -1) {
+    if(mbind(ptr, size, MPOL_BIND, &mask, NUMA_NODES+1, 0) == -1) {
       fprintf(stderr, "Binding failure for address ptr %p, with error %s\n", ptr, strerror(errno));
+      exit(-1);
     }
     
     return; 
+  }
+
+  static void * mmapPageInterleaved(size_t sz, void * startaddr) {
+    void * ptr;
+
+    // Mmap a block from the OS. 
+    ptr = mmapAllocatePrivate(sz, startaddr);
+
+    unsigned long mask = (1 << NUMA_NODES)-1;
+
+    // Set the memory to be interleaved, and the nodemax has to be set to 1 more than the NUMA_NODES
+    if(mbind(ptr, sz, MPOL_INTERLEAVE, &mask, NUMA_NODES+1, 0) == -1) {
+      fprintf(stderr, "Binding failure for address ptr %p, with error %s\n", ptr, strerror(errno));
+      exit(-1);
+    }
+
+    return ptr;
+  }
+
+  static void * mmapBlockInterleaved(size_t sz, void * startaddr, int nodeindex) {
+    void * ptr;
+    bool isHugePage = false;
+
+    size_t size = alignup(sz, PAGE_SIZE);
+    if(size < NUMA_NODES * PAGE_SIZE) {
+      fprintf(stderr, "Wrong size information for the current allocation\n");
+      exit(-1);
+    }
+    else if (size >= NUMA_NODES * SIZE_HUGE_PAGE) {
+      isHugePage = true; 
+    }
+
+    // Mmap a chunk at first.
+    ptr = mmapAllocatePrivate(size, startaddr, isHugePage); 
+    
+    // Now bind the memory to different nodes with block size. 
+    size_t blockSize = size/NUMA_NODES;
+
+    if(size % NUMA_NODES != 0 ) {
+      blockSize += 1;
+    }
+
+    // Starting block will be the local node
+    int nindex = mainNodeIndex;
+    char * pointer = (char *)ptr;
+    for(int i = 0; i < NUMA_NODES; i++) {
+      bindMemoryToNode(pointer, blockSize, nindex);
+      pointer += blockSize;
+      nindex++;
+      if(nindex == NUMA_NODES) {
+       nindex = 0;
+      } 
+    }
+
+    return ptr;
   }
 
   static void * mmapFromNode(size_t sz, int nodeindex, void * startaddr = NULL, bool isHugePage = false) {
