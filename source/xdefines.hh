@@ -38,6 +38,7 @@ extern "C" {
 
 extern char * getThreadBuffer();
 extern int outputfd;
+extern unsigned int mainNodeIndex;
 extern struct bitmask memBitmasks[NUMA_NODES+1];
 #define PTHREADEXIT_CODE 2230
 
@@ -100,6 +101,15 @@ inline size_t aligndown(size_t addr, size_t alignto) { return (addr & ~(alignto 
 // 16 node machines. That is, each node will have 4TB memory, and the first 
 // thread will have the 4TB memory as well.
 //#define SIZE_PER_NODE_HEAP (4*SIZE_PER_TB) // 40 bits, 4TB
+
+// It utilizes rdtscp to get the node id, which should take much less time than invoking a system call.
+inline int getRealNodeIndex(void)
+{
+  unsigned long a,d,c;
+  __asm__ volatile("rdtscp" : "=a" (a), "=d" (d), "=c" (c));
+  return (c & 0xFFF000)>>12;
+}
+
 #define SIZE_PER_NODE_SHIFT 42
 #define SIZE_ONE_MB_BAG 0x100000
 #define SIZE_ONE_MB_MASK 0xFFFF

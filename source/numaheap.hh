@@ -31,7 +31,9 @@
 #include "dlist.h"
 #include "pernodeheap.hh"
 #include "perthread.hh"
-
+#ifdef SPEC_MAINTHREAD_SUPPORT
+#include "mainheap.hh"
+#endif
 
 /* How to deal with the heap allocation. If one thread continuously allocates 
  * large chunk of data, such as over the number of allocations and the total size.
@@ -61,6 +63,7 @@ public:
   // Initialization of the NUMA Heap
   void initialize(void) {
     //unsigned long heapSize = (NUMA_NODES + 1) * SIZE_PER_NODE;
+#ifndef SPEC_MAINTHREAD_SUPPORT
     unsigned long heapSize = NUMA_NODES * SIZE_PER_NODE;
     _heapBegin = 0x100000000000; 
    //_heapBegin = 0x100000000000-SIZE_PER_NODE; 
@@ -88,33 +91,18 @@ public:
 
       pnheapPointer += SIZE_PER_NODE;
     }
+#else
+
+
+#endif
  
   }
  
-  void initMainThreadMemory(void * start)
-  {
-    // The first half of the perfthreadheap will be 
-    // completely interleaved, while the second half 
-    // will be block-wise interleaved method
-
-    // For the first half, if the size is smaller than 4K, then it will
-    // be deallocated to its owner. If the size is larger than 4K, but smaller
-    // than 4K*NUM_NODES, then it will be putted to its owner. 
-
-    // If the size is larger than 4K*NUM_NODES, then the object is 
-    // will be block-wise interleaved method, which could be placed to the 
-    // current thread or its original owner (it doesn't matter).
-   
-    // If the size is larger than 2M*NUM_NODES, we will utilize the large page and 
-    //  the block-wise interleaved method
-    
-
-  }
-
 
   void * allocate(size_t size) {
     void * ptr = NULL; 
 
+#ifndef SPEC_MAINTHREAD_SUPPORT
   // if(current->index == 0)
 //   fprintf(stderr, "Thread %d at node %d: allocation size %ld\n", current->index, current->nindex, size);
 
@@ -131,6 +119,9 @@ public:
       // Always allocate a large object from PerNodeHeap directly 
       ptr = _nodes[index].allocateBigObject(size);
     }
+#else
+
+#endif
    
     return ptr;
   } 

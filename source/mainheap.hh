@@ -25,27 +25,89 @@
    The first half of the perfthreadheap will be completely interleaved, while 
    the second half will be block-wise interleaved method.
 
-   For simplicity, 
-   For allocations with the size smaller than 4K, the object will be returned to the node.
+   For simplicity, all these objects will be returned to this heap, but will be returned to 
+   the os if it is larger than the bag size after the creation of threads.
+   We don't want to create unnecessary remote accesses. 
 
-   For allocations with the size larger than 4K but smaller than 4K*NUM_NODES, then it will be putted to its owner.
-
-   If the size is larger than 4K*NUM_NODES, then the object will be block-wise interleaved method, which 
-   could be placed to the current thread or its original owner (it doesn't matter).
-
-   If the size is larger than 2M*NUM_NODES, we will utilize the large page and the block-wise interleaved method
+   The allocation of this heap can be only used if there is one thread. In fact, it is important to 
+   support this for some openmp program
 */
 
 class MainHeap {
+
+  typedef struct t_bigObject {
+    char * addr; 
+    size_t size;
+    // For some cases, we will have to mmap twice with one allocation
+    char * addr2; 
+    size_t size;
+  } BigObject;
+
+#define MT_MIDDLE_SPAN_THRESHOLD (PAGE_SIZE * (NUMA_NODES-1))
+#define MT_BIG_SPAN_THESHOLD BIG_OBJECT_SIZE_THRESHOLD
+#define MT_BIG_OBJECTS_NUM 2048
+
+  class mtBigObjects {
+    private:
+      char * _bpBig;
+      char * _bpBigEnd;
+      unsigned int _next; 
+      BigObject _objects[MT_BIG_OBJECTS_NUM];
+
+    void initialize(void * start, size_t size) {
+      _next = 0;
+      _bpBig = (char *)start;
+      _bpBigEnd = _bpBig + size;
+    }
+
+    // We will always utilize the bump pointer to allocate a new object
+    void * allocate(size_t size) {
+      void * ptr;
+
+      size_t size = (); 
+      if(size <= SIZE_HUGE_PAGE * (NUMA_NODES-1)) {
+        // Then use the normal pages, but with the block-interleaved way for the allocation
+        ptr = _bpBig;
+        
+        ptr = MM:mmapPageInterleaved(
+
+        _bpBig += size;
+      }
+      else {
+
+      } 
+      return ptr;
+    }
+
+    void deallocate(void * ptr) {
+      for(int i = 0; i < _next; i++) {
+        // Now we have found the object
+        if(ptr == _objects[i].addr) {
+          // Simply return this object to the OS right now
+          munmap(ptr, _objects[i].size);
+
+          // Moving the last one to the current one.
+          if(i != _next-1) { 
+            _objects[i].addr = _objects[_next-1].addr;
+            _objects[i].size = _objects[_next-1].size;
+          } 
+          _next--;
+          break;  
+        }
+      }
+    }
+  }
+
   private:
     char * _begin;
     char * _end;
    
-    char * _bumpPointer;
+    char * _bpSmall;
+    char * _bpSmallEnd;
+    char * _bpMiddle;
+    char * _bpMiddleEnd;
 
     size_t _scMagicValue; 
-
-    PerNodeBigObjects * _bigObjects;
 
     // Currently, size class is from 2^4 to 2^19 (512 KB), with 16 sizes in total.
     PerNodeSizeClass  ** _sizes;
@@ -53,9 +115,10 @@ class MainHeap {
     int   _nodeindex;
     char  padding[64]; // Padding with 64bytes to ensure that two node data will no locate in the same cashe line
 
+
  public:
-   size_t computeMetadataSize(size_t heapsize) {
-     size_t size = sizeof(pthread_spinlock_t) + 4; 
+   size_t computeMetadataSize(void) {
+     size_t size = 0;
 
       // Compute the size for _bigObjects. 
       size += sizeof(PerNodeBigObjects) + _bigObjects->computeImplicitSize(heapsize);
@@ -78,16 +141,30 @@ class MainHeap {
       return size;
    }
 
-   void initialize(int nodeindex, char * start, size_t heapsize) {
-
+   void initialize(int nodeindex, char * end) {
       // Save the heap related information
-      _begin = start; 
-      _end = start + heapsize;
-      _bumpPointer = start;
+      _end = end;
+      _begin = _end - 3 * SIZE_PER_SPAN;
+
+      // Map an interleaved block for the small pages.
+      _bpSmall = (char *)MM::mmapPageInterleaved(SIZE_PER_SPAN, (void *)_begin);
+      _bpSmallEnd = _bpSmall + SIZE_PER_SPAN;
+
+
+      // MMap the next span at first, and then use mbind to change the binding only
+      // Note that we may only need to change it to huge page support (VERY RARE), if the allocation is 
+      // larger than HUGE_PAGE_SIZE * NUMA_NODES
+      _bpMiddle = (char *)MM::mmapAllocatePrivate(SIZE_PER_SPAN,_bpSmallEnd);
+      _bpMiddleEnd = _bpMiddle + SIZE_PER_SPAN;
+
+      // Note that the _bpBig is not initialized at first.
+      _bpBig = _bpMiddleEnd;
+      _bpBigEnd = _bpBig + SIZE_PER_SPAN; 
+
       _nodeindex = nodeindex; 
       _numClasses = SMALL_SIZE_CLASSES;
 
-      // Compute the metadata size for PerNodeHeap
+      // Compute the metadata size for the management.
       size_t metasize = computeMetadataSize(heapsize);
       _scMagicValue = 32 - LOG2(SIZE_CLASS_START_SIZE);
 
@@ -150,112 +227,73 @@ class MainHeap {
     return sc;
   }
 
-  // allocate a big object with the specified size
-  void * allocateBigObject(size_t size) {
-    void * ptr = NULL;
-    size = alignup(size, SIZE_ONE_MB_BAG);
-
-    //fprintf(stderr, "allocateBigObject at node %d: size %lx\n", _nodeindex, size);
-    ptr = allocateFromFreelist(size);
-    if(ptr == NULL) {
-      ptr = allocateFromBumppointer(size);
-    }
-
-    // Mark the object size
-    markPerMBInfo(ptr, size, size);
-
-    return ptr;
-  }
-
-  int allocateBatch(int sc, unsigned long num, void ** start) {
-    return _sizes[sc]->allocateBatch(num, start);   
-  }
-
-  int deallocateBatch(int sc, unsigned long num, void ** start) {
-    return _sizes[sc]->deallocateBatch(num, start);   
-  }
-
-  // size indicates that this onemb will be used to satisfy object with size
-  char * allocateFromFreelist(size_t size) {
-    return (char *)_bigObjects->allocate(size); 
-  }
-
   // The size is the actual size for each object. 
   void markPerMBInfo(void * blockStart, size_t blockSize, size_t size) {
-    _bigObjects->markPerMBInfo(blockStart, blockSize, size);
   }
-
-  char * allocateFromBumppointer(size_t size) {
-    char * ptr = NULL; 
-
-    lock(); 
-    ptr = (char *)_bumpPointer;
-    _bumpPointer += size; 
-
-    // We should not consume all memory. If yes, then we should make the heap bigger.
-    // Since we don't check normally  to reduce the overhead, we will use the assertion here
-    assert(_bumpPointer < _end);
-    unlock();
-
-    return ptr;
-  }
-
-  // Allocate one MB from the current node, and will use it for small objects with size _size
-  char * allocateOnemb(size_t size) {
-    char * ptr = NULL; 
-
-    // Check the freed bigObjects at first, since they may be still hot in cache. 
-    ptr = allocateFromFreelist(SIZE_ONE_MB_BAG); 
-
-    // If there is no freed bigObjects, getting one from the bump pointer
-    if(ptr == NULL) {
-      ptr = allocateFromBumppointer(SIZE_ONE_MB_BAG);
-    } 
-
-    // Mark the size information
-    markPerMBInfo(ptr, SIZE_ONE_MB_BAG, size);
-
-    return ptr; 
-  }
-
 
   size_t getSize(void * ptr) {
-    // Check the 1MB information in order to find the size. 
-    return _bigObjects->getSize(ptr); 
+    // Check the shadow information in order to find the size. 
+    // TODO:
+    //
   }
 
   bool isSmallObject(size_t size) {
     return (size <= BIG_OBJECT_SIZE_THRESHOLD) ? true : false;
   }
-  
-  void deallocate(int nodeindex, void * ptr) {
-     // Get the size of this object
-     size_t size = getSize(ptr);
 
-     // For a small object, 
-     if(isSmallObject(size)) {
-       // If the node index is the same as the current thread, 
-       // Return this object to per-thread's cache
-       int index = getNodeIndex(); 
-       int sc = getSizeClass(size);
+  void * allocateFromSecondSpan(size_t size) {
 
-       if(index == nodeindex) {
-         // Only return an object to perthread's heap if the object is from the same node
-         current->ptheap->deallocate(ptr, sc);
-       }
-       else {
-          // Return this object to the current node's freelist for different size classes
-        // Based on NumaHeap, this address belongs to the current node.
-        _sizes[sc]->deallocate(ptr);
-       }
-     }
-     else {
-  //     _bigObjects->printSize(ptr);   
-  //     fprintf(stderr, "Thread %d: Deallocate ptr %p size %lx\n", getThreadIndex(), ptr, size); 
-       // Deallocate this object to _bigObjects
-       _bigObjects->deallocate(ptr, size);
-     }
-   }
 
+  }
+
+  void * allocate(size_t size) {
+    void * ptr = NULL; 
+
+    // Allocate from the freelist at first. 
+    int sc;
+    if(isSmallObject(size)) {
+      sc = getSizeClass(size);
+      ptr = _sizes[sc]->allocate();
+    }
+    else {
+      ptr = _bigObjects->allocate(size);
+    }
+      
+    // Allocate from the bump pointer right now
+    if(ptr == NULL) {
+      // Now we are using different size requirement for this.
+      if(size <= MT_MIDDLE_SPAN_THRESHOLD) {
+        size_t sc = (); 
+
+        // Allocate one bag from the first span
+        // Then add all objects to the free list, except the first one. 
+         
+        ptr = (char *)_bpSmall;
+        _bpSmall += size;
+      }
+      else if () {
+        // Allocate from the second span
+        ptr = allocateFromSecondSpan(size);
+      }
+      else {
+        // Allocate from the big span
+      }
+    }
+  }
+
+  void deallocateBigObject(void *ptr) {
+    // Traverse the list of big objects, and then invokde 
+    // munmap to return this object back to the OS.
+    
+  }
+
+  void deallocate(void * ptr) {
+    if(ptr <= _bpMiddleEnd) {
+      int sc = getSizeClass(ptr);
+      _sizes[sc]->deallocate(ptr);
+    }
+    else { 
+      deallocateBigObject(ptr);
+    }
 };
 #endif

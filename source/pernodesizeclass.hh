@@ -33,6 +33,21 @@ class PerNodeSizeClass {
       _freeArray = (void **)ptr;
     }  
 
+    // Note: this function is only invoked by the main thread's heap. 
+    // Therefore, there is no need to utilize the lock protect, which will be only 
+    // invoked when there is just one thread.
+    void * allocate( ) {
+      void * ptr = NULL;
+
+      if(_avails > 0) {
+        _next--;
+        _avails--;
+        ptr = _freeArray[_next];
+      }
+
+      return ptr;
+    }
+
     // Allocate multiple objects in a batch from the pernode's size class 
     int allocateBatch(unsigned long requestNum, void ** dest) {
       int  num = 0; 

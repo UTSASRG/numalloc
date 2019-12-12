@@ -37,6 +37,8 @@ void heapinitialize();
 // http://david-grs.github.io/tls_performance_overhead_cost_linux/, 
 // TLS is very efficient. I also have verified this by myself. 
 thread_local thread_t * current;
+unsigned int mainNodeIndex; 
+
 
 char localBuffer[4096];
 char * localPtr = NULL;
@@ -90,6 +92,7 @@ extern "C" {
                                         alias("xxposix_memalign")));
 }
 __attribute__((constructor)) void initializer() {
+  mainNodeIndex = getRealNodeIndex();
   heapinitialize();
 }
 

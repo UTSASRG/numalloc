@@ -124,14 +124,6 @@ class xthread {
 
   void finalize() {}
 
-  // The code is adapted from https://stackoverflow.com/questions/16862620/numa-get-current-node-core
-  // It utilizes rdtscp to get the node id, which should take much less time than invoking a system call.
-  int getRealNodeIndex(void)
-  {
-    unsigned long a,d,c;
-    __asm__ volatile("rdtscp" : "=a" (a), "=d" (d), "=c" (c));
-    return (c & 0xFFF000)>>12;
-  }
   
 	void initializeInitialThread(void) {
 		int tindex = allocThreadIndex();
