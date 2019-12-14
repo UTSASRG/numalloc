@@ -38,9 +38,6 @@ class MainHeap {
   typedef struct t_bigObject {
     char * addr; 
     size_t size;
-    // For some cases, we will have to mmap twice with one allocation
-    char * addr2; 
-    size_t size;
   } BigObject;
 
 #define MT_MIDDLE_SPAN_THRESHOLD (PAGE_SIZE * (NUMA_NODES-1))
@@ -61,21 +58,37 @@ class MainHeap {
     }
 
     // We will always utilize the bump pointer to allocate a new object
-    void * allocate(size_t size) {
-      void * ptr;
+    void * allocate(size_t sz, int nodeindex) {
+      void * ptr = NULL;
+      bool isHugePage =false; 
 
-      size_t size = (); 
-      if(size <= SIZE_HUGE_PAGE * (NUMA_NODES-1)) {
-        // Then use the normal pages, but with the block-interleaved way for the allocation
-        ptr = _bpBig;
+      size_t size = alignup(sz, PAGE_SIZE);
+      ptr = _bpBig;
+      size_t pages = size/PAGE_SIZE;
+      if(size > SIZE_HUGE_PAGE * (NUMA_NODES-1)) {
+        // Get the number of huge pages at first
+        hugePages = size/SIZE_HUGE_PAGE; 
+        if(size/SIZE_HUGE_PAGE != 0) {
+          hugePages += 1;
+        }
+
+        // Compute the blockSize. We will try to be balanced.
+        // Overall, we don't want one node has 1 more blocks than the others. 
+        size = hugePages * SIZE_HUGE_PAGE;
+        isHugePage = true; 
+     }
+     _bpBig += size;
+
+      // Allocate the memory from the OS 
+      ptr = MM:mmapAllocatePrivate(size, ptr, isHugePage);
+      _objects[_next].addr = ptr;
+      _objects[_next].size = size;
+      _next++;
+     
+      // Now binding the memory to different nodes. 
+      MM::bindMemoryBlockwise((char *)ptr, pages, nodeindex, isHugePage); 
         
-        ptr = MM:mmapPageInterleaved(
-
-        _bpBig += size;
-      }
-      else {
-
-      } 
+      // Adding the object to the list
       return ptr;
     }
 
@@ -96,7 +109,8 @@ class MainHeap {
         }
       }
     }
-  }
+
+  };
 
   private:
     char * _begin;

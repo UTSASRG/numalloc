@@ -77,42 +77,33 @@ public:
     return ptr;
   }
 
-  static void * mmapBlockInterleaved(size_t sz, void * startaddr, int nodeindex) {
-    void * ptr;
-    bool isHugePage = false;
+  static void bindMemoryBlockwise(char * pointer, size_t pages, int startNodeIndex, bool isHugePage) {
+    int pagesPerNode = pages/NUMA_NODES;
 
-    size_t size = alignup(sz, PAGE_SIZE);
-    if(size < NUMA_NODES * PAGE_SIZE) {
-      fprintf(stderr, "Wrong size information for the current allocation\n");
-      exit(-1);
-    }
-    else if (size >= NUMA_NODES * SIZE_HUGE_PAGE) {
-      isHugePage = true; 
-    }
+    double totalStrides = (double)(pages - pagesPerNode*NUMA_NODES)/NUMA_NODES;
+    double stride = (double)1/NUMA_NODES;
 
-    // Mmap a chunk at first.
-    ptr = mmapAllocatePrivate(size, startaddr, isHugePage); 
-    
-    // Now bind the memory to different nodes with block size. 
-    size_t blockSize = size/NUMA_NODES;
-
-    if(size % NUMA_NODES != 0 ) {
-      blockSize += 1;
-    }
-
-    // Starting block will be the local node
-    int nindex = mainNodeIndex;
-    char * pointer = (char *)ptr;
+    int nindex = startNodeIndex; 
+    double strides = 0.0;
+    size_t size;
     for(int i = 0; i < NUMA_NODES; i++) {
-      bindMemoryToNode(pointer, blockSize, nindex);
-      pointer += blockSize;
+      int pages = pagesPerNode;
+      strides += stride; 
+      if(strides <= totalStrides) {
+        pages += 1;
+      } 
+    
+      // Now we will compute the actual size 
+      size = isHugePage ? (pages * SIZE_HUGE_PAGE) : (pages * PAGE_SIZE);
+
+      bindMemoryToNode(pointer, size, nindex);
+
+      pointer += size;
       nindex++;
       if(nindex == NUMA_NODES) {
-       nindex = 0;
-      } 
+        nindex = 0;
+      }
     }
-
-    return ptr;
   }
 
   static void * mmapFromNode(size_t sz, int nodeindex, void * startaddr = NULL, bool isHugePage = false) {
