@@ -17,9 +17,6 @@ void * PerThreadSizeClass::allocateOneIfAvailable() {
 void * PerThreadSizeClass::allocate() {
     void * ptr = NULL; 
 
-    //if(_sc == 2) {
-    //  fprintf(stderr, "_avails at %p, _size %p, _pointer at %p, _pointerEnd at %p\n", &_avails, &_size, &_bumpPointer, &_bumpPointerEnd);
-   // }
     if(_avails > 0) {
       ptr = allocateOneIfAvailable(); 
       return ptr;
@@ -47,13 +44,11 @@ void * PerThreadSizeClass::allocate() {
       }
     }
 
-
     if(ptr == NULL) {
       _allocs++;
       // Now allocate from the never used ones
       // We don't need to change _avails and _next any more
       if(_bumpPointer < _bumpPointerEnd) {
-//        fprintf(stderr, "ALLOCATE from bump pointer\n");
         ptr = _bumpPointer;
         _bumpPointer += _size; 
       }
@@ -62,7 +57,6 @@ void * PerThreadSizeClass::allocate() {
         _bumpPointer = NumaHeap::getInstance().allocateOnembFromNode(getNodeIndex(), _size); 
         _bumpPointerEnd = _bumpPointer + SIZE_ONE_MB_BAG;
 
-      //  fprintf(stderr, "Getting one mb now\n");
         // Now perform the allocation
         ptr = _bumpPointer;
         _bumpPointer += _size; 
@@ -72,7 +66,7 @@ void * PerThreadSizeClass::allocate() {
   }
  
   // Return an object starting with ptr to the PerThreadSizeClass
-void PerThreadSizeClass::deallocate(void *ptr) {
+  void PerThreadSizeClass::deallocate(void *ptr) {
     if(_discard == true) {
       if(_next < _max) {
         _discard = false;
@@ -89,13 +83,13 @@ void PerThreadSizeClass::deallocate(void *ptr) {
 
     // If there is no spot to hold next deallocation, put some objects to PerNodeSizeClass 
     if(_next >= _max) {
-      int size;
+      int items;
       // We would like to maintain the same order. 
       int first = _next - _batch;   
-      size = NumaHeap::getInstance().deallocateBatchToNodeFreelist(getNodeIndex(), _sc, _batch, &_freeArray[first]);
-      _avails -= size;
-      _next -= size;
-      if(size == 0) {
+      items = NumaHeap::getInstance().deallocateBatchToNodeFreelist(getNodeIndex(), _sc, _batch, &_freeArray[first]);
+      _avails -= items;
+      _next -= items;
+      if(items == 0) {
         fprintf(stderr, "Increase the size for PerNodeSizeClass or PerThreadSizeCalss for _sc %ld\n", _sc);
         _discard = true;
         //assert(size != 0);
