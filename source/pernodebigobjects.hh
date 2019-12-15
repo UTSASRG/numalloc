@@ -79,7 +79,7 @@ public:
 
     // confirm why _info has been corrupted. 
     _info = (PerMBInfo *)ptr;
-    memset(ptr, 0, (heapsize>>SIZE_ONE_MB_SHIFT)*sizeof(PerMBInfo));
+    //memset(ptr, 0, (heapsize>>SIZE_ONE_MB_SHIFT)*sizeof(PerMBInfo));
   
   }
 

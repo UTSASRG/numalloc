@@ -38,6 +38,7 @@ class PerNodeSizeClass {
     // invoked when there is just one thread.
     void * allocate( ) {
       void * ptr = NULL;
+      lock();
 
       if(_avails > 0) {
         _next--;
@@ -45,6 +46,7 @@ class PerNodeSizeClass {
         ptr = _freeArray[_next];
       }
 
+      unlock();
       return ptr;
     }
 
@@ -81,6 +83,21 @@ class PerNodeSizeClass {
       return num;
     }
 
+
+    // Only invoked by the main thread.
+    void insertObjectsToFreeList(char * start, char * stop) {
+      char * ptr = start; 
+
+      while(ptr < stop) {
+        _freeArray[_next] = ptr;
+        ptr += _size; 
+        _avails++;
+        _next++;
+      }
+
+      return;
+    }
+
     // Deallocate multiple objects to the pernode's size class. 
     int deallocateBatch(unsigned long requestNum, void ** dest) {
       int  num = requestNum; 
@@ -108,6 +125,10 @@ class PerNodeSizeClass {
 
       return num;
    }
+
+    inline size_t getSize() {
+      return _size;
+    }
 
     // Putting an entry to the pernode freelist of a size class
     void deallocate(void * ptr) {

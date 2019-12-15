@@ -89,6 +89,8 @@ extern "C" {
                                         alias("xxposix_memalign")));
 }
 
+void heapinitialize();
+
 __attribute__((constructor)) void initializer() {
   heapinitialize();
 }

@@ -1,4 +1,5 @@
 
+#include "mm.hh"
 #include "perthreadsizeclass.hh"
 #include "numaheap.hh"
 
@@ -12,7 +13,6 @@ void * PerThreadSizeClass::allocateOneIfAvailable() {
     _avails--;
     return ptr;
 }
-
 
 void * PerThreadSizeClass::allocate() {
     void * ptr = NULL; 

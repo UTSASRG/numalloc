@@ -63,9 +63,13 @@ public:
   // Initialization of the NUMA Heap
   void initialize(void) {
     //unsigned long heapSize = (NUMA_NODES + 1) * SIZE_PER_NODE;
-#ifndef SPEC_MAINTHREAD_SUPPORT
     unsigned long heapSize = NUMA_NODES * SIZE_PER_NODE;
     _heapBegin = 0x100000000000; 
+#ifdef SPEC_MAINTHREAD_SUPPORT
+    _mainHeapBegin = _heapBegin - 3*SIZE_PER_NODE;
+    _mainHeap.initialize(getNodeIndex(), (void *)_mainHeapBegin);
+    _mainHeapPhase = true;  
+#endif
 
   // fprintf(stderr, "_heapBegin is %lx\n", _heapBegin);
     // Setting the _heapEnd address
@@ -90,20 +94,26 @@ public:
 
       pnheapPointer += SIZE_PER_NODE;
     }
-#else
-
-
-#endif
  
   }
- 
+
+  void stopMainHeapPhase() {
+    _mainHeapPhase = false;
+  } 
+
+  void startMainHeapPhase() {
+    _mainHeapPhase = true;
+  } 
 
   void * allocate(size_t size) {
     void * ptr = NULL; 
 
-#ifndef SPEC_MAINTHREAD_SUPPORT
+#ifdef SPEC_MAINTHREAD_SUPPORT
 //   fprintf(stderr, "Thread %d at node %d: allocation size %ld\n", current->index, current->nindex, size);
-
+    if(_mainHeapPhase) {
+      return _mainHeap.allocate(size);
+    }
+#endif
     // Check the size information. 
     if(size <= BIG_OBJECT_SIZE_THRESHOLD) {
       // Small objects will be always allocated via PerThreadSizeClass
@@ -117,9 +127,7 @@ public:
       // Always allocate a large object from PerNodeHeap directly 
       ptr = _nodes[index].allocateBigObject(size);
     }
-#else
 
-#endif
    
     return ptr;
   } 
@@ -139,6 +147,11 @@ public:
   }
 
   void deallocate(void * ptr) {
+#ifdef SPEC_MAINTHREAD_SUPPORT
+    if(((uintptr_t)ptr >= _mainHeapBegin) && ((uintptr_t)ptr < _heapBegin)) {
+      _mainHeap.deallocate(ptr);
+    }
+#endif
     if((uintptr_t)ptr < _heapBegin || (uintptr_t)ptr > _heapEnd) {
       return; 
     }
@@ -166,6 +179,11 @@ public:
 
 private:
   size_t _heapBegin;
+#ifdef SPEC_MAINTHREAD_SUPPORT
+  size_t _mainHeapBegin;
+  MainHeap _mainHeap;
+  bool   _mainHeapPhase; 
+#endif
   size_t _heapEnd; 
   PerNodeHeap _nodes[NUMA_NODES];
 };	

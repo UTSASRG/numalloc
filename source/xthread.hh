@@ -197,34 +197,7 @@ class xthread {
 
   inline thread_t* getThread(int index) { return &_threads[index]; }
 
-	int thread_create(pthread_t * thread, const pthread_attr_t * attr, threadFunction * fn, void * arg) {
-    // Since we will create the children threads, set this flag to be true. 
-    // This flag will change the allocation of the main thread, but should not affect
-    // other threads.
-    if(current->hasChildrenthreads == false)
-      current->hasChildrenthreads = true;
-
-    int tindex = allocThreadIndex();
-
-		// Acquire the thread structure.
-		thread_t* children = getThread(tindex);	
-		children->index = tindex;
-		children->startArg = arg;
-		children->startRoutine = fn;
-
-    // Create the thread and bind the thread to the specific node (passed by _tattrs[nodeindex])
-		int result = Real::pthread_create(thread, &_tattrs[children->nindex], xthread::startThread, (void *)children);
-
-		if(result) {
-			FATAL("thread_create failure");
-		}
-
-		// Setting up this in the creater thread so that
-		// pthread_join can always find its pthread_t. 
-		// Otherwise, it may fail if the child haven't set this value before the join
-		children->thread = *thread;
-		return result;
-	}
+	int thread_create(pthread_t * thread, const pthread_attr_t * attr, threadFunction * fn, void * arg);
 
   static void * startThread(void * arg) {
     thread_t * current = (thread_t *) arg;
@@ -251,22 +224,7 @@ class xthread {
     return index; 
   }
 
-	int thread_join(pthread_t thread, void ** retval) {
-		int ret;
-
-		if((ret = Real::pthread_join(thread, retval)) == 0) {
-        int joinee = -1;
-
-        // Clean up the thread entry so that the future threads 
-        // can utilize the same entry, and also the 
-        lock();
-        joinee = findJoineeIndex(thread);
-        _threads[joinee].available = true;
-        _alives--;
-				unlock();
-		}
-		return ret;
-	}
+	int thread_join(pthread_t thread, void ** retval);
 
 	void lock() {
 		spin_lock();
