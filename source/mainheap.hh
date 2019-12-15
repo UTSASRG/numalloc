@@ -5,7 +5,6 @@
 #include<stdlib.h>
 #include "xdefines.hh"
 #include "mm.hh"
-#include "pernodebigobjects.hh"
 #include "pernodesizeclass.hh"
 #include "perthread.hh"
 
@@ -36,7 +35,7 @@
 class MainHeap {
 
   typedef struct t_bigObject {
-    char * addr; 
+    void * addr; 
     size_t size;
   } BigObject;
 
@@ -51,6 +50,7 @@ class MainHeap {
       unsigned int _next; 
       BigObject _objects[MT_BIG_OBJECTS_NUM];
 
+    public:
     void initialize(void * start, size_t size) {
       _next = 0;
       _bpBig = (char *)start;
@@ -67,7 +67,7 @@ class MainHeap {
       size_t pages = size/PAGE_SIZE;
       if(size > SIZE_HUGE_PAGE * (NUMA_NODES-1)) {
         // Get the number of huge pages at first
-        hugePages = size/SIZE_HUGE_PAGE; 
+        size_t hugePages = size/SIZE_HUGE_PAGE; 
         if(size/SIZE_HUGE_PAGE != 0) {
           hugePages += 1;
         }
@@ -80,7 +80,7 @@ class MainHeap {
      _bpBig += size;
 
       // Allocate the memory from the OS 
-      ptr = MM:mmapAllocatePrivate(size, ptr, isHugePage);
+      ptr = MM::mmapAllocatePrivate(size, ptr, isHugePage);
       _objects[_next].addr = ptr;
       _objects[_next].size = size;
       _next++;
@@ -121,6 +121,9 @@ class MainHeap {
     char * _bpMiddle;
     char * _bpMiddleEnd;
 
+    class mtBigObjects  _bigObjects;
+
+    pthread_spinlock_t  _lock; 
     size_t _scMagicValue; 
 
     // Currently, size class is from 2^4 to 2^19 (512 KB), with 16 sizes in total.
@@ -133,9 +136,6 @@ class MainHeap {
  public:
    size_t computeMetadataSize(void) {
      size_t size = 0;
-
-      // Compute the size for _bigObjects. 
-      size += sizeof(PerNodeBigObjects) + _bigObjects->computeImplicitSize(heapsize);
 
       // Compute the size for _classes
       size += (sizeof(PerNodeSizeClass) + sizeof(PerNodeSizeClass *)) * SMALL_SIZE_CLASSES;
@@ -172,14 +172,13 @@ class MainHeap {
       _bpMiddleEnd = _bpMiddle + SIZE_PER_SPAN;
 
       // Note that the _bpBig is not initialized at first.
-      _bpBig = _bpMiddleEnd;
-      _bpBigEnd = _bpBig + SIZE_PER_SPAN; 
+      _bigObjects.initialize(_bpMiddleEnd, SIZE_PER_SPAN);
 
       _nodeindex = nodeindex; 
       _numClasses = SMALL_SIZE_CLASSES;
 
       // Compute the metadata size for the management.
-      size_t metasize = computeMetadataSize(heapsize);
+      size_t metasize = computeMetadataSize();
       _scMagicValue = 32 - LOG2(SIZE_CLASS_START_SIZE);
 
       // Binding the memory to the specified node.
@@ -188,17 +187,10 @@ class MainHeap {
       fprintf(stderr, "Initialize pernodeheap's metadata from %p to %p\n", ptr, ptr+metasize);
 
       // Initialization right now.
-      _lock = (pthread_spinlock_t *)ptr; 
-      pthread_spin_init(_lock, PTHREAD_PROCESS_PRIVATE);
+      pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
       
-      ptr += sizeof(pthread_spinlock_t) +4; 
-
       // Initilize the PerNodeMBInfo
       // Initialize the _bigObjects
-      _bigObjects = (PerNodeBigObjects *)ptr; 
-      ptr += sizeof(PerNodeBigObjects); 
-      _bigObjects->initialize(ptr, start, heapsize); 
-      ptr += _bigObjects->computeImplicitSize(heapsize);
 
       // Initilize the size classes; 
       //size += sizeof(PerNodeSizeClass) * SMALL_SIZE_CLASSES;
@@ -227,7 +219,11 @@ class MainHeap {
       }
    } 
 
-  
+  int getSizeClass(void * ptr) {
+    //TODO 
+    return 0;
+  }
+
   int getSizeClass(size_t size) {
     int sc;
 
@@ -248,7 +244,7 @@ class MainHeap {
   size_t getSize(void * ptr) {
     // Check the shadow information in order to find the size. 
     // TODO:
-    //
+    return 0;
   }
 
   bool isSmallObject(size_t size) {
@@ -256,8 +252,9 @@ class MainHeap {
   }
 
   void * allocateFromSecondSpan(size_t size) {
-
-
+    void * ptr = NULL;
+  
+    return ptr;
   }
 
   void * allocate(size_t size) {
@@ -270,14 +267,14 @@ class MainHeap {
       ptr = _sizes[sc]->allocate();
     }
     else {
-      ptr = _bigObjects->allocate(size);
+      ptr = _bigObjects.allocate(size, _nodeindex);
     }
       
     // Allocate from the bump pointer right now
     if(ptr == NULL) {
       // Now we are using different size requirement for this.
       if(size <= MT_MIDDLE_SPAN_THRESHOLD) {
-        size_t sc = (); 
+        //size_t sc = getSize(); 
 
         // Allocate one bag from the first span
         // Then add all objects to the free list, except the first one. 
@@ -285,7 +282,7 @@ class MainHeap {
         ptr = (char *)_bpSmall;
         _bpSmall += size;
       }
-      else if () {
+      else if (size <= MT_BIG_SPAN_THESHOLD) {
         // Allocate from the second span
         ptr = allocateFromSecondSpan(size);
       }
@@ -293,12 +290,15 @@ class MainHeap {
         // Allocate from the big span
       }
     }
+
+    return ptr;
   }
 
   void deallocateBigObject(void *ptr) {
     // Traverse the list of big objects, and then invokde 
     // munmap to return this object back to the OS.
-    
+   
+    return; 
   }
 
   void deallocate(void * ptr) {
@@ -309,5 +309,7 @@ class MainHeap {
     else { 
       deallocateBigObject(ptr);
     }
+  }
+ 
 };
 #endif

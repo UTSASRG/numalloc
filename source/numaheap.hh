@@ -31,9 +31,9 @@
 #include "dlist.h"
 #include "pernodeheap.hh"
 #include "perthread.hh"
-#ifdef SPEC_MAINTHREAD_SUPPORT
+//#ifdef SPEC_MAINTHREAD_SUPPORT
 #include "mainheap.hh"
-#endif
+//#endif
 
 /* How to deal with the heap allocation. If one thread continuously allocates 
  * large chunk of data, such as over the number of allocations and the total size.
@@ -66,7 +66,6 @@ public:
 #ifndef SPEC_MAINTHREAD_SUPPORT
     unsigned long heapSize = NUMA_NODES * SIZE_PER_NODE;
     _heapBegin = 0x100000000000; 
-   //_heapBegin = 0x100000000000-SIZE_PER_NODE; 
 
   // fprintf(stderr, "_heapBegin is %lx\n", _heapBegin);
     // Setting the _heapEnd address
@@ -103,7 +102,6 @@ public:
     void * ptr = NULL; 
 
 #ifndef SPEC_MAINTHREAD_SUPPORT
-  // if(current->index == 0)
 //   fprintf(stderr, "Thread %d at node %d: allocation size %ld\n", current->index, current->nindex, size);
 
     // Check the size information. 
@@ -142,11 +140,9 @@ public:
 
   void deallocate(void * ptr) {
     if((uintptr_t)ptr < _heapBegin || (uintptr_t)ptr > _heapEnd) {
-      //fprintf(stderr, "invalid ptr\n");
       return; 
     }
     
-
     // Check the address range of this ptr
     size_t offset = (size_t)ptr - _heapBegin;
 
