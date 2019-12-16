@@ -108,6 +108,7 @@ public:
 #endif
   void * allocate(size_t size) {
     void * ptr = NULL; 
+   //fprintf(stderr, "Thread %d: allocate size %ld\n", current->index, size);
 
 #ifdef SPEC_MAINTHREAD_SUPPORT
 //   fprintf(stderr, "Thread %d at node %d: allocation size %ld\n", current->index, current->nindex, size);

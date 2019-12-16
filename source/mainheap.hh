@@ -89,6 +89,7 @@ class MainHeap {
 
       // Allocate the memory from the OS 
       ptr = MM::mmapAllocatePrivate(size, ptr, isHugePage);
+    fprintf(stderr, "BIG malloc %ld ptr %p\n", sz, ptr);
       _objects[_next].addr = ptr;
       _objects[_next].size = size;
       _next++;
@@ -102,10 +103,12 @@ class MainHeap {
 
     void deallocate(void * ptr) {
       int i;
+    
 
       for(i = 0; i < _next; i++) {
         // Now we have found the object
         if(ptr == _objects[i].addr) {
+          fprintf(stderr, "BIG free ptr %p size %lx\n", ptr, _objects[i].size);
           // Simply return this object to the OS right now
           munmap(ptr, _objects[i].size);
 
@@ -181,6 +184,7 @@ class MainHeap {
 
       // Map an interleaved block for the small pages.
       _bpSmall = (char *)MM::mmapPageInterleaved(SIZE_PER_SPAN, (void *)_begin);
+      //_bpSmall = (char *)MM::mmapAllocatePrivate(SIZE_PER_SPAN, (void *)_begin);
       _bpSmallEnd = _bpSmall + SIZE_PER_SPAN;
 
 //      fprintf(stderr, "_bpSmall is %p\n", _bpSmall);
@@ -198,9 +202,6 @@ class MainHeap {
       _numClasses = SMALL_SIZE_CLASSES;
       _scMagicValue = 32 - LOG2(SIZE_CLASS_START_SIZE);
      
-
-      //_bagShiftBits = 13 + NUMA_NODES; 
-
       switch(NUMA_NODES) {
         case 16: 
           _bagShiftBits = 17;
@@ -345,14 +346,15 @@ class MainHeap {
         markPerBagInfo(ptr, classsize, classsize);
       }
     }
-    
+   
+    //fprintf(stderr, "malloc %ld ptr %p\n", size, ptr);
     return ptr;
   }
 
   void deallocate(void * ptr) {
     if(ptr <= _bpMiddleEnd) {
       int sc = getSizeClass(ptr);
-      //fprintf(stderr, "ptr %p with size %lx\n", ptr, getSize(ptr));
+      //fprintf(stderr, "free ptr %p with size %lx\n", ptr, getSize(ptr));
       if(sc > 16) {
         unsigned long index = getBagIndex(ptr);
         PerBagInfo * info = &_info[index];
