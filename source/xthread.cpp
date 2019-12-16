@@ -52,9 +52,11 @@ int xthread::thread_create(pthread_t * thread, const pthread_attr_t * attr, thre
 	children->startRoutine = fn;
 
   // If there are two threads right now, we will stop the main heap phase.
+#ifdef SPEC_MAINTHREAD_SUPPORT
   if(_alives == 2) {
     NumaHeap::getInstance().stopMainHeapPhase();
   }
+#endif
 
   // Create the thread and bind the thread to the specific node (passed by _tattrs[nodeindex])
 	int result = Real::pthread_create(thread, &_tattrs[children->nindex], xthread::startThread, (void *)children);
@@ -85,9 +87,11 @@ int xthread::thread_join(pthread_t thread, void ** retval) {
 	  unlock();
 	}
   
+#ifdef SPEC_MAINTHREAD_SUPPORT
   if(_alives == 1) {
     NumaHeap::getInstance().startMainHeapPhase();
   }
+#endif
 	return ret;
 }
 

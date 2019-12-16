@@ -64,10 +64,10 @@ public:
   void initialize(void) {
     //unsigned long heapSize = (NUMA_NODES + 1) * SIZE_PER_NODE;
     unsigned long heapSize = NUMA_NODES * SIZE_PER_NODE;
-    _heapBegin = 0x100000000000; 
+    _heapBegin = 0x200000000000; 
 #ifdef SPEC_MAINTHREAD_SUPPORT
     _mainHeapBegin = _heapBegin - 3*SIZE_PER_NODE;
-    _mainHeap.initialize(getNodeIndex(), (void *)_mainHeapBegin);
+    _mainHeap.initialize(getRealNodeIndex(), (void *)_mainHeapBegin);
     _mainHeapPhase = true;  
 #endif
 
@@ -97,6 +97,7 @@ public:
  
   }
 
+#ifdef SPEC_MAINTHREAD_SUPPORT
   void stopMainHeapPhase() {
     _mainHeapPhase = false;
   } 
@@ -104,7 +105,7 @@ public:
   void startMainHeapPhase() {
     _mainHeapPhase = true;
   } 
-
+#endif
   void * allocate(size_t size) {
     void * ptr = NULL; 
 
@@ -168,6 +169,11 @@ public:
   }
 
   size_t getSize(void *ptr) {
+#ifdef SPEC_MAINTHREAD_SUPPORT
+    if(((uintptr_t)ptr >= _mainHeapBegin) && ((uintptr_t)ptr < _heapBegin)) {
+      return _mainHeap.getSize(ptr);      
+    }
+#endif
     // Check the address range of this ptr
     size_t offset = (size_t)ptr - _heapBegin;
 

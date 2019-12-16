@@ -45,7 +45,7 @@ class MainHeap {
 
 // We will use twice as one bag, which is the unit for the shadow memory
 #define BAG_SIZE_SMALL_OBJECTS (2 * MT_MIDDLE_SPAN_THRESHOLD)
-#define TIMES 8
+#define TIMES 32
 
   class mtBigObjects {
     private:
@@ -178,6 +178,8 @@ class MainHeap {
       // Map an interleaved block for the small pages.
       _bpSmall = (char *)MM::mmapPageInterleaved(SIZE_PER_SPAN, (void *)_begin);
       _bpSmallEnd = _bpSmall + SIZE_PER_SPAN;
+
+//      fprintf(stderr, "_bpSmall is %p\n", _bpSmall);
 
       // MMap the next span at first, and then use mbind to change the binding only
       // Note that we may only need to change it to huge page support (VERY RARE), if the allocation is 
