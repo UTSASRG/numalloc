@@ -79,7 +79,11 @@ class MainHeap {
         // Compute the blockSize. We will try to be balanced.
         // Overall, we don't want one node has 1 more blocks than the others. 
         size = pages * SIZE_HUGE_PAGE;
-        isHugePage = true; 
+        isHugePage = true;
+        
+        ptr = (void *)alignup((uintptr_t)ptr, SIZE_HUGE_PAGE); 
+        //fprintf(stderr, "BigObject allocate: size %lx, pages %lx, ptr %p\n", sz, pages, ptr); 
+        _bpBig = (char *)ptr;   
      }
      _bpBig += size;
 
@@ -217,14 +221,13 @@ class MainHeap {
         default:
           fprintf(stderr, "Please provide more support for specified %d nodes\n", NUMA_NODES);
        };
+      
       // Compute the metadata size for the management.
       size_t metasize = computeMetadataSize();
 
       // Binding the memory to the specified node.
       char * ptr = (char *)MM::mmapFromNode(alignup(metasize, PAGE_SIZE), nodeindex);
       
-      fprintf(stderr, "Initialize pernodeheap's metadata from %p to %p\n", ptr, ptr+metasize);
-
       // Initilize the size classes; 
       _sizes = (PerNodeSizeClass **)ptr;
       ptr += sizeof(PerNodeSizeClass *) * SMALL_SIZE_CLASSES;
@@ -252,8 +255,6 @@ class MainHeap {
 
       // Now initialize the PerBagInfo 
       _info = (PerBagInfo *)ptr;
-
-      fprintf(stderr, "PerBagInfo for the main heap starts at %p. Watch address %p\n", _info, &_info[74]);
    } 
   
   // We will reserve a block of memory to store the size information of each chunk,
