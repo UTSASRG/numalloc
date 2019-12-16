@@ -45,7 +45,7 @@ class MainHeap {
 
 // We will use twice as one bag, which is the unit for the shadow memory
 #define BAG_SIZE_SMALL_OBJECTS (2 * MT_MIDDLE_SPAN_THRESHOLD)
-#define TIMES 32
+#define TIMES 128
 
   class mtBigObjects {
     private:
@@ -252,12 +252,15 @@ class MainHeap {
 
       // Now initialize the PerBagInfo 
       _info = (PerBagInfo *)ptr;
+
+      fprintf(stderr, "PerBagInfo for the main heap starts at %p. Watch address %p\n", _info, &_info[74]);
    } 
   
   // We will reserve a block of memory to store the size information of each chunk,
   // in the unit of four pages. 
   int getSizeClass(void * ptr) {
-    size_t size = getSize(ptr);  
+    size_t size = getSize(ptr); 
+   // fprintf(stderr, "getSizeClass ptr %p size %lx\n", ptr, size); 
     return getSizeClass(size);
   }
 
@@ -282,17 +285,22 @@ class MainHeap {
   void markPerBagInfo(void * start, size_t blockSize, size_t realsize) {
     int count = blockSize >> _bagShiftBits; 
 
-    int index = getBagIndex(start); 
+    unsigned long index = getBagIndex(start);
+
     PerBagInfo * info = &_info[index];
+    // fprintf(stderr, "start %p, index %ld, count %d, info %p (offset %lx), realsize %lx, blocksize %lx\n", start, index, count, info, (&_info[index] - &_info[0]), realsize, blockSize);
+
+    // fprintf(stderr, "start %p, index %ld, count %d, info %p, realsize %ld, blocksize %lx\n", start, index, count, info, realsize, blockSize);
     for(int i = 0; i < count; i++) {
       info->size = realsize;
       info++;
     }
   }
 
-  inline size_t getSize(void * ptr) {
+  size_t getSize(void * ptr) {
     // Check the shadow information in order to find the size. 
-    return _info[getBagIndex(ptr)].size; 
+    unsigned long index = getBagIndex(ptr); 
+    return _info[index].size; 
   }
 
   inline bool isBigObject(size_t size) {
@@ -304,6 +312,7 @@ class MainHeap {
 
     // Allocate from the freelist at first. 
     int sc;
+
     if(isBigObject(size)) {
       ptr = _bigObjects.allocate(size, _nodeindex);
       return ptr; 
@@ -335,13 +344,21 @@ class MainHeap {
         markPerBagInfo(ptr, classsize, classsize);
       }
     }
-
+    
     return ptr;
   }
 
   void deallocate(void * ptr) {
     if(ptr <= _bpMiddleEnd) {
       int sc = getSizeClass(ptr);
+      //fprintf(stderr, "ptr %p with size %lx\n", ptr, getSize(ptr));
+      if(sc > 16) {
+        unsigned long index = getBagIndex(ptr);
+        PerBagInfo * info = &_info[index];
+        fprintf(stderr, "ptr %p with index %ld, info %p size %x\n", ptr, index, info, info->size);
+
+        exit(-1);
+      }
       _sizes[sc]->deallocate(ptr);
     }
     else { 

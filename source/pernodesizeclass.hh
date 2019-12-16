@@ -134,14 +134,17 @@ class PerNodeSizeClass {
     void deallocate(void * ptr) {
       lock(); 
 
-      _freeArray[_next] = ptr;
+      if(_next < _max) {
+        _freeArray[_next] = ptr;
         
-      _next++;
-      _avails++;
-      // Check whether _avails objects are more than enough
-      if(_next == _max || _avails == _max) {
-        fprintf(stderr, "The pernode freelist for size class %ld with %ld objects is too small.\n", _size, _max);
-        assert(_avails == _max);
+        _next++;
+        _avails++;
+      
+        // Check whether _avails objects are more than enough
+        if(_next == _max || _avails == _max) {
+          fprintf(stderr, "The pernode freelist for size class %ld with %ld objects is too small.\n", _size, _max);
+          assert(_avails == _max);
+        }
       }
       unlock();
     }
