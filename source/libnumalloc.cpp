@@ -100,20 +100,55 @@ __attribute__((destructor)) void finalizer() {
 
 }
 
-/* Adding the following data structure to 
- * collect numa topology, such as 
- * the number of nodes, and the latency of accessing
- * different nodes.
- * The later one will help the performance by deciding the 
- * collocation in a complicated NUMA environment. 
- * But the first version will not implement it. 
- * Ideally, we could utilize the allocation and deallocation pattern
- * to understand the difference. However, we can't solve this issue
- * when multiple types of threads are accessing the same data, such as 
- * A --> B --> C. How to detect B is inside. 
- */
+__attribute__ ((always_inline)) int recordCallStack(int depth, void** buf) {
 
+  // Fetch the frame address of the topmost stack frame
+  struct stack_frame * current_frame = NULL;
 
+  // Loop condition tests the validity of the frame address given for the
+  // previous frame by ensuring it actually points to a location located
+  // on the stack
+  void * caller_addr = NULL;
+
+  current_frame = (struct stack_frame *)(__builtin_frame_address(0));
+
+  // Initialize the prev_frame pointer to equal the current_frame. This
+  // simply ensures that the while loop below will be entered and
+  // executed and least once
+  struct stack_frame * prev_frame = current_frame;
+
+  int level = 0;
+  int loop_counter = 0;
+  while(level < depth &&  
+      ((void *)prev_frame <= current->startFrame) && 
+      (prev_frame >= current_frame) &&
+      (loop_counter++ < xdefines::MAX_SEARCH_CALLSTACK_DEPTH)
+      ) {
+
+    caller_addr = prev_frame->caller_address;
+
+    if(!selfmap::getInstance().isProberLibrary(caller_addr)){
+      buf[level++] = caller_addr;
+    }
+
+    if(prev_frame == prev_frame->prev){
+      break;
+    }
+    // Walk the prev_frame pointer backward in preparation for the
+    // next iteration of the loop
+    prev_frame = prev_frame->prev;
+  }
+
+  if(level < depth) {
+    for(int i=level; i<depth; i++) {
+      buf[i] = NULL;
+    }
+  }
+
+  return level;
+}
+
+// Heap initialization function
 void heapinitialize() {
 	if(heapInitStatus == E_HEAP_INIT_WORKING) {
     
