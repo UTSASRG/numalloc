@@ -1,7 +1,6 @@
-#if !defined(_HASHMAP_H)
-#define _HASHMAP_H
+#ifndef __HASHMAP_H__
+#define __HASHMAP_H__
 
-#define INIT_META_MAPPING 1
 
 #include <assert.h>
 #include <stddef.h>
@@ -12,6 +11,8 @@
 #include "dlist.hh"
 #include "xdefines.hh"
 #include "real.hh"
+
+#define INIT_META_MAPPING 1
 
 template <class KeyType,                    
           class ValueType,              
@@ -63,7 +64,7 @@ class HashMap {
   bool _initialized;
   struct HashEntry* _entries;
   size_t _buckets;     // How many buckets in total
-  size_t _bucketsUsed; // How many buckets in total
+  size_t _bucketsUsed; // How many buckets in use
 
 #ifdef INIT_META_MAPPING
   LockType entrylock;
@@ -128,7 +129,6 @@ public:
   inline size_t hashIndex(const KeyType& key, size_t keylen) {
     size_t hkey = _hashfunc(key, keylen);
     return hkey & (_buckets-1);
-    //return hkey % _buckets;
   }
 
   // Look up whether an entry is existing or not.
@@ -215,7 +215,7 @@ public:
     return isFound;
   }
 
-  // Free an entry with specified
+  // Free an entry with specified key
   bool erase(const KeyType& key, size_t keylen) {
     assert(_initialized == true);
     size_t hindex = hashIndex(key, keylen);

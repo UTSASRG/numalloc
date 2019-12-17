@@ -28,7 +28,7 @@
 #include <new>
 #include "mm.hh"
 #include "xdefines.hh"
-#include "dlist.h"
+#include "dlist.hh"
 #include "pernodeheap.hh"
 #include "perthread.hh"
 //#ifdef SPEC_MAINTHREAD_SUPPORT
@@ -110,7 +110,8 @@ public:
   // is that the object is allocated in the main thread, but it is 
   // not freed in the same thread (before creating the threads). 
   bool isSharedObject() {
-
+    // TODO
+    return true;
   } 
 #endif
 

@@ -2,7 +2,7 @@
 #define __PER_NODE_BIG_OBJECTS_HH__
 
 #include <pthread.h>
-#include "dlist.h"
+#include "dlist.hh"
 #include "xdefines.hh"
 #include "perthread.hh"
 
@@ -14,7 +14,7 @@ class PerNodeBigObjects {
   // the freelist that is ordered by the deallocation order.
   class PerBigObject {
   public:
-    dlist_t list;
+    list_t list;
     void *  address;
     size_t  size;
   };
@@ -30,7 +30,7 @@ class PerNodeBigObjects {
 
 private:
   // Pointing to freed big objects
-  dlist_t _list;
+  list_t _list;
 
   // A circular array with the maximum of 1024 objects;
   // When an object is used, it will be removed from the list. 
@@ -66,7 +66,7 @@ public:
     //_nindex = ??;
 
     // Initialize the _list and _lock
-    initDLList(&_list); 
+    listInit(&_list); 
     pthread_spin_init(&_lock, 0);
 
     // Initialize the _objects array
@@ -101,7 +101,7 @@ public:
 
     
     // Now search the freelist to find an entry that satisfies the request
-    dlist * entry = _list.next;
+    list_t * entry = _list.next;
 
     do {
       PerBigObject * object = (PerBigObject *)entry; 
@@ -140,27 +140,17 @@ public:
 
         // Unusual case: the object size is the requested size, then we should change the freelist
         if (object->size == 0) {
-          // Remove this entry from the list
-          removeDLNode(&_list, entry);
-          
-          // When the current entry is not the last entry
-          if(entry != (dlist *)&_objects[_next - 1]) {
-            // Copy the last entry here, in order to free an entry for the future use
+          // When the current entry is not the last entry,
+          // then we try to copy the last entry to the current entry, in order to free one entry
+          if(entry != (list_t *)&_objects[_next - 1]) {
+            // Copy the last entry here
             memcpy(entry, (void *)&_objects[_next - 1], sizeof(PerBigObject));
 
-            // Because we copy the last entry to the current node, then the last entry's prev and next node
-            // should be changed to the current entry
-            // Note that no need to change the list pointers for the current entry
-            entry->prev->next = entry;
-            if(entry->next != NULL) {
-              // this is the last entry
-              entry->next->prev = entry;
-            }
-            else {
-              // Update the list's pointer to this entry
-              _list.prev = entry;
-            }
+            // Update the last entry's prev and next node, so that they can be pointed to the current entry
+            // Note that there is no need to change the list pointers for the current entry
+            listUpdateEntry(entry);
           }
+          
           // Freed an entry
           _next--; 
         }
@@ -266,7 +256,8 @@ public:
     lock();
 
     PerBigObject * object = &_objects[_next];
-    initDLEntry(&object->list);
+    
+    nodeInit(&object->list);
     object->size = size; 
     object->address = ptr;
 
@@ -277,7 +268,8 @@ public:
     assert(_next != _max); 
   
     // Insert this entry to the header of freelist. 
-    insertDLBegin(&_list, &object->list);
+    listInsertHead(&object->list, &_list);
+    //insertDLBegin(&_list, &object->list);
 
     // Change PerMBInfo in order to encourage the coalesce TODO:  
     clearPerMBInfo(ptr, size);

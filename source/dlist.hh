@@ -16,12 +16,6 @@ inline void listInit(list_t* node) { nodeInit(node); }
 // Whether a list is empty
 inline bool isListEmpty(list_t* head) { return (head->next == head); }
 
-// Next node of current node
-inline list_t* nextEntry(list_t* cur) { return cur->next; }
-
-// Previous node of current node
-inline list_t* prevEntry(list_t* cur) { return cur->prev; }
-
 // We donot check whetehr the list is empty or not?
 inline list_t* tailList(list_t* head) {
   list_t* tail = NULL;
@@ -47,6 +41,10 @@ inline void listInsertNode(list_t* node, list_t* prev) { __insert_between(node, 
 // Insert between tail and head
 inline void listInsertTail(list_t* node, list_t* head) {
   __insert_between(node, head->prev, head);
+}
+
+inline void listUpdateEntry(list_t * node) {
+  __insert_between(node, node->prev, node->next);
 }
 
 // Insert one entry to the head of specified list.
@@ -75,6 +73,11 @@ inline void listInsertList(list_t* list, list_t* where) {
 inline void listRemoveNode(list_t* node) {
   __list_link(node->prev, node->next);
   nodeInit(node);
+}
+
+// Delete an entry without re-initialization.
+inline void listRemoveNodeOnly(list_t* node) {
+  __list_link(node->prev, node->next);
 }
 
 // Check whether current node is the tail of a list
