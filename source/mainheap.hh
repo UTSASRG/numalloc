@@ -89,7 +89,7 @@ class MainHeap {
 
       // Allocate the memory from the OS 
       ptr = MM::mmapAllocatePrivate(size, ptr, isHugePage);
-    fprintf(stderr, "BIG malloc %ld ptr %p\n", sz, ptr);
+//    fprintf(stderr, "BIG malloc %ld ptr %p\n", sz, ptr);
       _objects[_next].addr = ptr;
       _objects[_next].size = size;
       _next++;
@@ -108,7 +108,7 @@ class MainHeap {
       for(i = 0; i < _next; i++) {
         // Now we have found the object
         if(ptr == _objects[i].addr) {
-          fprintf(stderr, "BIG free ptr %p size %lx\n", ptr, _objects[i].size);
+//          fprintf(stderr, "BIG free ptr %p size %lx\n", ptr, _objects[i].size);
           // Simply return this object to the OS right now
           munmap(ptr, _objects[i].size);
 

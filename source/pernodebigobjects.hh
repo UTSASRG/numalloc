@@ -62,7 +62,7 @@ public:
     _max = PER_NODE_MAX_BIG_OBJECTS - 1;
     
     _heapBegin = heapBegin;
-    fprintf(stderr, "_heapBegin %p is at %p size is %ld. _max is at %p\n", _heapBegin, &_heapBegin, sizeof(_heapBegin), &_max); 
+    //fprintf(stderr, "_heapBegin %p is at %p size is %ld. _max is at %p\n", _heapBegin, &_heapBegin, sizeof(_heapBegin), &_max); 
     //_nindex = ??;
 
     // Initialize the _list and _lock
@@ -106,7 +106,7 @@ public:
     do {
       PerBigObject * object = (PerBigObject *)entry; 
 
-      //fprintf(stderr, "AllocateBigObject at line %d: check object %p address %p size %lx request size %lx\n", __LINE__, object, object->address, object->size, size);
+  //    fprintf(stderr, "AllocateBigObject at line %d: totalSize %lx --- check object %p address %p size %lx request size %lx\n", __LINE__, _totalSize,  object, object->address, object->size, size);
       // Check whether the current entry can be merged with its neibour to satisfy this request
       if(object->size < size) {
 #if 0
@@ -138,14 +138,17 @@ public:
         object->size -= size; 
         _totalSize -= size;
 
+        //fprintf(stderr, "line %d: get size. Object->size %ld totalsize %ld\n", __LINE__, object->size, _totalSize);
         // Unusual case: the object size is the requested size, then we should change the freelist
         if (object->size == 0) {
+        //fprintf(stderr, "line %d: get size\n", __LINE__);
           // When the current entry is not the last entry,
           // then we try to copy the last entry to the current entry, in order to free one entry
           if(entry != (list_t *)&_objects[_next - 1]) {
             // Copy the last entry here
             memcpy(entry, (void *)&_objects[_next - 1], sizeof(PerBigObject));
 
+            fprintf(stderr, "*******BIG OBJECTS*******\n");
             // Update the last entry's prev and next node, so that they can be pointed to the current entry
             // Note that there is no need to change the list pointers for the current entry
             listUpdateEntry(entry);
@@ -171,10 +174,17 @@ public:
       }
 
       // If the current entry cannot be allocated (due to a smaller size), try next entry 
+      //fprintf(stderr, "entry %p entry->next %p head %p\n", entry, entry->next, &_list);
       entry = entry->next; 
-    } while (entry != NULL);
+      if(isListTail(entry)) {
+        break;
+      }
+      // Now check whether entry is the last entry
+    } while (true);
 
     unlock();
+
+    //fprintf(stderr, "line %d: get object ptr %p\n", __LINE__, ptr);
 
     return ptr; 
   }

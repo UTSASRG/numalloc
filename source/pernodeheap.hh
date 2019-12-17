@@ -157,6 +157,8 @@ class PerNodeHeap {
     //fprintf(stderr, "allocateBigObject at node %d: size %lx\n", _nodeindex, size);
     ptr = allocateFromFreelist(size);
     if(ptr == NULL) {
+      //fprintf(stderr, "allocateBigObject at node %d: size %lx\n", _nodeindex, size);
+   
       // Now allocate from _bpBig
       lockBigHeap();
       ptr = (char *)_bpBig;
@@ -168,7 +170,7 @@ class PerNodeHeap {
       unlockBigHeap();
     }
 
-  //  fprintf(stderr, "allocateBigObject, ptr %p, size %lx\n", ptr, size);
+    //fprintf(stderr, "allocateBigObject, ptr %p, size %lx\n", ptr, size);
     // Mark the object size
     markPerMBInfo(ptr, size, size);
 
