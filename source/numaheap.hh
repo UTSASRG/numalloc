@@ -104,15 +104,23 @@ public:
 
   void startMainHeapPhase() {
     _mainHeapPhase = true;
+  }
+
+  // The idea about identifying a shared object
+  // is that the object is allocated in the main thread, but it is 
+  // not freed in the same thread (before creating the threads). 
+  bool isSharedObject() {
+
   } 
 #endif
+
   void * allocate(size_t size) {
     void * ptr = NULL; 
    //fprintf(stderr, "Thread %d: allocate size %ld\n", current->index, size);
 
 #ifdef SPEC_MAINTHREAD_SUPPORT
 //   fprintf(stderr, "Thread %d at node %d: allocation size %ld\n", current->index, current->nindex, size);
-    if(_mainHeapPhase) {
+    if(_mainHeapPhase && isSharedObject()) {
       return _mainHeap.allocate(size);
     }
 #endif
