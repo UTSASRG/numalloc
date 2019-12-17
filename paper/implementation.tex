@@ -1,6 +1,10 @@
 \section{Design and Implementation}
 \label{sec:implement}
 
+\subsection{Node-Local Allocation}
 
-\subsection{Allocation}
+What is the basic idea of allocation? 
+Basically, upon receiving a request, \NM{} will check the size of the object at first. If the size is less than the threshold of big objects, this is a small object. 
+
+For small objects, \NM{} will always allocate them from the PerThreadHeap. Since a PerThreadHeap will be only utilized by one thread, it won't need the synchronization, and possibly has the better scalability. 
 

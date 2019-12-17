@@ -38,3 +38,4 @@ Memory system performance in a numa multicore multiprocessor
 Scalloc utilizes the same-sized spans in order to encourage memory reuses~\cite{Scalloc}, which is also the same for \NM{}. Salloc has another two contributions, a global backend developed by concurrent data structures, and a constant-time front which returns the spans to the backend. 
 
 Bolosky et. al. propose a simple mechanism to improve the performance by replicating read-only pages to multiple processors, moving pages to the processor that written them, and placing pages to the global memory if they are written by multiple processes ~\cite{Bolosky:1989:SBE:74850.74854}. bl
+

@@ -40,6 +40,16 @@ RTDSCP is a way to know where a thread is executed on.
 
 % From Score: SCOREs runtime system will include a memory manager instrumented to track object ownership with low overhead by leveraging existing thread-local allocation buffers and using per-processor memory pools. The runtime system will sample memory access patterns to detect when memory should be relocated to or initially placed in memory closer to a specific processor
 
+What is the uniqueness of NUMA architecture? 
+
+Remote accesses and imbalance? 
+What are the big issues that could cause the performance issues on the NUMA architecture. 
+
+Programs also have some inherent imbalance. For instance, main thread typically will prepare the data for all children threads. Therefore, many existing tools discover that the block-wised allocation is one way to reduce the imbalance~\cite{XuNuma, XXX}. 
+Also, many applications are typically utilizes a producer-consumer architecture, where the objects allocated in one thread will be deallocated by another thread. This issue, if not handle correctly, will cause the ownership thrifting issues, which will cause that it is impossible to know the placement of an object after a while. Very quickly, it may cause a lot of unnecessary remote accesses, when using the existing NUMA allocator~\cite{}.  
+
+Therefore, a good NUMA allocator should deal with these inherent imbalance of programs. Also, it should deal with the normal problems of NUMA hardware. It should 
+
 \subsection{Novelty}
 
 \begin{itemize}
@@ -51,4 +61,20 @@ RTDSCP is a way to know where a thread is executed on.
 \item We may track the relationship of all objects. Then those objects will be allocated correspondingly. For instance, if the objects are allocated in the main thread, we assume that they will be accessed as a shared mode. Then we would like to allocate in the node-balanced areana initially. 
 
 \end{itemize}
+
+
+\subsection{TODO list}
+
+\begin{enumerate}
+\item Dividing each node's memory into two parts, one for small objects, and one for big objects. 
+\item Making the main thread to use a dedicate memory region. Memory will be allocated in different nodes in an interleaved way. However, this method has some benefits and shortcomings. If the memory is deallocated immediately, then it is time-consuming to put it remotely, and will hurt the performance. Therefore, it is necessary to identify such cases, and do not allocate such objects in the interleaved way. 
+\item Fixing the merge and split for big objects
+\item Thinking about the integration of Ding Chen's theory. (Let Xin to do this part)
+\item Thinking about using the inside of the object for holding the pointers for link list, which will be faster and remove some memory overhead unnecessarily. (Let Xin to do this part)
+\item For producer-consumer threads, we will also track which objects are allocated and freed in different threads. For those objects, maybe they could utilize the same mechanism as the main thread. But we will do this in the future.
+%\item Could we use page-spans instead to ensure the sharing? 
+\item Intercepting mmap and use the mainthread's interleaved idea. 
+
+	
+\end{enumerate}
 
