@@ -6,6 +6,10 @@
 #include "xdefines.hh"
 #include "mm.hh"
 #include "pernodesizeclass.hh"
+#include "hashmap.hh"
+#include "hashfuncs.hh"
+#include "hashvalue.hh"
+#include "real.hh"
 #include "perthread.hh"
 
 /* Basic memory mechanism for main thread.
@@ -65,7 +69,7 @@ class MainHeap {
     void * allocate(size_t sz, int nodeindex) {
       void * ptr = NULL;
       bool isHugePage = false; 
-
+      
       size_t size = alignup(sz, PAGE_SIZE);
       ptr = _bpBig;
       size_t pages = size/PAGE_SIZE;
@@ -153,6 +157,46 @@ class MainHeap {
     // The size of bag will be BAG_SIZE_SMALL_OBJECTS 
     PerBagInfo * _info;  
 
+    class CallsiteInfo {
+      bool _isPrivate; // Is known to be private or not. 
+      int  _allocNum;  // How many allocations in this callsite?
+    
+      public:
+        CallsiteInfo() {
+          _isPrivate = false;
+          _allocNum = 1;
+        }
+
+        inline bool isPrivateCallsite() {
+          return _isPrivate;
+        }
+
+        inline void updateAlloc() {
+          _allocNum++;
+        }
+    }; 
+
+    class localAllocator {
+      public:
+      static void * allocate(size_t size) {
+        return Real::malloc(size);
+      }
+
+      static void free(void *ptr) {
+        return Real::free(ptr);
+      }
+    };
+
+    // CallsiteMap is used to save the callsite and corresponding information (whether it is 
+    // private or not).
+    typedef HashMap<callstack, CallsiteInfo, localAllocator> CallsiteMap;
+    CallsiteMap _callsiteMap;
+
+
+    // ObjectsMap will save the mapping between the object address and its callsite
+    typedef HashMap<void *, void *, localAllocator> ObjectsHashMap;
+    ObjectsHashMap _objectsMap;
+
  public:
    size_t computeMetadataSize(void) {
      size_t size = 0;
@@ -186,8 +230,10 @@ class MainHeap {
       _bpSmall = (char *)MM::mmapPageInterleaved(SIZE_PER_SPAN, (void *)_begin);
       //_bpSmall = (char *)MM::mmapAllocatePrivate(SIZE_PER_SPAN, (void *)_begin);
       _bpSmallEnd = _bpSmall + SIZE_PER_SPAN;
-
 //      fprintf(stderr, "_bpSmall is %p\n", _bpSmall);
+
+      _callsiteMap.initialize(HashFuncs::hashCallStackT, HashFuncs::compareCallStackT);
+      _objectsMap.initialize(HashFuncs::hashAddr, HashFuncs::compareAddr);
 
       // MMap the next span at first, and then use mbind to change the binding only
       // Note that we may only need to change it to huge page support (VERY RARE), if the allocation is 
@@ -309,65 +355,8 @@ class MainHeap {
     return (size >= MT_BIG_SPAN_THESHOLD) ? true : false;
   }
 
-  void * allocate(size_t size) {
-    void * ptr = NULL; 
-
-    // Allocate from the freelist at first. 
-    int sc;
-
-    if(isBigObject(size)) {
-      ptr = _bigObjects.allocate(size, _nodeindex);
-      return ptr; 
-    }
-     
-    // If it is small object, allocate from the freelist at first. 
-    sc = getSizeClass(size);
-    ptr = _sizes[sc]->allocate();
-      
-    // Allocate from the bump pointer right now
-    if(ptr == NULL) {
-      int classsize = _sizes[sc]->getSize();
-
-      // Now we are using different size requirement for this.
-      if(classsize <= MT_MIDDLE_SPAN_THRESHOLD) {
-        // Allocate one bag from the first span
-        ptr = _bpSmall;
-        _bpSmall += BAG_SIZE_SMALL_OBJECTS;
-    
-        // Adding remainning objects to the free list, except the first one. 
-        _sizes[sc]->insertObjectsToFreeList((char *)ptr +classsize, _bpSmall);
-      
-        // Mark PerBagInfo
-        markPerBagInfo(ptr, BAG_SIZE_SMALL_OBJECTS, classsize);
-      }
-      else if (size <= MT_BIG_SPAN_THESHOLD) {
-        ptr = _bpMiddle;
-        _bpMiddle += classsize;
-        markPerBagInfo(ptr, classsize, classsize);
-      }
-    }
-   
-    //fprintf(stderr, "malloc %ld ptr %p\n", size, ptr);
-    return ptr;
-  }
-
-  void deallocate(void * ptr) {
-    if(ptr <= _bpMiddleEnd) {
-      int sc = getSizeClass(ptr);
-      //fprintf(stderr, "free ptr %p with size %lx\n", ptr, getSize(ptr));
-      if(sc > 16) {
-        unsigned long index = getBagIndex(ptr);
-        PerBagInfo * info = &_info[index];
-        fprintf(stderr, "ptr %p with index %ld, info %p size %x\n", ptr, index, info, info->size);
-
-        exit(-1);
-      }
-      _sizes[sc]->deallocate(ptr);
-    }
-    else { 
-      _bigObjects.deallocate(ptr);
-    }
-  }
+  void * allocate(size_t size);
+  void deallocate(void * ptr);
  
 };
 #endif

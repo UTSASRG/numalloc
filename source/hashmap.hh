@@ -1,7 +1,6 @@
 #ifndef __HASHMAP_H__
 #define __HASHMAP_H__
 
-
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -10,31 +9,42 @@
 
 #include "dlist.hh"
 #include "xdefines.hh"
-#include "real.hh"
 
-#define INIT_META_MAPPING 1
+#define LOCK_PROTECTION 0
 
+#if LOCK_PROTECTION
 template <class KeyType,                    
           class ValueType,              
-          class LockType> 
+          class LockType, class SourceHeap>
+#else
+template <class KeyType,
+          class ValueType, class SourceHeap>
+#endif 
 class HashMap {
 
   // Each entry has a lock.
-  struct HashEntry {
-    list_t list;
+  struct HashBucket {
+    list_t   list;
+#if LOCK_PROTECTION
     // Each entry has a separate lock
     LockType lock;
-    size_t count; // How many _entries in this list
+#endif
+    size_t   count; // How many _bucketsTotal in this list
 
     void initialize() {
       count = 0;
       listInit(&list);
+#if LOCK_PROTECTION
       LockInit();
+#endif
     }
 
+
+#if LOCK_PROTECTION
     void Lock() { lock.lock(); }
     void Unlock() { lock.unlock(); }
     void LockInit() { lock.init(); }
+#endif
 
     void* getFirstEntry() { return (void*)list.next; }
   };
@@ -62,15 +72,9 @@ class HashMap {
   };
 
   bool _initialized;
-  struct HashEntry* _entries;
-  size_t _buckets;     // How many buckets in total
-  size_t _bucketsUsed; // How many buckets in use
-
-#ifdef INIT_META_MAPPING
-  LockType entrylock;
-  struct Entry* allentries;
-  size_t entryindex;
-#endif
+  struct HashBucket* _buckets;
+  size_t _bucketsTotal;     // How many buckets in total
+  size_t _bucketsTotalUsed; // How many buckets in use
 
   size_t _totalEntry;
 
@@ -84,13 +88,10 @@ public:
   }
 
   void initialize(hashFuncPtr hfunc, keycmpFuncPtr kcmp, const size_t size = 4096) {
-    _entries = NULL;
-    _bucketsUsed = 0;
-    _buckets = size;
+    _buckets = NULL;
+    _bucketsTotalUsed = 0;
+    _bucketsTotal = size;
     _totalEntry = 0;
-#ifdef INIT_META_MAPPING
-    entryindex = 0;
-#endif
 
     if(hfunc == NULL || kcmp == NULL) {
       abort();
@@ -101,26 +102,20 @@ public:
     _keycmp = kcmp;
 
     // Allocated predefined size.
-    //_entries = (struct HashEntry*)SourceHeap::allocate(size * sizeof(struct HashEntry));
-    _entries = (struct HashEntry*)Real::malloc(size * sizeof(struct HashEntry));
-#ifdef INIT_META_MAPPING
-    allentries = (struct Entry*)Real::malloc(size * sizeof(struct Entry));
+    _buckets = (struct HashBucket*)SourceHeap::allocate(size * sizeof(struct HashBucket));
 
-    entrylock.init();
-#endif
-
-    // Initialize all of these _entries.
-    struct HashEntry* entry;
+    // Initialize all of these _buckets.
+    struct HashBucket* bucket;
     for(size_t i = 0; i < size; i++) {
-      entry = getHashEntry(i);
-      entry->initialize();
+      bucket = getHashBucket(i);
+      bucket->initialize();
     }
     _initialized = true;
   }
 
-  inline struct HashEntry* getHashEntry(size_t index) {
-    if(index < _buckets) {
-      return &_entries[index];
+  inline struct HashBucket* getHashBucket(size_t index) {
+    if(index < _bucketsTotal) {
+      return &_buckets[index];
     } else {
       return NULL;
     }
@@ -128,7 +123,7 @@ public:
 
   inline size_t hashIndex(const KeyType& key, size_t keylen) {
     size_t hkey = _hashfunc(key, keylen);
-    return hkey & (_buckets-1);
+    return hkey & (_bucketsTotal-1);
   }
 
   // Look up whether an entry is existing or not.
@@ -137,7 +132,7 @@ public:
   bool find(const KeyType& key, size_t keylen, ValueType* value) {
     assert(_initialized == true);
     size_t hindex = hashIndex(key, keylen);
-    struct HashEntry* first = getHashEntry(hindex);
+    struct HashBucket* first = getHashBucket(hindex);
     struct Entry* entry = getEntry(first, key, keylen);
     bool isFound = false;
 
@@ -148,30 +143,52 @@ public:
 
     return isFound;
   }
+ 
+  void * findEntry(const KeyType& key, size_t keylen) {
+    assert(_initialized == true);
+    size_t hindex = hashIndex(key, keylen);
+    struct HashBucket* first = getHashBucket(hindex);
+    struct Entry* entry = getEntry(first, key, keylen);
 
+    return entry;
+  }
+
+  ValueType * getValueFromEntry(void * ptr) {
+    struct Entry * entry = (struct Entry *)ptr;
+
+    if(entry) {
+      return entry->value;
+    }
+
+    return NULL;
+  }
   // this function is customized for call stack array
   ValueType* findOrAdd(const KeyType& key, size_t keylen, ValueType newval){
     assert(_initialized == true);
     ValueType* ret = NULL;
 
     size_t hindex = hashIndex(key, keylen);
-    struct HashEntry* first = getHashEntry(hindex);
+    struct HashBucket* first = getHashBucket(hindex);
 
     struct Entry* entry = NULL;
+#if LOCK_PROTECTION
     first->Lock();
-    // Check all _entries with the same hindex.
+#endif
+    // Check all _buckets with the same hindex.
     entry = getEntry(first, key, keylen);
     if(entry == NULL) {
+      fprintf(stderr, "entry not exists. Now add the current one to the map\n");
       // insert new call stack into map 
       entry = insertEntry(first, key, keylen, newval);
-
-      //entry->value.depth = 0;
-      entry->value.allocation = 0;
     }
-    // return the actual call stack value
-    ret = &entry->value; 
+    else {
+      // return the actual call stack value
+      ret = &entry->value;
+    } 
     
+#if LOCK_PROTECTION
     first->Unlock();
+#endif
 
     return ret;
   }
@@ -184,12 +201,16 @@ public:
     assert(_initialized == true);
     size_t hindex = hashIndex(key, keylen);
     // PRINF("Insert entry:  before inserting\n");
-    struct HashEntry* first = getHashEntry(hindex);
+    struct HashBucket* first = getHashBucket(hindex);
 
     // PRINF("Insert entry: key %p\n", key);
+#if LOCK_PROTECTION
     first->Lock();
     insertEntry(first, key, keylen, value);
     first->Unlock();
+#else 
+    insertEntry(first, key, keylen, value);
+#endif
   }
 
   // Insert a hash table entry if it is not existing.
@@ -197,21 +218,24 @@ public:
   bool insertIfAbsent(const KeyType& key, size_t keylen, ValueType value) {
     assert(_initialized == true);
     size_t hindex = hashIndex(key, keylen);
-    struct HashEntry* first = getHashEntry(hindex);
+    struct HashBucket* first = getHashBucket(hindex);
     struct Entry* entry;
     bool isFound = true;
 
+#if LOCK_PROTECTION
     first->Lock();
+#endif
 
-    // Check all _entries with the same hindex.
+    // Check all _buckets with the same hindex.
     entry = getEntry(first, key, keylen);
     if(!entry) {
       isFound = false;
       insertEntry(first, key, keylen, value);
     }
 
+#if LOCK_PROTECTION
     first->Unlock();
-
+#endif
     return isFound;
   }
 
@@ -219,11 +243,13 @@ public:
   bool erase(const KeyType& key, size_t keylen) {
     assert(_initialized == true);
     size_t hindex = hashIndex(key, keylen);
-    struct HashEntry* first = getHashEntry(hindex);
+    struct HashBucket* first = getHashBucket(hindex);
     struct Entry* entry;
     bool isFound = false;
 
+#if LOCK_PROTECTION
     first->Lock();
+#endif
 
     entry = getEntry(first, key, keylen);
 
@@ -234,69 +260,55 @@ public:
       // Remove this entry if existing.
       entry->erase();
 
-      Real::free(entry);
+      SourceHeap::free(entry);
     }
 
     first->count--;
 
+#if LOCK_PROTECTION
     first->Unlock();
-
+#endif
     return isFound;
   }
 
   size_t getEntryNumber() { return _totalEntry; }
 
-  // Clear all _entries
+  // Clear all _buckets
   void clear() {}
 
 private:
-#ifdef INIT_META_MAPPING
-  void expendMapping(){
-    allentries = (struct Entry*)Real::malloc(_buckets * sizeof(struct Entry));
-    entryindex = 0;
-  }
-#endif
 
   // Create a new Entry with specified key and value.
   struct Entry* createNewEntry(const KeyType& key, size_t keylen, ValueType value) {
-    //struct Entry* entry = (struct Entry*)SourceHeap::allocate(sizeof(struct Entry));
-#ifdef INIT_META_MAPPING
-    struct Entry* entry = NULL;
-    entrylock.lock();
-    if(entryindex > _buckets - 1){
-      expendMapping();
-    }
-    entry = &allentries[entryindex++];
-    entrylock.unlock();
-#else
-    struct Entry* entry = (struct Entry*)Real::malloc(sizeof(struct Entry));
-#endif
+    struct Entry* entry = (struct Entry*)SourceHeap::allocate(sizeof(struct Entry));
+    //struct Entry* entry = (struct Entry*)Real::malloc(sizeof(struct Entry));
 
     // Initialize this new entry.
     entry->initialize(key, keylen, value);
     return entry;
   }
 
-  struct Entry* insertEntry(struct HashEntry* head, const KeyType& key, size_t keylen, ValueType value) {
+  struct Entry* insertEntry(struct HashBucket* head, const KeyType& key, size_t keylen, ValueType value) {
     // Check whether the first entry is empty or not.
     // Create an entry
     struct Entry* entry = createNewEntry(key, keylen, value);
     listInsertTail(&entry->list, &head->list);
     head->count++;
+
     // increment total number
     __atomic_add_fetch(&_totalEntry, 1, __ATOMIC_RELAXED);
     return entry;
   }
 
   // Search the entry in the corresponding list.
-  struct Entry* getEntry(struct HashEntry* first, const KeyType& key, size_t keylen) {
+  struct Entry* getEntry(struct HashBucket* first, const KeyType& key, size_t keylen) {
     struct Entry* entry = (struct Entry*)first->getFirstEntry();
     struct Entry* result = NULL;
 
-    // Check all _entries with the same hindex.
+    // Check all _buckets with the same hindex.
     int count = first->count;
     while(count > 0) {
-      if(likely(_keycmp(entry->key, key, keylen) && entry->keylen == keylen)) {
+      if(_keycmp(entry->key, key, keylen) && (entry->keylen == keylen)) {
         result = entry;
         break;
       }
@@ -305,12 +317,19 @@ private:
       count--;
     }
 
+    fprintf(stderr, "count is %d\n", count);
     return result;
   }
 
 public:
   class iterator {
-    friend class HashMap<KeyType, ValueType, LockType>;
+    
+#if LOCK_PROTECTION
+    friend class HashMap<KeyType, ValueType, LockType, SourceHeap>;
+#else
+    friend class HashMap<KeyType, ValueType, SourceHeap>;
+#endif
+
     struct Entry* _entry; // Which entry in the current hash entry?
     size_t _pos;          // which bucket at the moment? [0, nbucket-1]
     HashMap* _hashmap;
@@ -326,7 +345,7 @@ public:
 
     iterator& operator++(int) // in postfix ++  /* parameter? */
     {
-      struct HashEntry* hashentry = _hashmap->getHashEntry(_pos);
+      struct HashBucket* hashentry = _hashmap->getHashBucket(_pos);
 
       // Check whether this entry is the last entry in current hash entry.
       if(!isListTail(&_entry->list, &hashentry->list)) {
@@ -335,7 +354,7 @@ public:
       } else {
         // Since current list is empty, we must search next hash entry.
         _pos++;
-        while((hashentry = _hashmap->getHashEntry(_pos)) != NULL) {
+        while((hashentry = _hashmap->getHashBucket(_pos)) != NULL) {
           if(hashentry->count != 0) {
             // Now we can return it.
             _entry = (struct Entry*)hashentry->getFirstEntry();
@@ -371,12 +390,12 @@ public:
   // Acquire the first entry of the hash table
   iterator begin() {
     size_t pos = 0;
-    struct HashEntry* head = NULL;
+    struct HashBucket* head = NULL;
     struct Entry* entry;
 
     // Get the first non-null entry
-    while(pos < _buckets) {
-      head = getHashEntry(pos);
+    while(pos < _bucketsTotal) {
+      head = getHashBucket(pos);
       if(head->count != 0) {
         // Now we can return it.
         entry = (struct Entry*)head->getFirstEntry();

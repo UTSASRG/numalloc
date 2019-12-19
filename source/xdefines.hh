@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <ucontext.h>
 #include <assert.h>
+#include <string.h>
 
 /*
  * @file   xdefines.h
@@ -97,6 +98,10 @@ inline size_t aligndown(size_t addr, size_t alignto) { return (addr & ~(alignto 
 #define SIZE_PER_TB 0x10000000000  // 0x100 8*0 
 #define SIZE_PER_SPAN (2*SIZE_PER_TB)
 #define SIZE_PER_NODE (2*SIZE_PER_SPAN)
+#define MAX_SEARCH_CALLSTACK_DEPTH 5
+//#define MAX_CALLSTACK_SKIP_BOTTOM = 0 };
+#define MAX_CALLSTACK_DEPTH 5
+
 // Since there are 64TB continuous memory space, let's support up to 
 // 16 node machines. That is, each node will have 4TB memory, and the first 
 // thread will have the 4TB memory as well.
@@ -109,6 +114,35 @@ inline int getRealNodeIndex(void)
   __asm__ volatile("rdtscp" : "=a" (a), "=d" (d), "=c" (c));
   return (c & 0xFFF000)>>12;
 }
+
+struct stack_frame {
+  struct stack_frame * prev;  // pointing to previous stack_frame
+  void * caller_address;    // the address of caller
+};
+
+struct callstack {
+  size_t hashcode;
+  void*  stack[MAX_CALLSTACK_DEPTH];
+
+  /*   assign operator */
+  callstack& operator = (const callstack& cs) {
+    if (this != &cs) {
+      hashcode = cs.hashcode;
+      memcpy(&stack, &cs.stack, MAX_CALLSTACK_DEPTH * sizeof(void*));
+    }
+    return *this;
+  }
+
+  /* comparison */
+  bool operator == (const callstack& other) const {
+    bool ret = true;
+    int level = 2;
+    for(int i=0; i<level; i++){
+      ret &= stack[i]==other.stack[i];
+    }
+    return ret;
+  }
+};
 
 #define SIZE_PER_NODE_SHIFT 42
 #define SIZE_ONE_MB_BAG 0x100000

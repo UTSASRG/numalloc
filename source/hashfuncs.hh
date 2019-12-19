@@ -1,5 +1,5 @@
-#if !defined(_HASHFUNCS_H)
-#define _HASHFUNCS_H
+#ifndef __HASHFUNCS_H__
+#define __HASHFUNCS_H__
 
 #include <stdint.h>
 #include <string.h>

@@ -129,12 +129,12 @@ class selfmap {
       return *theOneTrueObject;
     }
 
-    /// Check whether an address is inside the DoubleTake library itself.
-    bool isProberLibrary(void* pcaddr, void** offset = NULL) {
+    /// Check whether an address is inside this library itself.
+    bool isThisLibrary(void* pcaddr, void** offset = NULL) {
       if(offset != NULL){
-        *offset = (void*)((intptr_t)pcaddr - (intptr_t)_proberStart);
+        *offset = (void*)((intptr_t)pcaddr - (intptr_t)_thisLibraryStart);
       }
-      return ((pcaddr >= _proberStart) && (pcaddr <= _proberEnd));
+      return ((pcaddr >= _thisLibraryStart) && (pcaddr <= _thisLibraryEnd));
     }
 
     bool isPthreadLibrary(void* pcaddr, void** offset = NULL) {
@@ -218,8 +218,8 @@ class selfmap {
         const mapping& m = entry.second;
         if(m.isText()) {
           if(m.getFile().find("/libprober") != std::string::npos) {
-            _proberStart = (void*)m.getBase();
-            _proberEnd = (void*)m.getLimit();
+            _thisLibraryStart = (void*)m.getBase();
+            _thisLibraryEnd = (void*)m.getLimit();
             _currentLibrary = std::string(m.getFile());
           } else if(m.getFile().find("/libpthread-") != std::string::npos) {
             _libthreadStart = (void*)m.getBase();
@@ -273,8 +273,8 @@ class selfmap {
     void* _appTextEnd;
     void * _libthreadStart;
     void * _libthreadEnd;
-    void* _proberStart;
-    void* _proberEnd;
+    void* _thisLibraryStart;
+    void* _thisLibraryEnd;
     void* _libcStart;
     void* _libcEnd;
 };

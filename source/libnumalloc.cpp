@@ -29,6 +29,7 @@
 #include "xthread.hh"
 #include "numaheap.hh"
 #include "mm.hh"
+#include "selfmap.hh"
 #include "xdefines.hh"
 #include "perthread.hh"
 
@@ -41,6 +42,16 @@ char localBuffer[4096];
 char * localPtr = NULL;
 char * localPtrEnd;
 
+// Variables used by our pre-init private allocator
+typedef enum {
+	E_HEAP_INIT_NOT = 0,
+	E_HEAP_INIT_WORKING,
+	E_HEAP_INIT_DONE,
+	E_HEAP_NORMAL,
+} eHeapInitStatus;
+
+eHeapInitStatus heapInitStatus = E_HEAP_INIT_NOT;
+
 typedef int (*main_fn_t)(int, char**, char**);
 
 extern "C" int __libc_start_main(main_fn_t, int, char**, void (*)(), void (*)(), void (*)(), void*) __attribute__((weak, alias("light_libc_start_main")));
@@ -48,17 +59,16 @@ extern "C" int __libc_start_main(main_fn_t, int, char**, void (*)(), void (*)(),
 extern "C" int light_libc_start_main(main_fn_t main_fn, int argc, char** argv, void (*init)(), void (*fini)(), void (*rtld_fini)(), void* stack_end) {
     // real run
   	auto real_libc_start_main = (decltype(__libc_start_main)*)dlsym(RTLD_NEXT, "__libc_start_main");
-  	return real_libc_start_main(main_fn, argc, argv, init, fini, rtld_fini, stack_end);
+
+    // only for main thread
+    current->startFrame = (char *)__builtin_frame_address(0);
+
+    selfmap::getInstance().getTextRegions();
+
+    heapInitStatus = E_HEAP_NORMAL;
+    return real_libc_start_main(main_fn, argc, argv, init, fini, rtld_fini, stack_end);
 }
 
-// Variables used by our pre-init private allocator
-typedef enum {
-	E_HEAP_INIT_NOT = 0,
-	E_HEAP_INIT_WORKING,
-	E_HEAP_INIT_DONE,
-} eHeapInitStatus;
-
-eHeapInitStatus heapInitStatus = E_HEAP_INIT_NOT;
 
 extern "C" {
 	void   xxfree(void *);
@@ -100,53 +110,6 @@ __attribute__((destructor)) void finalizer() {
 
 }
 
-__attribute__ ((always_inline)) int recordCallStack(int depth, void** buf) {
-
-  // Fetch the frame address of the topmost stack frame
-  struct stack_frame * current_frame = NULL;
-
-  // Loop condition tests the validity of the frame address given for the
-  // previous frame by ensuring it actually points to a location located
-  // on the stack
-  void * caller_addr = NULL;
-
-  current_frame = (struct stack_frame *)(__builtin_frame_address(0));
-
-  // Initialize the prev_frame pointer to equal the current_frame. This
-  // simply ensures that the while loop below will be entered and
-  // executed and least once
-  struct stack_frame * prev_frame = current_frame;
-
-  int level = 0;
-  int loop_counter = 0;
-  while(level < depth &&  
-      ((void *)prev_frame <= current->startFrame) && 
-      (prev_frame >= current_frame) &&
-      (loop_counter++ < xdefines::MAX_SEARCH_CALLSTACK_DEPTH)
-      ) {
-
-    caller_addr = prev_frame->caller_address;
-
-    if(!selfmap::getInstance().isProberLibrary(caller_addr)){
-      buf[level++] = caller_addr;
-    }
-
-    if(prev_frame == prev_frame->prev){
-      break;
-    }
-    // Walk the prev_frame pointer backward in preparation for the
-    // next iteration of the loop
-    prev_frame = prev_frame->prev;
-  }
-
-  if(level < depth) {
-    for(int i=level; i<depth; i++) {
-      buf[i] = NULL;
-    }
-  }
-
-  return level;
-}
 
 // Heap initialization function
 void heapinitialize() {
@@ -191,10 +154,11 @@ void heapinitialize() {
     break;
 
     case E_HEAP_INIT_WORKING:
+    case E_HEAP_INIT_DONE: 
       ptr = Real::malloc(size);
       break; 
 
-    case E_HEAP_INIT_DONE: 
+    case E_HEAP_NORMAL: 
       ptr = NumaHeap::getInstance().allocate(size); 
       //fprintf(stderr, "malloc size %ld ptr %p\n", size, ptr);
       break;

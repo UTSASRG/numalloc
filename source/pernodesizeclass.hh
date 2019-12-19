@@ -2,6 +2,7 @@
 #define __PER_NODE_SIZE_CLASS_HH__
 
 #include "mm.hh"
+#include "pthread.h"
 
 // For small objects, each size class will maintain
 // one bumppointer and one freelist

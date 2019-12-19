@@ -27,6 +27,8 @@ typedef struct thread {
   // fprintf will use a shared buffer and can't be used in signal handler
   char * outputBuf;
 
+  void* startFrame;
+
   // The freelists of this heap
   PerThreadHeap * ptheap;
 } thread_t;

@@ -109,7 +109,7 @@ public:
   // The idea about identifying a shared object
   // is that the object is allocated in the main thread, but it is 
   // not freed in the same thread (before creating the threads). 
-  bool isSharedObject() {
+  bool isSharedCallstack() {
     // TODO
     return true;
   } 
@@ -121,8 +121,11 @@ public:
 
 #ifdef SPEC_MAINTHREAD_SUPPORT
 //   fprintf(stderr, "Thread %d at node %d: allocation size %ld\n", current->index, current->nindex, size);
-    if(_mainHeapPhase && isSharedObject()) {
-      return _mainHeap.allocate(size);
+    if(_mainHeapPhase) {
+
+      ptr = _mainHeap.allocate(size);
+      if(ptr) 
+        return ptr;
     }
 #endif
     // Check the size information. 

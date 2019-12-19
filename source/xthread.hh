@@ -156,6 +156,8 @@ class xthread {
     // Initialize the current heap
     if(current->inited == false) 
       initCurrentHeap(current->index, current->nindex); 
+
+    current->startFrame = (char *)__builtin_frame_address(0);
   }
 
 	/// @ internal function: allocation a thread index when spawning.
