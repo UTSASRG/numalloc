@@ -129,19 +129,18 @@ public:
   // Look up whether an entry is existing or not.
   // If existing, return true. *value should be carried specific value for this key.
   // Otherwise, return false.
-  bool find(const KeyType& key, size_t keylen, ValueType* value) {
+  ValueType * find(const KeyType& key, size_t keylen) {
     assert(_initialized == true);
     size_t hindex = hashIndex(key, keylen);
     struct HashBucket* first = getHashBucket(hindex);
     struct Entry* entry = getEntry(first, key, keylen);
-    bool isFound = false;
+    ValueType * ret = NULL;
 
     if(entry) {
-      *value = entry->value;
-      isFound = true;
+      ret = &entry->value;
     }
 
-    return isFound;
+    return ret;
   }
  
   void * findEntry(const KeyType& key, size_t keylen) {
@@ -157,33 +156,34 @@ public:
     struct Entry * entry = (struct Entry *)ptr;
 
     if(entry) {
-      return entry->value;
+      return &entry->value;
     }
 
     return NULL;
   }
+
   // this function is customized for call stack array
   ValueType* findOrAdd(const KeyType& key, size_t keylen, ValueType newval){
     assert(_initialized == true);
     ValueType* ret = NULL;
-
     size_t hindex = hashIndex(key, keylen);
     struct HashBucket* first = getHashBucket(hindex);
+    struct Entry* entry = getEntry(first, key, keylen);
 
-    struct Entry* entry = NULL;
 #if LOCK_PROTECTION
     first->Lock();
 #endif
     // Check all _buckets with the same hindex.
     entry = getEntry(first, key, keylen);
     if(entry == NULL) {
-      fprintf(stderr, "entry not exists. Now add the current one to the map\n");
+     // fprintf(stderr, "entry not exists. Now add the current one to the map\n");
       // insert new call stack into map 
       entry = insertEntry(first, key, keylen, newval);
     }
     else {
       // return the actual call stack value
       ret = &entry->value;
+      //fprintf(stderr, "entry exists. Now return. ret %p\n", ret);
     } 
     
 #if LOCK_PROTECTION
@@ -317,7 +317,7 @@ private:
       count--;
     }
 
-    fprintf(stderr, "count is %d\n", count);
+    //fprintf(stderr, "count is %d\n", count);
     return result;
   }
 

@@ -149,6 +149,10 @@ class MainHeap {
     int   _nodeindex;
     int   _bagShiftBits;
 
+    // We will update the phase information.
+    bool  _mainHeapPhase; 
+    int   _mhpSequence;     // main heap phase sequence number
+
     class mtBigObjects  _bigObjects;
 
     // Currently, size class is from 2^4 to 2^19 (512 KB), with 16 sizes in total.
@@ -156,6 +160,7 @@ class MainHeap {
 
     // The size of bag will be BAG_SIZE_SMALL_OBJECTS 
     PerBagInfo * _info;  
+    unsigned long _specialMalloc; 
 
     class CallsiteInfo {
       bool _isPrivate; // Is known to be private or not. 
@@ -173,6 +178,10 @@ class MainHeap {
 
         inline void updateAlloc() {
           _allocNum++;
+        }
+
+        inline void setPrivateCallsite() {
+          _isPrivate = true;
         }
     }; 
 
@@ -192,9 +201,26 @@ class MainHeap {
     typedef HashMap<callstack, CallsiteInfo, localAllocator> CallsiteMap;
     CallsiteMap _callsiteMap;
 
+    class ObjectInfo {
+    public:
+      int    _allocSequence;
+      CallsiteInfo * _callsiteInfo;
 
+      ObjectInfo(int sequence, CallsiteInfo * info) {
+        _allocSequence = sequence; 
+        _callsiteInfo = info;
+      }
+
+      int getSequence() {
+        return _allocSequence;
+      }
+
+      CallsiteInfo * getCallsiteInfo() {
+        return _callsiteInfo;
+      }
+    };
     // ObjectsMap will save the mapping between the object address and its callsite
-    typedef HashMap<void *, void *, localAllocator> ObjectsHashMap;
+    typedef HashMap<void *, ObjectInfo, localAllocator> ObjectsHashMap;
     ObjectsHashMap _objectsMap;
 
  public:
@@ -221,6 +247,7 @@ class MainHeap {
       return size;
    }
 
+
    void initialize(int nodeindex, void * begin) {
       // Save the heap related information
       _begin = (char *)begin;
@@ -231,6 +258,7 @@ class MainHeap {
       //_bpSmall = (char *)MM::mmapAllocatePrivate(SIZE_PER_SPAN, (void *)_begin);
       _bpSmallEnd = _bpSmall + SIZE_PER_SPAN;
 //      fprintf(stderr, "_bpSmall is %p\n", _bpSmall);
+      _specialMalloc = 0;
 
       _callsiteMap.initialize(HashFuncs::hashCallStackT, HashFuncs::compareCallStackT);
       _objectsMap.initialize(HashFuncs::hashAddr, HashFuncs::compareAddr);
@@ -300,10 +328,22 @@ class MainHeap {
         classSize *= 2;
       }
 
+      _mainHeapPhase = true; 
+      _mhpSequence = 0; // main heap phase sequence number
+
       // Now initialize the PerBagInfo 
       _info = (PerBagInfo *)ptr;
    } 
-  
+
+  void stopPhase() {
+    _mainHeapPhase = false; 
+  } 
+
+  void updatePhase() {
+    _mainHeapPhase = true;
+    _mhpSequence++;
+  }
+
   // We will reserve a block of memory to store the size information of each chunk,
   // in the unit of four pages. 
   int getSizeClass(void * ptr) {

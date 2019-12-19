@@ -3,6 +3,7 @@
 #include "selfmap.hh"
 
 #define CALLSTACK_SKIP_LEVEL 2 
+#define MY_DEBUG 0
 int getCallStack(int depth, callstack *cs) {
 
   // Fetch the frame address of the topmost stack frame
@@ -31,7 +32,7 @@ int getCallStack(int depth, callstack *cs) {
 
     if(!selfmap::getInstance().isThisLibrary(caller_addr)){
       cs->stack[level++] = caller_addr;
-      fprintf(stderr, "calleraddr %p\n", caller_addr);
+      //fprintf(stderr, "calleraddr %p\n", caller_addr);
     }
 
     if(prev_frame == prev_frame->prev){
@@ -42,7 +43,7 @@ int getCallStack(int depth, callstack *cs) {
     prev_frame = prev_frame->prev;
   }
 
-  fprintf(stderr, "level is %d depth is %d\n", level, depth);
+//  fprintf(stderr, "level is %d depth is %d\n", level, depth);
 
   if(level < depth) {
     for(int i=level; i<depth; i++) {
@@ -55,11 +56,11 @@ int getCallStack(int depth, callstack *cs) {
       
 
   void * MainHeap::allocate(size_t size) {
-    void * ptr = NULL; 
-      
+    void * ptr = NULL;
+
+#if MY_DEBUG      
     // Get the callstack right now.
     callstack cs;
-    //void * stack[2];
     struct CallsiteInfo info;
 
     // Collect the callstack
@@ -72,15 +73,21 @@ int getCallStack(int depth, callstack *cs) {
     // Check whether this callstack is shared or not
     // If not, then we will use the normal allocation, instead of the shared heap.
     if(oldinfo) {
-      fprintf(stderr, "oldinfo exists????\n");
       if(oldinfo->isPrivateCallsite()) {
+        //while(1) { ; }
+        //  fprintf(stderr, "***********a private callsite*********\n");
         return NULL;
       }
       else {
         oldinfo->updateAlloc();
       }
     }
+ #endif
+    //_specialMalloc++;
 
+    //if(_specialMalloc % 10000 == 0) {
+    //  fprintf(stderr, "specialMalloc %ld\n", _specialMalloc);
+   // }
     // If the callstack is shared or unknown, then we will allocated from the interleaved heap.
     // Allocate from the freelist at first. 
     int sc;
@@ -117,20 +124,42 @@ int getCallStack(int depth, callstack *cs) {
       }
     }
   
-
+#if MY_DEBUG
     // We will only add the first object into the objectsHashMap to speedup the search later. 
     if(!oldinfo) {
-      void * hashentry = _callsiteMap.findEntry(cs, sizeof(cs));
+      CallsiteInfo* info = _callsiteMap.find(cs, sizeof(cs));
+      ObjectInfo objInfo(_mhpSequence, info);
 
-      fprintf(stderr, "Insert the object: size %ld ptr %p entry %p\n", size, ptr, hashentry);
       // For the performance reason, we will save the entry of another hashmap there. 
-      _objectsMap.insert((void *)ptr, sizeof(callstack *), hashentry); 
+      _objectsMap.insert((void *)ptr, sizeof(void *), objInfo); 
     }
-      //fprintf(stderr, "malloc %ld ptr %p\n", size, ptr);
+#endif    
     return ptr;
   }
 
 void MainHeap::deallocate(void * ptr) {
+#if MY_DEBUG
+  // Check the phase information of this deallocation. 
+  // If the current phase is the same as the allocation phase, 
+  // then we will mark the corresponding callsite as private
+  if(_mainHeapPhase) {
+    ObjectInfo * info = _objectsMap.find((void *)ptr, sizeof(void *)); 
+
+    if(info) {
+  //    fprintf(stderr, "in deallocate, with object phase %d\n", info->getSequence());
+      if(info->getSequence() == _mhpSequence) {
+        // Set the corresponding callsite to private, avoiding subsequent 
+        // allocations from the special heap.
+        CallsiteInfo * csInfo = info->getCallsiteInfo();
+        //fprintf(stderr, "csInfo is at %p\n", csInfo);
+        csInfo->setPrivateCallsite();
+      }
+    }
+
+    // Now simply delete this entry
+    _objectsMap.erase((void *)ptr, sizeof(void *));
+  } 
+#endif
     if(ptr <= _bpMiddleEnd) {
       int sc = getSizeClass(ptr);
       //fprintf(stderr, "free ptr %p with size %lx\n", ptr, getSize(ptr));

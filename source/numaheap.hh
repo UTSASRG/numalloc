@@ -69,6 +69,7 @@ public:
     _mainHeapBegin = _heapBegin - 3*SIZE_PER_NODE;
     _mainHeap.initialize(getRealNodeIndex(), (void *)_mainHeapBegin);
     _mainHeapPhase = true;  
+    _skipCheckAddr = NULL;
 #endif
 
   // fprintf(stderr, "_heapBegin is %lx\n", _heapBegin);
@@ -100,19 +101,14 @@ public:
 #ifdef SPEC_MAINTHREAD_SUPPORT
   void stopMainHeapPhase() {
     _mainHeapPhase = false;
+    _mainHeap.stopPhase();
   } 
 
   void startMainHeapPhase() {
     _mainHeapPhase = true;
+    _mainHeap.updatePhase();
   }
 
-  // The idea about identifying a shared object
-  // is that the object is allocated in the main thread, but it is 
-  // not freed in the same thread (before creating the threads). 
-  bool isSharedCallstack() {
-    // TODO
-    return true;
-  } 
 #endif
 
   void * allocate(size_t size) {
@@ -120,15 +116,34 @@ public:
    //fprintf(stderr, "Thread %d: allocate size %ld\n", current->index, size);
 
 #ifdef SPEC_MAINTHREAD_SUPPORT
+//    fprintf(stderr, "Thread %d: allocate size %ld at %p. _skipCheckAddr %p\n", current->index, size, &size, _skipCheckAddr);
+#if 0
+    if(_mainHeapPhase && (&size != _skipCheckAddr)) {
 //   fprintf(stderr, "Thread %d at node %d: allocation size %ld\n", current->index, current->nindex, size);
-    if(_mainHeapPhase) {
-
       ptr = _mainHeap.allocate(size);
-      if(ptr) 
+      if(ptr) { 
         return ptr;
+      }
+      else {
+        _skipCheckAddr = &size;
+      }
+    }
+    else if(&size == _skipCheckAddr) {
+      while(1) { ; }
     }
 #endif
-    // Check the size information. 
+    if(_mainHeapPhase && size > (PAGE_SIZE * NUMA_NODES/2)) {
+      ptr = _mainHeap.allocate(size);
+      if(ptr) { 
+        return ptr;
+      }
+    }
+    // Now the corresponding address is failed. 
+#endif
+
+   //fprintf(stderr, "Thread %d: allocate size %ld private\n", current->index, size);
+
+   // Check the size information. 
     if(size <= BIG_OBJECT_SIZE_THRESHOLD) {
       // Small objects will be always allocated via PerThreadSizeClass
       // although PerThreadSizeClass may get objects from PerNodeHeap as well 
@@ -179,6 +194,7 @@ public:
     // Return it to the PerNodeHeap, since we will have to check PerOnembInfo to get the actual size. 
     // After that, the object  may return to the PerThreadHeap or PerNodeHeap
     _nodes[index].deallocate(index, ptr);
+    //fprintf(stderr, "deallocate index %d ptr %p\n", index, ptr);
   }
 
   size_t getSize(void *ptr) {
@@ -201,7 +217,8 @@ private:
 #ifdef SPEC_MAINTHREAD_SUPPORT
   size_t _mainHeapBegin;
   MainHeap _mainHeap;
-  bool   _mainHeapPhase; 
+  bool   _mainHeapPhase;
+  void   * _skipCheckAddr; 
 #endif
   size_t _heapEnd; 
   PerNodeHeap _nodes[NUMA_NODES];

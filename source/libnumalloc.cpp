@@ -46,8 +46,7 @@ char * localPtrEnd;
 typedef enum {
 	E_HEAP_INIT_NOT = 0,
 	E_HEAP_INIT_WORKING,
-	E_HEAP_INIT_DONE,
-	E_HEAP_NORMAL,
+	E_HEAP_INIT_DONE
 } eHeapInitStatus;
 
 eHeapInitStatus heapInitStatus = E_HEAP_INIT_NOT;
@@ -65,7 +64,6 @@ extern "C" int light_libc_start_main(main_fn_t main_fn, int argc, char** argv, v
 
     selfmap::getInstance().getTextRegions();
 
-    heapInitStatus = E_HEAP_NORMAL;
     return real_libc_start_main(main_fn, argc, argv, init, fini, rtld_fini, stack_end);
 }
 
@@ -121,7 +119,6 @@ void heapinitialize() {
     // Thread initialization, which can be occurred before or after numap heap initialization
 		xthread::getInstance().initialize();
 
-    fprintf(stderr, "in the end of heapinitialize()\n");
     heapInitStatus = E_HEAP_INIT_DONE;
 	} 
   else {
@@ -154,11 +151,10 @@ void heapinitialize() {
     break;
 
     case E_HEAP_INIT_WORKING:
-    case E_HEAP_INIT_DONE: 
       ptr = Real::malloc(size);
       break; 
 
-    case E_HEAP_NORMAL: 
+    case E_HEAP_INIT_DONE: 
       ptr = NumaHeap::getInstance().allocate(size); 
       //fprintf(stderr, "malloc size %ld ptr %p\n", size, ptr);
       break;
