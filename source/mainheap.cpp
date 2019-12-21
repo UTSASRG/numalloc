@@ -9,6 +9,7 @@
     int sc;
 
     if(isBigObject(size)) {
+      fprintf(stderr, "Allocate big object with size %lx\n", size);
       ptr = _bigObjects.allocate(size, _nodeindex);
       return ptr; 
     }
@@ -56,6 +57,7 @@ void MainHeap::deallocate(void * ptr) {
       _sizes[sc]->deallocate(ptr);
     }
     else { 
+     // fprintf(stderr, "free ptr %p with size %lx\n", ptr, getSize(ptr));
       _bigObjects.deallocate(ptr);
     }
   }

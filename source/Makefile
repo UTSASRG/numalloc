@@ -1,15 +1,17 @@
 SRCS = real.cpp							\
 			 xthread.cpp          \
 perthreadsizeclass.cpp          \
+			mainheap.cpp					\
 			 libnumalloc.cpp			
 
-INCS = dlist.h               \
+INCS = dlist.hh               \
 		numaheap.hh						\
 		pernodeheap.hh				\
 		pernodebigobjects.hh				\
 		pernodesizeclass.hh      \
 		perthreadheap.hh				\
 		perthreadsizeclass.hh				\
+		mainheap.hh 					\
 		log.hh								\
 		mm.hh									\
 		real.hh								\
@@ -22,7 +24,7 @@ CXX = clang++
 
 
 #DNDEBUG
-CFLAGS = -g -std=c++11 -Wno-unused-result -O3 -DNDEBUG -DNUMA_NODES=2
+CFLAGS = -g -std=c++14 -Wno-unused-result -O3  -DNUMA_NODES=2 -DSPEC_MAINTHREAD_SUPPORT
 #CFLAGS = -g -std=c++14 -Wno-unused-result -DNDEBUG -O2 -DNUMA_NODES=2
 #CFLAGS = -g -Wno-unused-result -DNDEBUG -O2 -DNUMA_NODES=2
 #CFLAGS = -g -Wno-unused-result -DNDEBUG -O3 --std=c++11 -DNEW_BIG_HEAP -DNUMA_NODES=2
