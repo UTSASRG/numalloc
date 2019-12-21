@@ -9,8 +9,8 @@
     int sc;
 
     if(isBigObject(size)) {
-      fprintf(stderr, "Allocate big object with size %lx\n", size);
-      ptr = _bigObjects.allocate(size, _nodeindex);
+      //fprintf(stderr, "Allocate big object with size %lx\n", size);
+      ptr = _bigObjects.allocate(size);
       return ptr; 
     }
      

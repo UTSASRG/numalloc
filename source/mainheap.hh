@@ -6,6 +6,7 @@
 #include "xdefines.hh"
 #include "mm.hh"
 #include "pernodesizeclass.hh"
+#include "pernodebigobjects.hh"
 #include "real.hh"
 #include "perthread.hh"
 
@@ -35,11 +36,6 @@
 
 class MainHeap {
 
-  typedef struct t_bigObject {
-    void * addr; 
-    size_t size;
-  } BigObject;
-
 #define MT_MIDDLE_SPAN_THRESHOLD (PAGE_SIZE * NUMA_NODES)
 #define MT_BIG_SPAN_THESHOLD BIG_OBJECT_SIZE_THRESHOLD
 #define MT_BIG_OBJECTS_NUM 2048
@@ -52,18 +48,37 @@ class MainHeap {
     private:
       char * _bpBig;
       char * _bpBigEnd;
-      unsigned int _next; 
-      BigObject _objects[MT_BIG_OBJECTS_NUM];
+      PerNodeBigObjects  _bigObjects;
+      int    _nodeIndex;
 
     public:
-    void initialize(void * start, size_t size) {
-      _next = 0;
+    void initialize(void * start, size_t size, int nodeindex) {
       _bpBig = (char *)start;
       _bpBigEnd = _bpBig + size;
+      _nodeIndex = nodeindex;
+
+      // Get a chunk of space to store the objects
+      int metasize = _bigObjects.computeImplicitSize(size);
+      char * ptr = (char *)MM::mmapFromNode(alignup(metasize, PAGE_SIZE), nodeindex);
+      _bigObjects.initialize(ptr, start, size);
     }
 
-    // We will always utilize the bump pointer to allocate a new object
-    void * allocate(size_t sz, int nodeindex) {
+    void * allocate(size_t size) {
+      void * ptr = NULL;
+
+      //fprintf(stderr, "allocateBigObject at node %d: size %lx\n", _nodeindex, size);
+      // Allocate from the free list at first
+      ptr = _bigObjects.allocate(size);
+      if(ptr == NULL) {
+        // Now allocate from the bump pointer
+        allocateFromBumppointer(size);
+      }
+
+      return ptr;
+    }
+
+    // Utilize the bump pointer to allocate a new object
+    void * allocateFromBumppointer(size_t sz) {
       void * ptr = NULL;
       bool isHugePage = false; 
       
@@ -78,7 +93,7 @@ class MainHeap {
         }
 
         // Compute the blockSize. We will try to be balanced.
-        // Overall, we don't want one node has 1 more blocks than the others. 
+        // Overall, we don't want one node that has 1 more blocks than the others. 
         size = pages * SIZE_HUGE_PAGE;
         isHugePage = true;
         
@@ -86,44 +101,37 @@ class MainHeap {
         //fprintf(stderr, "BigObject allocate: size %lx, pages %lx, ptr %p\n", sz, pages, ptr); 
         _bpBig = (char *)ptr;   
      }
+     else {
+       size = alignup(size, SIZE_ONE_MB_BAG);
+     }
+     
      _bpBig += size;
 
-      // Allocate the memory from the OS 
-      ptr = MM::mmapAllocatePrivate(size, ptr, isHugePage);
+     // Allocate the memory from the OS 
+     ptr = MM::mmapAllocatePrivate(size, ptr, isHugePage);
 //    fprintf(stderr, "BIG malloc %ld ptr %p\n", sz, ptr);
-      _objects[_next].addr = ptr;
-      _objects[_next].size = size;
-      _next++;
      
-      // Now binding the memory to different nodes. 
-      MM::bindMemoryBlockwise((char *)ptr, pages, nodeindex, isHugePage); 
+     // Now binding the memory to different nodes. 
+     MM::bindMemoryBlockwise((char *)ptr, pages, _nodeIndex, isHugePage); 
        
-      // Adding the object to the list
-      return ptr;
+     // Mark the object size
+     markPerMBInfo(ptr, size, size);
+     return ptr;
+   }
+
+    void markPerMBInfo(void * blockStart, size_t blockSize, size_t size) {
+      _bigObjects.markPerMBInfo(blockStart, blockSize, size);
     }
 
     void deallocate(void * ptr) {
-      int i;
-    
-
-      for(i = 0; i < _next; i++) {
-        // Now we have found the object
-        if(ptr == _objects[i].addr) {
-//          fprintf(stderr, "BIG free ptr %p size %lx\n", ptr, _objects[i].size);
-          // Simply return this object to the OS right now
-          munmap(ptr, _objects[i].size);
-
-          // Moving the last one to the current one.
-          if(i != _next-1) { 
-            _objects[i].addr = _objects[_next-1].addr;
-            _objects[i].size = _objects[_next-1].size;
-          } 
-          _next--;
-          break;  
-        }
-      }
+      size_t size = getSize(ptr);
+      _bigObjects.deallocate(ptr, size); 
     }
 
+    size_t getSize(void * ptr) {
+      // Check the 1MB information in order to find the size. 
+      return _bigObjects.getSize(ptr);
+    }
   };
 
   class PerBagInfo {
@@ -200,7 +208,7 @@ class MainHeap {
       _bpMiddleEnd = _bpMiddle + SIZE_PER_SPAN;
 
       // Note that the _bpBig is not initialized at first.
-      _bigObjects.initialize(_bpMiddleEnd, SIZE_PER_SPAN);
+      _bigObjects.initialize(_bpMiddleEnd, SIZE_PER_SPAN, nodeindex);
 
       _nodeindex = nodeindex; 
       _numClasses = SMALL_SIZE_CLASSES;

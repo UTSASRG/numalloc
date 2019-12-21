@@ -154,21 +154,21 @@ class PerNodeHeap {
     void * ptr = NULL;
     size = alignup(size, SIZE_ONE_MB_BAG);
 
+    lockBigHeap();
     //fprintf(stderr, "allocateBigObject at node %d: size %lx\n", _nodeindex, size);
     ptr = allocateFromFreelist(size);
     if(ptr == NULL) {
       //fprintf(stderr, "allocateBigObject at node %d: size %lx\n", _nodeindex, size);
    
       // Now allocate from _bpBig
-      lockBigHeap();
       ptr = (char *)_bpBig;
       _bpBig += size;
 
       // We should not consume all memory. If yes, then we should make the heap bigger.
       // Since we don't check normally  to reduce the overhead, we will use the assertion here
       assert(_bpBig < _bpBigEnd);
-      unlockBigHeap();
     }
+    unlockBigHeap();
 
     //fprintf(stderr, "allocateBigObject, ptr %p, size %lx\n", ptr, size);
     // Mark the object size
@@ -262,10 +262,12 @@ class PerNodeHeap {
        }
      }
      else {
+       lockBigHeap();
   //     _bigObjects->printSize(ptr);   
   //     fprintf(stderr, "Thread %d: Deallocate ptr %p size %lx\n", getThreadIndex(), ptr, size); 
        // Deallocate this object to _bigObjects
        _bigObjects->deallocate(ptr, size);
+       unlockBigHeap();
      }
    }
 

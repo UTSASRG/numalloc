@@ -35,7 +35,6 @@ private:
 
   // TODO: put this in the upper level
   //[PER_NODE_MAX_BIG_OBJECTS];  
-  pthread_spinlock_t _lock; 
   
   unsigned long _next;
   unsigned long _max;
@@ -58,7 +57,6 @@ public:
     
     _heapBegin = heapBegin;
 
-    pthread_spin_init(&_lock, 0);
 
     // Initialize the _objects array
     _objects = (PerBigObject *) ptr;
@@ -86,8 +84,6 @@ public:
     }
 
     //fprintf(stderr, "Allocate big object size %lx, _totalSize %lx\n", size, _totalSize);
-
-    lock();
 
     for(int i = _next - 1; i>= 0; i--) {
       PerBigObject * object = &_objects[i];   
@@ -154,10 +150,8 @@ public:
       }
     } 
 
-    unlock();
-
-  if(ptr)
-    fprintf(stderr, "GET object ptr %p size %lx _next %ld\n", ptr, size, _next);
+  //if(ptr)
+  //  fprintf(stderr, "GET object ptr %p size %lx _next %ld\n", ptr, size, _next);
 
     return ptr; 
   }
@@ -236,8 +230,6 @@ public:
   // Place the objects to the list
   void deallocate(void * ptr, size_t size) {
 
-    lock();
-
     PerBigObject * object = &_objects[_next];
     
     object->size = size; 
@@ -252,18 +244,6 @@ public:
     // Change PerMBInfo in order to encourage the coalesce TODO:  
     clearPerMBInfo(ptr, size);
 
-    unlock();
-  
   }
-
-private:
-  void lock() {
-      pthread_spin_lock(&_lock);
-  }
-  
-  void unlock() {
-      pthread_spin_unlock(&_lock);
-  }
-
 };
 #endif
