@@ -29,7 +29,6 @@
 #include "xthread.hh"
 #include "numaheap.hh"
 #include "mm.hh"
-#include "selfmap.hh"
 #include "xdefines.hh"
 #include "perthread.hh"
 
@@ -61,8 +60,6 @@ extern "C" int light_libc_start_main(main_fn_t main_fn, int argc, char** argv, v
 
     // only for main thread
     current->startFrame = (char *)__builtin_frame_address(0);
-
-    selfmap::getInstance().getTextRegions();
 
     return real_libc_start_main(main_fn, argc, argv, init, fini, rtld_fini, stack_end);
 }

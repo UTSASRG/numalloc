@@ -94,7 +94,6 @@ public:
       return NULL;
     }
 
-
     //fprintf(stderr, "Allocate big object size %lx, _totalSize %lx\n", size, _totalSize);
 
     lock();
@@ -102,11 +101,11 @@ public:
     
     // Now search the freelist to find an entry that satisfies the request
     list_t * entry = _list.next;
+  //  fprintf(stderr, "AllocateBigObject totalSize %lx request size %lx\n",  _totalSize, size);
 
     do {
       PerBigObject * object = (PerBigObject *)entry; 
 
-  //    fprintf(stderr, "AllocateBigObject at line %d: totalSize %lx --- check object %p address %p size %lx request size %lx\n", __LINE__, _totalSize,  object, object->address, object->size, size);
       // Check whether the current entry can be merged with its neibour to satisfy this request
       if(object->size < size) {
 #if 0
@@ -141,32 +140,40 @@ public:
         //fprintf(stderr, "line %d: get size. Object->size %ld totalsize %ld\n", __LINE__, object->size, _totalSize);
         // Unusual case: the object size is the requested size, then we should change the freelist
         if (object->size == 0) {
-        //fprintf(stderr, "line %d: get size\n", __LINE__);
+          //fprintf(stderr, "_next %ld: the object is freed right now. entry %p, lastentry %p\n", _next, entry, &_objects[_next - 1]);
           // When the current entry is not the last entry,
           // then we try to copy the last entry to the current entry, in order to free one entry
           if(entry != (list_t *)&_objects[_next - 1]) {
             // Copy the last entry here
             memcpy(entry, (void *)&_objects[_next - 1], sizeof(PerBigObject));
 
-            fprintf(stderr, "*******BIG OBJECTS*******\n");
             // Update the last entry's prev and next node, so that they can be pointed to the current entry
             // Note that there is no need to change the list pointers for the current entry
             listUpdateEntry(entry);
           }
+          else { 
+            // Remove this entry from the list.
+            listRemoveNode(entry); 
+          }
           
           // Freed an entry
-          _next--; 
+          _next--;
         }
         else {
           // Split this object to two parts, and always use the first part to satisfy the request.
           // For the remaining part, we will update its pointer and size information (already did above).
           // There is no need to update the freelist, since another half is still in the list
           object->address = (void *)((intptr_t)object->address + size);
-        
+       
+         // fprintf(stderr, "********** dividing original size %lx this size %lx\n", object->size + size, size); 
           // Change the PerMBInfo information for the remaining part.
           // That is, we should change the size to the new size
           size_t newSize = object->size;
 
+          // Change the allocated one
+          changePerMBInfoSize(ptr, size, size);
+
+          // Change the remainning one
           changePerMBInfoSize(object->address, newSize, newSize);
         }
 
@@ -174,7 +181,7 @@ public:
       }
 
       // If the current entry cannot be allocated (due to a smaller size), try next entry 
-      //fprintf(stderr, "entry %p entry->next %p head %p\n", entry, entry->next, &_list);
+//     fprintf(stderr, "entry %p entry->next %p head %p\n", entry, entry->next, &_list);
       entry = entry->next; 
       if(isListTail(entry)) {
         break;
@@ -184,7 +191,8 @@ public:
 
     unlock();
 
-    //fprintf(stderr, "line %d: get object ptr %p\n", __LINE__, ptr);
+  //  if(ptr)
+  //  fprintf(stderr, "GET object ptr %p size %lx entry %p _next %ld\n", ptr, size, entry, _next);
 
     return ptr; 
   }
@@ -283,10 +291,10 @@ public:
 
     // Change PerMBInfo in order to encourage the coalesce TODO:  
     clearPerMBInfo(ptr, size);
-//    fprintf(stderr, "deallocate object pre:%p,next:%p.  _next:%d\n",
-//            object->list.prev, object->list.next, _next);
 
       unlock();
+  
+   //   fprintf(stderr, "deallocate %p with size %lx: object %p prev: %p,next:%p.  _next:%ld\n", ptr, size, object, object->list.prev, object->list.next, _next);
   }
 
 private:

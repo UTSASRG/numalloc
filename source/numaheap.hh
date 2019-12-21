@@ -101,12 +101,10 @@ public:
 #ifdef SPEC_MAINTHREAD_SUPPORT
   void stopMainHeapPhase() {
     _mainHeapPhase = false;
-    _mainHeap.stopPhase();
   } 
 
   void startMainHeapPhase() {
     _mainHeapPhase = true;
-    _mainHeap.updatePhase();
   }
 
 #endif
@@ -116,23 +114,8 @@ public:
    //fprintf(stderr, "Thread %d: allocate size %ld\n", current->index, size);
 
 #ifdef SPEC_MAINTHREAD_SUPPORT
-//    fprintf(stderr, "Thread %d: allocate size %ld at %p. _skipCheckAddr %p\n", current->index, size, &size, _skipCheckAddr);
-#if 0
-    if(_mainHeapPhase && (&size != _skipCheckAddr)) {
-//   fprintf(stderr, "Thread %d at node %d: allocation size %ld\n", current->index, current->nindex, size);
-      ptr = _mainHeap.allocate(size);
-      if(ptr) { 
-        return ptr;
-      }
-      else {
-        _skipCheckAddr = &size;
-      }
-    }
-    else if(&size == _skipCheckAddr) {
-      while(1) { ; }
-    }
-#endif
-    if(_mainHeapPhase && size > (PAGE_SIZE * NUMA_NODES/2)) {
+    if(_mainHeapPhase){
+    //if(_mainHeapPhase && size > (PAGE_SIZE * NUMA_NODES/2)) {
       ptr = _mainHeap.allocate(size);
       if(ptr) { 
         return ptr;

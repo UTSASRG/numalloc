@@ -6,9 +6,6 @@
 #include "xdefines.hh"
 #include "mm.hh"
 #include "pernodesizeclass.hh"
-#include "hashmap.hh"
-#include "hashfuncs.hh"
-#include "hashvalue.hh"
 #include "real.hh"
 #include "perthread.hh"
 
@@ -151,7 +148,6 @@ class MainHeap {
 
     // We will update the phase information.
     bool  _mainHeapPhase; 
-    int   _mhpSequence;     // main heap phase sequence number
 
     class mtBigObjects  _bigObjects;
 
@@ -160,68 +156,6 @@ class MainHeap {
 
     // The size of bag will be BAG_SIZE_SMALL_OBJECTS 
     PerBagInfo * _info;  
-    unsigned long _specialMalloc; 
-
-    class CallsiteInfo {
-      bool _isPrivate; // Is known to be private or not. 
-      int  _allocNum;  // How many allocations in this callsite?
-    
-      public:
-        CallsiteInfo() {
-          _isPrivate = false;
-          _allocNum = 1;
-        }
-
-        inline bool isPrivateCallsite() {
-          return _isPrivate;
-        }
-
-        inline void updateAlloc() {
-          _allocNum++;
-        }
-
-        inline void setPrivateCallsite() {
-          _isPrivate = true;
-        }
-    }; 
-
-    class localAllocator {
-      public:
-      static void * allocate(size_t size) {
-        return Real::malloc(size);
-      }
-
-      static void free(void *ptr) {
-        return Real::free(ptr);
-      }
-    };
-
-    // CallsiteMap is used to save the callsite and corresponding information (whether it is 
-    // private or not).
-    typedef HashMap<callstack, CallsiteInfo, localAllocator> CallsiteMap;
-    CallsiteMap _callsiteMap;
-
-    class ObjectInfo {
-    public:
-      int    _allocSequence;
-      CallsiteInfo * _callsiteInfo;
-
-      ObjectInfo(int sequence, CallsiteInfo * info) {
-        _allocSequence = sequence; 
-        _callsiteInfo = info;
-      }
-
-      int getSequence() {
-        return _allocSequence;
-      }
-
-      CallsiteInfo * getCallsiteInfo() {
-        return _callsiteInfo;
-      }
-    };
-    // ObjectsMap will save the mapping between the object address and its callsite
-    typedef HashMap<void *, ObjectInfo, localAllocator> ObjectsHashMap;
-    ObjectsHashMap _objectsMap;
 
  public:
    size_t computeMetadataSize(void) {
@@ -258,10 +192,6 @@ class MainHeap {
       //_bpSmall = (char *)MM::mmapAllocatePrivate(SIZE_PER_SPAN, (void *)_begin);
       _bpSmallEnd = _bpSmall + SIZE_PER_SPAN;
 //      fprintf(stderr, "_bpSmall is %p\n", _bpSmall);
-      _specialMalloc = 0;
-
-      _callsiteMap.initialize(HashFuncs::hashCallStackT, HashFuncs::compareCallStackT);
-      _objectsMap.initialize(HashFuncs::hashAddr, HashFuncs::compareAddr);
 
       // MMap the next span at first, and then use mbind to change the binding only
       // Note that we may only need to change it to huge page support (VERY RARE), if the allocation is 
@@ -328,21 +258,9 @@ class MainHeap {
         classSize *= 2;
       }
 
-      _mainHeapPhase = true; 
-      _mhpSequence = 0; // main heap phase sequence number
-
       // Now initialize the PerBagInfo 
       _info = (PerBagInfo *)ptr;
    } 
-
-  void stopPhase() {
-    _mainHeapPhase = false; 
-  } 
-
-  void updatePhase() {
-    _mainHeapPhase = true;
-    _mhpSequence++;
-  }
 
   // We will reserve a block of memory to store the size information of each chunk,
   // in the unit of four pages. 
