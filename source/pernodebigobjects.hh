@@ -241,7 +241,8 @@ public:
     
     _totalSize += size;
   
-    assert(_next != _max); 
+    assert(_next != _max);
+    freeObjectList.insertIntoHead(ptr, size);
   
     // Change PerMBInfo in order to encourage the coalesce TODO:  
     clearPerMBInfo(ptr, size);
