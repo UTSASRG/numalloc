@@ -111,7 +111,7 @@ public:
 
   void * allocate(size_t size) {
     void * ptr = NULL; 
-   //fprintf(stderr, "Thread %d: allocate size %ld\n", current->index, size);
+//   fprintf(stderr, "Thread %d: allocate size %ld\n", current->index, size);
 
 #ifdef SPEC_MAINTHREAD_SUPPORT
     if(_mainHeapPhase){
@@ -161,7 +161,7 @@ public:
   void deallocate(void * ptr) {
 #ifdef SPEC_MAINTHREAD_SUPPORT
     if(((uintptr_t)ptr >= _mainHeapBegin) && ((uintptr_t)ptr < _heapBegin)) {
-      _mainHeap.deallocate(ptr);
+      return _mainHeap.deallocate(ptr);
     }
 #endif
     if((uintptr_t)ptr < _heapBegin || (uintptr_t)ptr > _heapEnd) {
