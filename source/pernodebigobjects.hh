@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include "xdefines.hh"
 #include "perthread.hh"
+#include "freememlist.hh"
 
 // We should support the transfer between big objects and small objects 
 // We will maintain a freelist for big objects, with array 
@@ -29,7 +30,8 @@ class PerNodeBigObjects {
 private:
   // A circular array with the maximum of 1024 objects;
   // When an object is used, it will be removed from the list. 
-  // Also, the corresponding BigObjectInfo will be erased. 
+  // Also, the corresponding BigObjectInfo will be erased.
+  FreeMemList freeObjectList;
   PerBigObject * _objects;
   void * _heapBegin;
 

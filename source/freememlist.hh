@@ -19,25 +19,25 @@ private:
 
 private:
     FreeMemNode() {
-        this.next = NULL;
-        this.pre = NULL;
-        this.size = 0;
+        this->next = NULL;
+        this->pre = NULL;
+        this->size = 0;
     }
 
     FreeMemNode(size_t size) {
-        this.next = NULL;
-        this.pre = NULL;
-        this.size = size;
+        this->next = NULL;
+        this->pre = NULL;
+        this->size = size;
     }
 
     // insert exact behind this node
-    void insertNext(FreeMemNode freeMemNode) {
-        freeMemNode.pre = this;
-        freeMemNode.next = this->next;
+    void insertNext(FreeMemNode *freeMemNode) {
+        freeMemNode->pre = this;
+        freeMemNode->next = this->next;
         if (NULL != this->next) {
-            this->next->pre = &freeMemNode;
+            this->next->pre = freeMemNode;
         }
-        this->next = &freeMemNode;
+        this->next = freeMemNode;
     }
 
     void remove() {
@@ -48,9 +48,10 @@ private:
     }
 
 public:
-    static FreeMemNode create(void *ptr, size_t size) {
+    static FreeMemNode *create(void *ptr, size_t size) {
         assert(size >= sizeof(FreeMemNode));
-        FreeMemNode freeMemNode = new(ptr)FreeMemNode(size);
+        FreeMemNode *freeMemNode = new(ptr)FreeMemNode(size);
+        return freeMemNode;
     }
 
 
@@ -58,11 +59,11 @@ public:
         return size;
     }
 
-    FreeMemNode next() {
+    FreeMemNode *getNext() {
         return this->next;
     }
 
-    FreeMemNode pre() {
+    FreeMemNode *getPre() {
         return this->pre;
     }
 
@@ -74,20 +75,30 @@ private:
     FreeMemNode head;
 private:
 public:
-    void insertIntoHead(FreeMemNode node) {
+    void insertIntoHead(FreeMemNode *node) {
         this->head.insertNext(node);
     }
 
-    void remove(FreeMemNode node) {
-        node.remove();
+    void insertIntoHead(void *ptr, size_t size) {
+        FreeMemNode *node = FreeMemNode::create(ptr, size);
+        this->insertIntoHead(node);
     }
 
-    void replace(FreeMemNode originNode, FreeMemNode newNode) {
-        originNode.pre->next = &newNode;
-        newNode.pre = originNode.pre;
-        newNode.next = originNode.next;
-        if (NULL != originNode.next) {
-            originNode.next->pre = &newNode;
+    void remove(FreeMemNode *node) {
+        node->remove();
+    }
+
+    void replace(FreeMemNode *originNode, void *ptr, size_t size) {
+        FreeMemNode *newNode = FreeMemNode::create(ptr, size);
+        this->replace(originNode, newNode);
+    }
+
+    void replace(FreeMemNode *originNode, FreeMemNode *newNode) {
+        originNode->pre->next = newNode;
+        newNode->pre = originNode->pre;
+        newNode->next = originNode->next;
+        if (NULL != originNode->next) {
+            originNode->next->pre = newNode;
         }
     }
 
