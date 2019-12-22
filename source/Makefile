@@ -16,7 +16,8 @@ INCS = dlist.hh               \
 		mm.hh									\
 		real.hh								\
 		xdefines.hh						\
-		xthread.hh
+		xthread.hh                     \
+		freememlist.hh
 
 DEPS = $(SRCS) $(INCS)
 
