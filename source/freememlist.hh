@@ -6,6 +6,7 @@
 #define NUMALLOC_FREEMEMLIST_HH
 
 #include "dlist.hh"
+#include <new>
 
 class FreeMemList;
 
