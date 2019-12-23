@@ -5,49 +5,78 @@
 
 // Allocate reversely. Since _next always points to
 // the next availabe slot, we will use the object pointed by _next-1
-void * PerThreadSizeClass::allocateOneIfAvailable() {
-    _next--;
-    void * ptr = _freeArray[_next];
+void * PerThreadSizeClass::allocateFromFreelist() {
+  return _flist.Pop();
+}
 
-    // Make _next point to the just allocated slot
-    _avails--;
-    return ptr;
+/*
+    void *tail, *head;
+    src->PopRange(batch_size, &head, &tail);
+    central_cache[cl].InsertRange(head, tail, batch_size);
+*/
+
+int PerThreadSizeClass::moveObjectsFromNodeFreelist() {
+  int ret;
+  void * head, * tail;
+
+  // Get the objects from the node's freelist. 
+  ret = NumaHeap::getInstance().moveBatchFromNodeFreelist(_nodeindex, _sc, _batch, &head, &tail);
+
+  // Now place these objects to the freelist
+  _flist.PushRange(ret, head, tail);
+
+  return ret;
+}
+
+void PerThreadSizeClass::donateObjectsToNodeFreelist() {
+  void * head, * tail;
+
+  _flist.PopRange(_batch, &head, &tail);
+
+  // Donate objects to the node's freelist
+  NumaHeap::getInstance().donateBatchToNodeFreelist(_nodeindex, _sc, _batch, head, tail);
 }
 
 void * PerThreadSizeClass::allocate() {
-    void * ptr = NULL; 
-
-    if(_avails > 0) {
-      ptr = allocateOneIfAvailable(); 
-      return ptr;
+    if(_flist.hasItems()) {
+      return allocateFromFreelist(); 
     }
+    
+    void * ptr = NULL; 
       
     if(_allocs >= _allocsBeforeCheck) {
+     // fprintf(stderr, "sc %d batch %d move from node list, _allocs %d\n", _sc, _batch, _allocs);
       _allocs = 0;
+   
       // If no available objects, allocate objects from the node's freelist 
-      _avails = NumaHeap::getInstance().allocateBatchFromNodeFreelist(getNodeIndex(), _sc, _batch, &_freeArray[_next]);
+      int numb = moveObjectsFromNodeFreelist();
 
-      //We should get the allocation from the bumppointers at first, and then get batch from NodeFreelist
-      if(_avails > 0) {
-        _next += _avails;
-        ptr = allocateOneIfAvailable(); 
-        _allocsBeforeCheck /= 2;
+      // Now let's place this list to the current list. 
+      if(numb > 0) {
+        ptr = allocateFromFreelist(); 
+        if(numb == _batch) {
+          // Since we could get the objects, let's reduce the threshold for getting from the global list
+          _allocsBeforeCheck /= 2;
+          if(_allocsBeforeCheck <= _allocsCheckMin) {
+            _allocsBeforeCheck = _allocsCheckMin;
+          }
+        }
       }
       else {
       // fprintf(stderr, "Getting from pernode freelist failed. _allocsBeforeCheck %ld\n", _allocsBeforeCheck);
         // Can't find available objects in PerNodeFreeList, then we will 
         // check less frequently. 
         _allocsBeforeCheck *= 2;
-        if(_allocsBeforeCheck > _max/2) {
-          _allocsBeforeCheck = _max/2;
+        if(_allocsBeforeCheck > _allocsCheckMax) {
+          _allocsBeforeCheck = _allocsCheckMax;
         }
       }
     }
 
+    
     if(ptr == NULL) {
       _allocs++;
       // Now allocate from the never used ones
-      // We don't need to change _avails and _next any more
       if(_bumpPointer < _bumpPointerEnd) {
         ptr = _bumpPointer;
         _bumpPointer += _size; 
@@ -67,33 +96,13 @@ void * PerThreadSizeClass::allocate() {
  
   // Return an object starting with ptr to the PerThreadSizeClass
   void PerThreadSizeClass::deallocate(void *ptr) {
-    if(_discard == true) {
-      if(_next < _max) {
-        _discard = false;
-      }
-      else {
-        return;
-      }
-    }
-
-    _freeArray[_next] = ptr;
-
-    _next++;
-    _avails++;
+    // Put this entry to the list. 
+    _flist.Push(ptr);
 
     // If there is no spot to hold next deallocation, put some objects to PerNodeSizeClass 
-    if(_next >= _max) {
-      int items;
-      // We would like to maintain the same order. 
-      int first = _next - _batch;   
-      items = NumaHeap::getInstance().deallocateBatchToNodeFreelist(getNodeIndex(), _sc, _batch, &_freeArray[first]);
-      _avails -= items;
-      _next -= items;
-      if(items == 0) {
-        fprintf(stderr, "Increase the size for PerNodeSizeClass or PerThreadSizeCalss for _sc %ld\n", _sc);
-        _discard = true;
-        //assert(size != 0);
-      }
+    if(_flist.length() >= _watermark) {
+      // Donate the _batch items to the pernodefreelist 
+      donateObjectsToNodeFreelist();
     }
 
     return; 

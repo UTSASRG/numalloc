@@ -16,7 +16,6 @@
 // Second, we will use all read-only values, so that even there are some writes remotely,
 // the cache line won't need to be invalidated. 
 class PerNodeHeap {
-#define TIMES_MB 64
   private:
     char * _nodeBegin;
     char * _nodeEnd;
@@ -53,18 +52,6 @@ class PerNodeHeap {
       // Compute the size for _classes
       size += (sizeof(PerNodeSizeClass) + sizeof(PerNodeSizeClass *)) * SMALL_SIZE_CLASSES;
 
-      // Getting the size for each freeArray. 
-      unsigned long classSize = 16; 
-      for(int i = 0; i < SMALL_SIZE_CLASSES; i++) { 
-        unsigned long numObjects = (SIZE_ONE_MB_BAG * TIMES_MB)/classSize; 
-        if(numObjects < 2048) {
-          numObjects = 2048;
-        }
-
-        size += numObjects * sizeof(void *);
-        classSize *= 2;
-      }
-
       return size;
    }
 
@@ -82,11 +69,10 @@ class PerNodeHeap {
       // Initialize the heap for big objects, which will be allocated using huge pages.
       _bpBig = (char *)MM::mmapFromNode(SIZE_PER_SPAN, nodeindex, _bpSmallEnd, false); 
       _bpBigEnd = _bpBig + SIZE_PER_SPAN;
-
+      _scMagicValue = 32 - LOG2(SIZE_CLASS_START_SIZE);
 
       // Compute the metadata size for PerNodeHeap
       size_t metasize = computeMetadataSize(heapsize);
-      _scMagicValue = 32 - LOG2(SIZE_CLASS_START_SIZE);
 
       // Binding the memory to the specified node.
       char * ptr = (char *)MM::mmapFromNode(alignup(metasize, PAGE_SIZE), nodeindex);
@@ -120,16 +106,9 @@ class PerNodeHeap {
       } 
       
       unsigned long classSize = 16; 
-      unsigned long size; 
       for(int i = 0; i < SMALL_SIZE_CLASSES; i++) {
-        unsigned long numObjects = (SIZE_ONE_MB_BAG * TIMES_MB)/classSize; 
-        if(numObjects < 2048) {
-          numObjects = 2048;
-        }
-        size = numObjects * sizeof(void *);
         // Each element of 
-        _sizes[i]->initialize(classSize, numObjects, (void **)ptr);
-        ptr += size;
+        _sizes[i]->initialize(classSize);
 
         classSize *= 2;
       }
@@ -177,12 +156,12 @@ class PerNodeHeap {
     return ptr;
   }
 
-  int allocateBatch(int sc, unsigned long num, void ** start) {
-    return _sizes[sc]->allocateBatch(num, start);   
+  int allocateBatch(int sc, unsigned long num, void ** head, void ** tail) {
+    return _sizes[sc]->allocateBatch(num, head, tail);   
   }
 
-  int deallocateBatch(int sc, unsigned long num, void ** start) {
-    return _sizes[sc]->deallocateBatch(num, start);   
+  void deallocateBatch(int sc, unsigned long num, void *head, void *tail) {
+    _sizes[sc]->deallocateBatch(num, head, tail);   
   }
 
   // size indicates that this onemb will be used to satisfy object with size
@@ -256,7 +235,7 @@ class PerNodeHeap {
          current->ptheap->deallocate(ptr, sc);
        }
        else {
-          // Return this object to the current node's freelist for different size classes
+        // Return this object to the current node's freelist for different size classes
         // Based on NumaHeap, this address belongs to the current node.
         _sizes[sc]->deallocate(ptr);
        }

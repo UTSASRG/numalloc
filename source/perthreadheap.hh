@@ -17,28 +17,12 @@ public:
     unsigned long classSize = 16;
     unsigned long size = 0; 
     for(i = 0; i < SMALL_SIZE_CLASSES; i++) {
-      // Size is the total size of array for each size class. 
-      // Each perthreadsizeclass will hold 2M/classSize number of objects
-      // When perthreadsizeclass has too many freed objects, the objects will be putted into pernodesizeclass
-      size += (SIZE_ONE_MB_BAG * 2 * sizeof(void *))/classSize;
-      classSize *= 2;
-    }
-
-    char * ptr = (char *)MM::mmapFromNode(alignup(size, PAGE_SIZE), nindex); 
-    if(tindex == 0)
-    fprintf(stderr, "PerThreadHeap %d initialization nindex %d from %p to %p\n", tindex, nindex, ptr, ptr + size ); 
-    classSize = 16; 
-    for(i = 0; i < SMALL_SIZE_CLASSES; i++) {
-      unsigned int objects = SIZE_ONE_MB_BAG * 2/classSize;;
-      size = objects * sizeof(void *);
-      _sclass[i].initialize(nindex, classSize, i, objects, (void *)ptr); 
-
-      ptr += size;
+      unsigned int objects = SIZE_ONE_MB_BAG/classSize;
+      _sclass[i].initialize(nindex, classSize, i, objects); 
       classSize *= 2;
     }
 
     _scMagicValue = 32 - LOG2(SIZE_CLASS_START_SIZE); 
-    //fprintf(stderr, "********_scMagivValue %ld\n", _scMagicValue);
   }
 
   PerThreadSizeClass * getPerThreadSizeClassFromSize(size_t sz) {

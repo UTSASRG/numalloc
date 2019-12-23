@@ -88,8 +88,6 @@ public:
     for(int i = _next - 1; i>= 0; i--) {
       PerBigObject * object = &_objects[i];   
     // Now search the objects to find an entry that satisfies the request
-  //  fprintf(stderr, "AllocateBigObject totalSize %lx request size %lx\n",  _totalSize, size);
-      // Check whether the current entry can be merged with its neibour to satisfy this request
       if(object->size < size) {
 #if 0
         // Merge with its neighbor if possible.

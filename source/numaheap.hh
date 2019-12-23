@@ -114,8 +114,8 @@ public:
 //   fprintf(stderr, "Thread %d: allocate size %ld\n", current->index, size);
 
 #ifdef SPEC_MAINTHREAD_SUPPORT
-    if(_mainHeapPhase){
-    //if(_mainHeapPhase && size > (PAGE_SIZE * NUMA_NODES/2)) {
+    //if(_mainHeapPhase){
+    if(_mainHeapPhase && size > (PAGE_SIZE * NUMA_NODES/2)) {
       ptr = _mainHeap.allocate(size);
       if(ptr) { 
         return ptr;
@@ -145,8 +145,8 @@ public:
   } 
 
   // Allocate the specified number of freed objects from the specified node(nindex)'s size class (sc).
-  int allocateBatchFromNodeFreelist(int nindex, int sc, unsigned long num, void ** start) {
-    return _nodes[nindex].allocateBatch(sc, num, start);
+  int moveBatchFromNodeFreelist(int nindex, int sc, unsigned long num, void ** head, void ** tail) {
+    return _nodes[nindex].allocateBatch(sc, num, head, tail);
   }
 
   char * allocateOnembFromNode(int nindex, size_t size) {
@@ -154,8 +154,8 @@ public:
   }
   
   // Contribure some objects to the node's freelist
-  int deallocateBatchToNodeFreelist(int nindex, int sc, unsigned long num, void ** start) {
-    return _nodes[nindex].deallocateBatch(sc, num, start);
+  void donateBatchToNodeFreelist(int nindex, int sc, unsigned long num, void * head, void *tail) {
+    _nodes[nindex].deallocateBatch(sc, num, head, tail);
   }
 
   void deallocate(void * ptr) {

@@ -5,7 +5,7 @@
 #include<stdlib.h>
 #include "xdefines.hh"
 #include "mm.hh"
-#include "pernodesizeclass.hh"
+#include "mainheapsizeclass.hh"
 #include "pernodebigobjects.hh"
 #include "real.hh"
 #include "perthread.hh"
@@ -109,7 +109,6 @@ class MainHeap {
 
      // Allocate the memory from the OS 
      ptr = MM::mmapAllocatePrivate(size, ptr, isHugePage);
-//    fprintf(stderr, "BIG malloc %ld ptr %p\n", sz, ptr);
      
      // Now binding the memory to different nodes. 
      MM::bindMemoryBlockwise((char *)ptr, pages, _nodeIndex, isHugePage); 
@@ -160,7 +159,7 @@ class MainHeap {
     class mtBigObjects  _bigObjects;
 
     // Currently, size class is from 2^4 to 2^19 (512 KB), with 16 sizes in total.
-    PerNodeSizeClass  ** _sizes;
+    MainHeapSizeClass  ** _sizes;
 
     // The size of bag will be BAG_SIZE_SMALL_OBJECTS 
     PerBagInfo * _info;  
@@ -170,7 +169,7 @@ class MainHeap {
      size_t size = 0;
 
       // Compute the size for _classes
-      size += (sizeof(PerNodeSizeClass) + sizeof(PerNodeSizeClass *)) * SMALL_SIZE_CLASSES;
+      size += (sizeof(MainHeapSizeClass) + sizeof(MainHeapSizeClass *)) * SMALL_SIZE_CLASSES;
 
       // Getting the size for each freeArray. 
       unsigned long classSize = 16; 
@@ -242,13 +241,13 @@ class MainHeap {
       char * ptr = (char *)MM::mmapFromNode(alignup(metasize, PAGE_SIZE), nodeindex);
       
       // Initilize the size classes; 
-      _sizes = (PerNodeSizeClass **)ptr;
-      ptr += sizeof(PerNodeSizeClass *) * SMALL_SIZE_CLASSES;
+      _sizes = (MainHeapSizeClass **)ptr;
+      ptr += sizeof(MainHeapSizeClass *) * SMALL_SIZE_CLASSES;
 
-      // Initialize the _sizes array, since every element points to an actual PerNodeSizeClass object
+      // Initialize the _sizes array, since every element points to an actual MainHeapSizeClass object
       for(int i = 0; i < SMALL_SIZE_CLASSES; i++) {
-        _sizes[i] = (PerNodeSizeClass *)ptr;
-        ptr += sizeof(PerNodeSizeClass);
+        _sizes[i] = (MainHeapSizeClass *)ptr;
+        ptr += sizeof(MainHeapSizeClass);
       } 
       
       unsigned long classSize = 16; 
