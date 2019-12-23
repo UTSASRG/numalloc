@@ -84,11 +84,13 @@ public:
     }
 
     void insertIntoHead(void *ptr, size_t size) {
+        fprintf(stderr, "free node list insert\n");
         FreeMemNode *node = FreeMemNode::create(ptr, size);
         this->insertIntoHead(node);
     }
 
     void remove(FreeMemNode *node) {
+        fprintf(stderr, "free node list remove\n");
         node->remove();
     }
 
