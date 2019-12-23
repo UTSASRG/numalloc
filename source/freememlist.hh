@@ -55,6 +55,9 @@ public:
         return freeMemNode;
     }
 
+    void setSize(size_t size) {
+        this->size = size;
+    }
 
     size_t getSize() {
         return size;
@@ -101,6 +104,10 @@ public:
         if (NULL != originNode->next) {
             originNode->next->pre = newNode;
         }
+    }
+
+    FreeMemNode *getHead() {
+        return &head;
     }
 
     bool isEmpty() {
