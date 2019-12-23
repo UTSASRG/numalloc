@@ -81,8 +81,7 @@ public:
     void *allocate(size_t size) {
         void *ptr = NULL;
 
-        FreeMemNode *head = freeObjectList.getHead();
-        if (head->getNext() == NULL) {
+        if (freeObjectList.isEmpty()) {
             return NULL;
         }
 
@@ -93,6 +92,8 @@ public:
         if (_totalSize < size) {
             return NULL;
         }
+
+        FreeMemNode *head = freeObjectList.getHead();
 
         //fprintf(stderr, "Allocate big object size %lx, _totalSize %lx\n", size, _totalSize);
 
