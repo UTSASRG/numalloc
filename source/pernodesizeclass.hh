@@ -3,6 +3,7 @@
 
 #include "mm.hh"
 #include "pthread.h"
+#include "freememlist.hh"
 
 // For small objects, each size class will maintain
 // one bumppointer and one freelist
