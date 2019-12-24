@@ -3,7 +3,7 @@
 
 #include "mm.hh"
 #include "pthread.h"
-#include "freememlist.hh"
+#include "freememsinglelist.hh"
 
 // For small objects, each size class will maintain
 // one bumppointer and one freelist
@@ -18,7 +18,7 @@ class PerNodeSizeClass {
     // Freelist will be tracked with one circular array.
     void ** _freeArray;
 
-    FreeMemList freeMemList;
+    FreeMemSingleList freeMemList;
 
  public:
     void initialize(unsigned long size, unsigned long numObjects, void ** ptr) {
@@ -43,10 +43,10 @@ class PerNodeSizeClass {
     void * allocate( ) {
       void * ptr = NULL;
       lock();
-        FreeMemNode *head = freeMemList.getHead();
+        FreeMemSingleNode *head = freeMemList.getHead();
         if (head->getNext() != NULL) {
             ptr = (void *) head->getNext();
-            freeMemList.remove(head->getNext());
+            freeMemList.remove(head, head->getNext());
         }
       unlock();
       return ptr;
@@ -57,15 +57,14 @@ class PerNodeSizeClass {
       int  num = 0; 
 
       lock();
-        FreeMemNode *head = freeMemList.getHead();
-        for(; num < requestNum; num++) {
-            head = head->getNext();
-            if (head == NULL) {
+        FreeMemSingleNode *head = freeMemList.getHead();
+        for (; num < requestNum; num++) {
+            if (head->getNext() == NULL) {
                 break;
             }
-            *dest = (void *) head;
+            *dest = (void *) head->getNext();
             dest++;
-            freeMemList.remove(head);
+            freeMemList.remove(head, head->getNext());
         }
            
       unlock();

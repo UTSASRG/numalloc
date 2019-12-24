@@ -1,11 +1,10 @@
 //
-// Created by XIN ZHAO on 12/21/19.
+// Created by XIN ZHAO on 12/24/19.
 //
 
-#ifndef NUMALLOC_FREEMEMLIST_HH
-#define NUMALLOC_FREEMEMLIST_HH
+#ifndef NUMALLOC_FREEMEMSINGLELIST_HH
+#define NUMALLOC_FREEMEMSINGLELIST_HH
 
-#include "dlist.hh"
 #include <new>
 
 class FreeMemList;
@@ -121,5 +120,4 @@ public:
     }
 };
 
-
-#endif //NUMALLOC_FREEMEMLIST_HH
+#endif //NUMALLOC_FREEMEMSINGLELIST_HH
