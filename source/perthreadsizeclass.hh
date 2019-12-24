@@ -2,6 +2,7 @@
 #define __PER_THREAD_SIZE_CLASS_HH__
 
 #include "mm.hh"
+#include "freememlist.hh"
 
 class PerThreadSizeClass {
 private:
@@ -23,6 +24,7 @@ private:
   bool _discard;
   // Freelist will be tracked with one circular array.
   void ** _freeArray;
+  FreeMemList freeMemList;
 
 public: 
   void initialize(int nodeindex, int size, int sc, unsigned long numObjects, void * pointer) {

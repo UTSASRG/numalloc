@@ -6,31 +6,37 @@
 // Allocate reversely. Since _next always points to
 // the next availabe slot, we will use the object pointed by _next-1
 void * PerThreadSizeClass::allocateOneIfAvailable() {
-    _next--;
-    void * ptr = _freeArray[_next];
+    FreeMemNode *head = freeMemList.getHead();
+    if (head->getNext() == NULL) {
+        return NULL;
+    }
+    freeMemList.remove(head->getNext());
+    return (void *) head->getNext();
 
     // Make _next point to the just allocated slot
-    _avails--;
-    return ptr;
 }
 
 void * PerThreadSizeClass::allocate() {
-    void * ptr = NULL; 
+    void * ptr = NULL;
 
-    if(_avails > 0) {
-      ptr = allocateOneIfAvailable(); 
-      return ptr;
+    FreeMemNode *head = freeMemList.getHead();
+    if (head->getNext() != NULL) {
+        freeMemList.remove(head->getNext());
+        return head->getNext();
     }
-      
+
     if(_allocs >= _allocsBeforeCheck) {
       _allocs = 0;
+      void *dist[_batch];
       // If no available objects, allocate objects from the node's freelist 
-      _avails = NumaHeap::getInstance().allocateBatchFromNodeFreelist(getNodeIndex(), _sc, _batch, &_freeArray[_next]);
+      _avails = NumaHeap::getInstance().allocateBatchFromNodeFreelist(getNodeIndex(), _sc, _batch, dist);
 
       //We should get the allocation from the bumppointers at first, and then get batch from NodeFreelist
       if(_avails > 0) {
-        _next += _avails;
-        ptr = allocateOneIfAvailable(); 
+          ptr = dist[0];
+          for (int i = 1; i < _avails; i++) {
+              freeMemList.insertIntoHead(dist[i], _size);
+          }
         _allocsBeforeCheck /= 2;
       }
       else {
@@ -67,34 +73,22 @@ void * PerThreadSizeClass::allocate() {
  
   // Return an object starting with ptr to the PerThreadSizeClass
   void PerThreadSizeClass::deallocate(void *ptr) {
-    if(_discard == true) {
-      if(_next < _max) {
-        _discard = false;
+
+      freeMemList.insertIntoHead(ptr, _size);
+
+      // If there is no spot to hold next deallocation, put some objects to PerNodeSizeClass
+      if (freeMemList.getLength() < _max) {
+          return;
       }
-      else {
-        return;
+      void *dist[_batch];
+      for (int i = 0; i < _batch; i++) {
+          dist[i] = (void *) freeMemList.getTail();
+          freeMemList.remove(freeMemList.getTail());
       }
-    }
-
-    _freeArray[_next] = ptr;
-
-    _next++;
-    _avails++;
-
-    // If there is no spot to hold next deallocation, put some objects to PerNodeSizeClass 
-    if(_next >= _max) {
-      int items;
-      // We would like to maintain the same order. 
-      int first = _next - _batch;   
-      items = NumaHeap::getInstance().deallocateBatchToNodeFreelist(getNodeIndex(), _sc, _batch, &_freeArray[first]);
-      _avails -= items;
-      _next -= items;
-      if(items == 0) {
-        fprintf(stderr, "Increase the size for PerNodeSizeClass or PerThreadSizeCalss for _sc %ld\n", _sc);
-        _discard = true;
-        //assert(size != 0);
+      int items = NumaHeap::getInstance().deallocateBatchToNodeFreelist(getNodeIndex(), _sc, _batch, dist);
+      if (items < _batch) {
+          fprintf(stderr, "Increase the size for PerNodeSizeClass or PerThreadSizeCalss for _sc %ld\n", _sc);
+//          _discard = true;
+          //assert(size != 0);
       }
-    }
-
-    return; 
   }

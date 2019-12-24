@@ -76,10 +76,16 @@ public:
 class FreeMemList {
 private:
     FreeMemNode head;
+    FreeMemNode *tail = NULL;
+    long length = 0;
 private:
 public:
     void insertIntoHead(FreeMemNode *node) {
         this->head.insertNext(node);
+        length++;
+        if (node->next == NULL) {
+            tail = node;
+        }
     }
 
     void insertIntoHead(void *ptr, size_t size) {
@@ -90,6 +96,13 @@ public:
 
     void remove(FreeMemNode *node) {
 //        fprintf(stderr, "free node list remove\n");
+        length--;
+        if (this->tail == node) {
+            this->tail = const_cast<FreeMemNode *>(node->pre);
+        }
+        if (this->tail == &this->head) {
+            this->tail = NULL;
+        }
         node->remove();
     }
 
@@ -106,10 +119,17 @@ public:
         if (NULL != originNode->next) {
             originNode->next->pre = newNode;
         }
+        if (this->tail == originNode) {
+            this->tail = newNode;
+        }
     }
 
     FreeMemNode *getHead() {
         return &head;
+    }
+
+    FreeMemNode *getTail() {
+        return tail;
     }
 
     bool isEmpty() {
@@ -117,6 +137,10 @@ public:
             return true;
         }
         return false;
+    }
+
+    long getLength() {
+        return length;
     }
 };
 
