@@ -10,8 +10,9 @@ void * PerThreadSizeClass::allocateOneIfAvailable() {
     if (head->getNext() == NULL) {
         return NULL;
     }
-    freeMemList.remove(head->getNext());
-    return (void *) head->getNext();
+    head=head->getNext();
+    freeMemList.remove(head);
+    return (void *) head;
 
     // Make _next point to the just allocated slot
 }
@@ -21,8 +22,9 @@ void * PerThreadSizeClass::allocate() {
 
     FreeMemNode *head = freeMemList.getHead();
     if (head->getNext() != NULL) {
-        freeMemList.remove(head->getNext());
-        return head->getNext();
+        head = head->getNext();
+        freeMemList.remove(head);
+        return (void *) head;
     }
 
     if(_allocs >= _allocsBeforeCheck) {
