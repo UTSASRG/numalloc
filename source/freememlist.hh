@@ -83,18 +83,18 @@ public:
     }
 
     void insertIntoHead(void *ptr, size_t size) {
-        fprintf(stderr, "free node list insert head\n");
+//        fprintf(stderr, "free node list insert head\n");
         FreeMemNode *node = FreeMemNode::create(ptr, size);
         this->insertIntoHead(node);
     }
 
     void remove(FreeMemNode *node) {
-        fprintf(stderr, "free node list remove\n");
+//        fprintf(stderr, "free node list remove\n");
         node->remove();
     }
 
     void replace(FreeMemNode *originNode, void *ptr, size_t size) {
-        fprintf(stderr, "free node list replace\n");
+//        fprintf(stderr, "free node list replace\n");
         FreeMemNode *newNode = FreeMemNode::create(ptr, size);
         this->replace(originNode, newNode);
     }
