@@ -79,7 +79,7 @@ void * PerThreadSizeClass::allocate() {
       freeMemList.insertIntoHead(ptr, _size);
 
       // If there is no spot to hold next deallocation, put some objects to PerNodeSizeClass
-      if (freeMemList.getLength() < _max) {
+      if (freeMemList.getLength() < 2 * _max) {
           return;
       }
       void *dist[_batch];
