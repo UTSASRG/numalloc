@@ -85,10 +85,6 @@ public:
             return NULL;
         }
 
-        if (_next > 0) {
-            fprintf(stderr, "freeobjectList is NULL, but wrong\n");
-        }
-
         if (_totalSize < size) {
             return NULL;
         }
@@ -97,8 +93,38 @@ public:
 
         //fprintf(stderr, "Allocate big object size %lx, _totalSize %lx\n", size, _totalSize);
 
+        while (NULL != head->getNext()) {
+            head = head->getNext();
+
+            if (head->getSize() < size) {
+                continue;
+            }
+
+            size_t newSize = head->getSize() - size;
+            void *newPtr = (void *) ((intptr_t) head + size);
+
+            _totalSize -= size;
+            ptr = (void *) head;
+
+            // Change the allocated one
+            changePerMBInfoSize(ptr, size, size);
+
+            // Change the remainning one
+            changePerMBInfoSize(newPtr, newSize, newSize);
+
+            if (head->getSize() == size) {
+                freeObjectList.remove(head);
+                break;
+            }
+            freeObjectList.replace(head, newPtr, newSize);
+            break;
+        }
+
+        return ptr;
+
         for (int i = _next - 1; i >= 0; i--) {
             PerBigObject *object = &_objects[i];
+            head = head->getNext();
             // Now search the objects to find an entry that satisfies the request
             //  fprintf(stderr, "AllocateBigObject totalSize %lx request size %lx\n",  _totalSize, size);
             // Check whether the current entry can be merged with its neibour to satisfy this request
@@ -126,7 +152,6 @@ public:
                 // We should at least merge the last one with never-allocated ones.
             }
 
-            head = head->getNext();
             if (head->getSize() != object->size) {
                 fprintf(stderr, "freeobjectList size is wrong\n");
             }
@@ -154,7 +179,8 @@ public:
                     // For the remaining part, we will update its pointer and size information (already did above).
                     // There is no need to update the freelist, since another half is still in the list
                     object->address = (void *) ((intptr_t) object->address + size);
-                    freeObjectList.replace(head, object->address, head->getSize());
+
+                    freeObjectList.replace(head, (void *) ((intptr_t) (void *) head + size), head->getSize());
                     // fprintf(stderr, "********** dividing original size %lx this size %lx\n", object->size + size, size);
                     // Change the PerMBInfo information for the remaining part.
                     // That is, we should change the size to the new size
@@ -250,16 +276,16 @@ public:
     // Place the objects to the list
     void deallocate(void *ptr, size_t size) {
 
-        PerBigObject *object = &_objects[_next];
-
-        object->size = size;
-        object->address = ptr;
-
-        _next++;
-
+//        PerBigObject *object = &_objects[_next];
+//
+//        object->size = size;
+//        object->address = ptr;
+//
+//        _next++;
+//
         _totalSize += size;
 
-        assert(_next != _max);
+//        assert(_next != _max);
         freeObjectList.insertIntoHead(ptr, size);
 
         // Change PerMBInfo in order to encourage the coalesce TODO:

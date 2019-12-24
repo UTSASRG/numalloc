@@ -12,9 +12,9 @@ class FreeMemList;
 
 class FreeMemNode {
 private:
-    FreeMemNode *next;
-    FreeMemNode *pre;
-    size_t size;
+    volatile FreeMemNode *next;
+    volatile FreeMemNode *pre;
+    volatile size_t size;
 
     friend class FreeMemList;
 
@@ -64,11 +64,11 @@ public:
     }
 
     FreeMemNode *getNext() {
-        return this->next;
+        return const_cast<FreeMemNode *>(this->next);
     }
 
     FreeMemNode *getPre() {
-        return this->pre;
+        return const_cast<FreeMemNode *>(this->pre);
     }
 
 
@@ -84,7 +84,7 @@ public:
     }
 
     void insertIntoHead(void *ptr, size_t size) {
-        fprintf(stderr, "free node list insert\n");
+        fprintf(stderr, "free node list insert head\n");
         FreeMemNode *node = FreeMemNode::create(ptr, size);
         this->insertIntoHead(node);
     }
@@ -95,6 +95,7 @@ public:
     }
 
     void replace(FreeMemNode *originNode, void *ptr, size_t size) {
+        fprintf(stderr, "free node list replace\n");
         FreeMemNode *newNode = FreeMemNode::create(ptr, size);
         this->replace(originNode, newNode);
     }
