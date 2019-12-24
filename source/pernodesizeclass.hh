@@ -17,6 +17,8 @@ class PerNodeSizeClass {
     // Freelist will be tracked with one circular array.
     void ** _freeArray;
 
+    FreeMemList freeMemList;
+
  public:
     void initialize(unsigned long size, unsigned long numObjects, void ** ptr) {
       // Initialize the lock
@@ -40,13 +42,11 @@ class PerNodeSizeClass {
     void * allocate( ) {
       void * ptr = NULL;
       lock();
-
-      if(_avails > 0) {
-        _next--;
-        _avails--;
-        ptr = _freeArray[_next];
-      }
-
+        FreeMemNode *head = freeMemList.getHead();
+        if (head->getNext() != NULL) {
+            ptr = (void *) head->getNext();
+            freeMemList.remove(head->getNext());
+        }
       unlock();
       return ptr;
     }
@@ -56,28 +56,16 @@ class PerNodeSizeClass {
       int  num = 0; 
 
       lock();
-      
-      if(_avails > 0) {
-        num = requestNum >= _avails ? _avails : requestNum;
-
-        int start = _next-num; 
-
-        //assert(_next >= 1);
-        if(_next == 0) {
-          fprintf(stderr, "_next is 0!!!_size %ld _avails %ld requestNum %ld\n", _size, _avails, requestNum);
-          abort();
+        FreeMemNode *head = freeMemList.getHead();
+        for(; num < requestNum; num++) {
+            head = head->getNext();
+            if (head == NULL) {
+                break;
+            }
+            *dest = (void *) head;
+            dest++;
+            freeMemList.remove(head);
         }
-
-        // Allocate multiple mru entries to the dest starting with the given address
-        for(int i = start; i < _next; i++) {
-          *dest = _freeArray[i];
-          assert(_freeArray[i] != NULL);
-
-          dest++;
-        }
-        _next = start;
-        _avails -= num;
-      }
            
       unlock();
 
@@ -90,13 +78,9 @@ class PerNodeSizeClass {
       char * ptr = start; 
 
       while(ptr < stop) {
-        _freeArray[_next] = ptr;
-        ptr += _size; 
-        _avails++;
-        _next++;
+          freeMemList.insertIntoHead(ptr, _size);
+        ptr += _size;
       }
-
-      return;
     }
 
     // Deallocate multiple objects to the pernode's size class. 
@@ -109,19 +93,12 @@ class PerNodeSizeClass {
       lock();
       
       // Check whether it is big enough to hold all objects
-      if(requestNum + _avails > _max) {
-        num = _max - _avails; 
-      }
       
       // Allocate multiple mru entries to the dest starting with the given address
       for(int i = 0; i < num; i++) {
-         _freeArray[_next] = *dest;
-         dest++;
-         _next++;
+          freeMemList.insertIntoHead(dest[i],_size);
       }
 
-      _avails += num;
-      
       unlock();
 
       return num;
@@ -133,20 +110,9 @@ class PerNodeSizeClass {
 
     // Putting an entry to the pernode freelist of a size class
     void deallocate(void * ptr) {
-      lock(); 
+      lock();
 
-      if(_next < _max) {
-        _freeArray[_next] = ptr;
-        
-        _next++;
-        _avails++;
-      
-        // Check whether _avails objects are more than enough
-        if(_next == _max || _avails == _max) {
-          fprintf(stderr, "The pernode freelist for size class %ld with %ld objects is too small.\n", _size, _max);
-          assert(_avails == _max);
-        }
-      }
+      freeMemList.insertIntoHead(ptr, _size);
       unlock();
     }
 
