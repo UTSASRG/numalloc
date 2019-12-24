@@ -41,7 +41,7 @@ public:
     // Map a chunk of memory in the local node
     _freeArray = (void **)pointer;
 
-    _batch = 0.5 * numObjects;
+    _batch = numObjects;
     _allocsBeforeCheck = _batch/4;
     _allocs = 0;
 
