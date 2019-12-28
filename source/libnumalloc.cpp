@@ -32,6 +32,26 @@
 #include "xdefines.hh"
 #include "perthread.hh"
 
+#define GET_TIME 0
+#if GET_TIME
+#include "time.h"
+
+
+volatile unsigned long long origTime = 0;
+volatile unsigned long long allocs = 0;
+volatile unsigned long long totalAllocCycles = 0;
+volatile unsigned long long totalFreeCycles = 0;
+inline unsigned long long rdtscp() {
+    unsigned int lo, hi;
+    asm volatile (
+            "rdtscp"
+            : "=a"(lo), "=d"(hi) /* outputs */
+            : "a"(0)             /* inputs */
+            : "%ebx", "%ecx");     /* clobbers*/
+    unsigned long long retval = ((unsigned long long)lo) | (((unsigned long long)hi) << 32);
+    return retval;
+}
+#endif
 // Define a thread local variable--current. Based on the evaluation, 
 // http://david-grs.github.io/tls_performance_overhead_cost_linux/, 
 // TLS is very efficient. I also have verified this by myself. 
@@ -97,12 +117,20 @@ extern "C" {
 void heapinitialize();
 
 __attribute__((constructor)) void initializer() {
+#if GET_TIME
+  origTime = rdtscp();
+#endif
   heapinitialize();
 }
 
 
 __attribute__((destructor)) void finalizer() {
-
+  #if GET_TIME
+    unsigned long long lastTime = rdtscp() - origTime;
+    fprintf(stderr, "total runtime is %lld, percentage %lf", lastTime, ((double)lastTime)/((double)(totalAllocCycles + totalFreeCycles)));
+    fprintf(stderr, "total alloc cycles %lld, free cycles %lld\n", totalAllocCycles, totalFreeCycles);
+  #endif
+  
 }
 
 
@@ -151,8 +179,20 @@ void heapinitialize() {
       ptr = Real::malloc(size);
       break; 
 
-    case E_HEAP_INIT_DONE: 
+    case E_HEAP_INIT_DONE:
+#if GET_TIME
+     unsigned long long start = rdtscp(); 
+#endif
       ptr = NumaHeap::getInstance().allocate(size); 
+#if GET_TIME
+      unsigned long long length = rdtscp() - start;
+      allocs++;
+      totalAllocCycles += length;
+      if((allocs % 1000000) == 0) {
+        fprintf(stderr, "Runtime is %lld totalAllocCycles %lld, allocs %lld. current length %lld\n", rdtscp()-origTime, totalAllocCycles, allocs, length);
+      }
+      //fprintf(stderr, "totalAllocCycles %lld length %lld\n", totalAllocCycles, length);
+#endif
       //fprintf(stderr, "malloc size %ld ptr %p\n", size, ptr);
       break;
   
@@ -173,8 +213,15 @@ void heapinitialize() {
    }
    else { 
     // fprintf(stderr, "free ptr %p\n", ptr);
+#if GET_TIME
+     unsigned long long start = rdtscp(); 
+#endif
+      //fprintf(stderr, "malloc size %ld ptr %p\n", size, ptr);
      // Perform the free operation
      NumaHeap::getInstance().deallocate(ptr); 
+#if GET_TIME
+      totalFreeCycles += rdtscp() - start;
+#endif
      //fprintf(stderr, "free ptr %p done\n", ptr);
    }
 }

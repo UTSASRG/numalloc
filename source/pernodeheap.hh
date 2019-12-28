@@ -9,6 +9,7 @@
 #include "pernodesizeclass.hh"
 #include "perthread.hh"
 
+#define DEBUG 1
 // Since the array of PerNodeHeap will be allocated from the stack, therefore, 
 // we will try to avoid false sharing issue as much as possible. 
 // There are two ways to avoid the performance issues: 
@@ -36,6 +37,9 @@ class PerNodeHeap {
     // _bigObjects will also maintain the PerMBINfo
     PerNodeBigObjects * _bigObjects;
 
+#ifdef DEBUG 
+    unsigned long _allocMBs;
+#endif    
     // Currently, size class is from 2^4 to 2^19 (512 KB), with 16 sizes in total.
     PerNodeSizeClass  ** _sizes;
     int   _numClasses;
@@ -45,7 +49,9 @@ class PerNodeHeap {
  public:
    size_t computeMetadataSize(size_t heapsize) {
      size_t size = sizeof(pthread_spinlock_t) * 2; 
-
+#ifdef DEBUG
+    _allocMBs = 0; 
+#endif
       // Compute the size for _bigObjects. 
       size += sizeof(PerNodeBigObjects) + _bigObjects->computeImplicitSize(heapsize);
 
@@ -55,19 +61,20 @@ class PerNodeHeap {
       return size;
    }
 
-   void initialize(int nodeindex, char * start, size_t heapsize) {
+   void initialize(int nodeindex, char * start) {
+      size_t heapsize = 2 * SIZE_PER_SPAN;
       // Save the heap related information
       _nodeBegin = start; 
       _nodeEnd = start + heapsize;
       _nodeindex = nodeindex; 
       _numClasses = SMALL_SIZE_CLASSES;
-      
+     
       // Initialize the heap for small objects
       _bpSmall = (char *)MM::mmapFromNode(SIZE_PER_SPAN, nodeindex, (void *)start, false); 
       _bpSmallEnd = _bpSmall + SIZE_PER_SPAN;
 
       // Initialize the heap for big objects, which will be allocated using huge pages.
-      _bpBig = (char *)MM::mmapFromNode(SIZE_PER_SPAN, nodeindex, _bpSmallEnd, false); 
+      _bpBig = (char *)MM::mmapFromNode(SIZE_PER_SPAN, nodeindex, _bpSmallEnd, true); 
       _bpBigEnd = _bpBig + SIZE_PER_SPAN;
       _scMagicValue = 32 - LOG2(SIZE_CLASS_START_SIZE);
 
@@ -143,6 +150,9 @@ class PerNodeHeap {
       ptr = (char *)_bpBig;
       _bpBig += size;
 
+#ifdef DEBUG
+      //_allocMBs += size/SIZE_ONE_MB_BAG;
+#endif
       // We should not consume all memory. If yes, then we should make the heap bigger.
       // Since we don't check normally  to reduce the overhead, we will use the assertion here
       assert(_bpBig < _bpBigEnd);
@@ -194,10 +204,16 @@ class PerNodeHeap {
     char * ptr = NULL; 
 
     // Check the freed bigObjects at first, since they may be still hot in cache. 
-    ptr = allocateFromFreelist(SIZE_ONE_MB_BAG); 
-
+ //   ptr = allocateFromFreelist(SIZE_ONE_MB_BAG); 
+    
     // If there is no freed bigObjects, getting one from the bump pointer
     if(ptr == NULL) {
+#ifdef DEBUG
+      if(size == 64) {
+        _allocMBs += 1;
+        //fprintf(stderr, "Alloc one MB for size class %ld MBs %ld\n", size, _allocMBs);
+      }
+#endif
       ptr = allocateFromBumppointer(SIZE_ONE_MB_BAG);
     } 
 

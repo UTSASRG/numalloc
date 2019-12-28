@@ -30,10 +30,13 @@ int PerThreadSizeClass::moveObjectsFromNodeFreelist() {
 
 void PerThreadSizeClass::donateObjectsToNodeFreelist() {
   void * head, * tail;
+  
+  fprintf(stderr, "Thread %d :donate batch %d to node list, remain objects %ld\n", getNodeIndex(), _batch, _flist.length());
 
   _flist.PopRange(_batch, &head, &tail);
 
   // Donate objects to the node's freelist
+  fprintf(stderr, "Thread %d :donate batch %d to node list, remain objects %ld\n", getNodeIndex(), _batch, _flist.length());
   NumaHeap::getInstance().donateBatchToNodeFreelist(_nodeindex, _sc, _batch, head, tail);
 }
 
@@ -41,15 +44,15 @@ void * PerThreadSizeClass::allocate() {
     if(_flist.hasItems()) {
       return allocateFromFreelist(); 
     }
-    
+   
     void * ptr = NULL; 
       
     if(_allocs >= _allocsBeforeCheck) {
-     // fprintf(stderr, "sc %d batch %d move from node list, _allocs %d\n", _sc, _batch, _allocs);
       _allocs = 0;
    
       // If no available objects, allocate objects from the node's freelist 
       int numb = moveObjectsFromNodeFreelist();
+  //    fprintf(stderr, "Thread %d :sc %d batch %d move %d objects from node list, _allocs %d\n", getNodeIndex(), _sc, _batch, numb, _allocsBeforeCheck);
 
       // Now let's place this list to the current list. 
       if(numb > 0) {
@@ -76,19 +79,36 @@ void * PerThreadSizeClass::allocate() {
     
     if(ptr == NULL) {
       _allocs++;
-      // Now allocate from the never used ones
-      if(_bumpPointer < _bumpPointerEnd) {
-        ptr = _bumpPointer;
-        _bumpPointer += _size; 
-      }
-      else {
+      // Get a new block if necessary 
+      if(_bumpPointer == _bumpPointerEnd) {
         // Now get a chunk from the current PerNodeHeap: either from big objects or never allocated ones
         _bumpPointer = NumaHeap::getInstance().allocateOnembFromNode(getNodeIndex(), _size); 
         _bumpPointerEnd = _bumpPointer + SIZE_ONE_MB_BAG;
+      }
 
-        // Now perform the allocation
+      // Now allocate from the never used ones
+      if(_bumpPointer < _bumpPointerEnd) {
         ptr = _bumpPointer;
-        _bumpPointer += _size; 
+        if(_size >= _warmupSize/2) {
+          _bumpPointer += _size;
+        }
+        else {
+          _bumpPointer += _warmupSize;
+          // Split the block into pieces and add to the free-list
+          char * iptr = ((char*)ptr) + _size;
+          void * head = iptr;
+          void ** tail = (void **)head;
+          while (iptr <= (_bumpPointer - _size)) {
+            iptr += _size;
+          //fprintf(stderr, "tail %p set to iptr %p\n", tail, iptr);
+            *tail = iptr;
+            tail = reinterpret_cast<void**>(iptr);
+          //tail = reinterpret_cast<void**>(ptr);
+          }
+
+          // Add the remaining objects to the freelist.
+          _flist.PushRange(_warmupObjects, head, tail);
+        }
       }
     }
     return ptr;

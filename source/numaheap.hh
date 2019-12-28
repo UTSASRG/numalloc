@@ -64,9 +64,9 @@ public:
   void initialize(void) {
     //unsigned long heapSize = (NUMA_NODES + 1) * SIZE_PER_NODE;
     unsigned long heapSize = NUMA_NODES * SIZE_PER_NODE;
-    _heapBegin = 0x200000000000; 
+    _heapBegin = 0x100000000000; 
 #ifdef SPEC_MAINTHREAD_SUPPORT
-    _mainHeapBegin = _heapBegin - 3*SIZE_PER_NODE;
+    _mainHeapBegin = _heapBegin - 2*SIZE_PER_NODE;
     _mainHeap.initialize(getRealNodeIndex(), (void *)_mainHeapBegin);
     _mainHeapPhase = true;  
     _skipCheckAddr = NULL;
@@ -85,7 +85,7 @@ public:
     
     // Initialize for each PerNodeHeap right now. 
     for(int i = 0; i < NUMA_NODES; i++) {
-      _nodes[i].initialize(i, pnheapPointer, SIZE_PER_NODE); 
+      _nodes[i].initialize(i, pnheapPointer); 
 
       // Binding the memory to the specific node
       unsigned long mask = 1 << i;
@@ -115,7 +115,7 @@ public:
 
 #ifdef SPEC_MAINTHREAD_SUPPORT
     //if(_mainHeapPhase){
-    if(_mainHeapPhase && size > (PAGE_SIZE * NUMA_NODES/2)) {
+    if(_mainHeapPhase && (size > (PAGE_SIZE * NUMA_NODES/2))) {
       ptr = _mainHeap.allocate(size);
       if(ptr) { 
         return ptr;
@@ -123,9 +123,6 @@ public:
     }
     // Now the corresponding address is failed. 
 #endif
-
-   //fprintf(stderr, "Thread %d: allocate size %ld private\n", current->index, size);
-
    // Check the size information. 
     if(size <= BIG_OBJECT_SIZE_THRESHOLD) {
       // Small objects will be always allocated via PerThreadSizeClass

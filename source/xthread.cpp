@@ -77,7 +77,6 @@ int xthread::thread_join(pthread_t thread, void ** retval) {
 
 	if((ret = Real::pthread_join(thread, retval)) == 0) {
     int joinee = -1;
-
     // Clean up the thread entry so that the future threads 
     // can utilize the same entry, and also the 
     lock();

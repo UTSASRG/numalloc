@@ -33,9 +33,6 @@ private:
   PerBigObject * _objects;
   void * _heapBegin;
 
-  // TODO: put this in the upper level
-  //[PER_NODE_MAX_BIG_OBJECTS];  
-  
   unsigned long _next;
   unsigned long _max;
 
@@ -56,7 +53,6 @@ public:
     _max = PER_NODE_MAX_BIG_OBJECTS - 1;
     
     _heapBegin = heapBegin;
-
 
     // Initialize the _objects array
     _objects = (PerBigObject *) ptr;
@@ -147,9 +143,8 @@ public:
         break;
       }
     } 
-
-  //if(ptr)
-  //  fprintf(stderr, "GET object ptr %p size %lx _next %ld\n", ptr, size, _next);
+    
+  //  fprintf(stderr, "Allocate big object ptr %p size %lx, _totalSize %lx\n", ptr, size, _totalSize);
 
     return ptr; 
   }
@@ -171,7 +166,8 @@ public:
   void markPerMBInfo(void * ptr, size_t size, size_t objsize) {
     unsigned long mbIndex = getMBIndex(ptr);
     unsigned long mbs = size >> SIZE_ONE_MB_SHIFT;
-  
+ 
+   // fprintf(stderr, "ptr %p size %lx objsize %lx\n", ptr, size, objsize);  
   //  assert(size & SIZE_ONE_MB_MASK == 0);
    if((size & SIZE_ONE_MB_MASK) != 0) {
       fprintf(stderr, "markPerMBInfo markPerMBInfo size is not aligned. size %lx\n", size);
@@ -204,30 +200,26 @@ public:
     }
   }
 
-  size_t getSize(unsigned long mbIndex) {
+  inline size_t getSize(unsigned long mbIndex) {
     return _info[mbIndex].size;
   } 
 
-  void printSize(void * ptr) {
-    unsigned long mbIndex = getMBIndex(ptr); 
-    //fprintf(stderr, "printSize with ptr %p, mbIndex %lx, _heapBegin %p, getsize %lx\n", ptr, mbIndex, _heapBegin, getSize(mbIndex));
+  inline unsigned long getMBIndex(void * ptr) {
+    unsigned long index = ((uintptr_t)ptr - (uintptr_t)_heapBegin) >> SIZE_ONE_MB_SHIFT;
 
-  }
-
-  unsigned long getMBIndex(void * ptr) {
-    return ((uintptr_t)ptr - (uintptr_t)_heapBegin) >> SIZE_ONE_MB_SHIFT;
+  //  fprintf(stderr, "ptr %p heapBegin %p index %lx\n", ptr, _heapBegin, index);
+    return index;
   }
 
   size_t getSize(void * ptr) {
     //unsigned long mbIndex = getMBIndex(ptr); 
     unsigned long mbIndex = ((uintptr_t)ptr - (uintptr_t)_heapBegin) >> SIZE_ONE_MB_SHIFT;
-  //  fprintf(stderr, "getSize with ptr %p, mbIndex %lx, _heapBegin %p, getsize %lx\n", ptr, mbIndex, _heapBegin, getSize(mbIndex));
+ // fprintf(stderr, "getSize with ptr %p, mbIndex %lx, _heapBegin %p, getsize %lx\n", ptr, mbIndex, _heapBegin, getSize(mbIndex));
     return getSize(mbIndex);
  }
 
   // Place the objects to the list
   void deallocate(void * ptr, size_t size) {
-
     PerBigObject * object = &_objects[_next];
     
     object->size = size; 
@@ -241,7 +233,6 @@ public:
   
     // Change PerMBInfo in order to encourage the coalesce TODO:  
     clearPerMBInfo(ptr, size);
-
   }
 };
 #endif

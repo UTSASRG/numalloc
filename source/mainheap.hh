@@ -5,7 +5,6 @@
 #include<stdlib.h>
 #include "xdefines.hh"
 #include "mm.hh"
-#include "mainheapsizeclass.hh"
 #include "pernodebigobjects.hh"
 #include "real.hh"
 #include "perthread.hh"
@@ -35,293 +34,279 @@
 */
 
 class MainHeap {
+  
+  class MainThreadSizeClass {
+  private:
+    unsigned int _csize;
+    unsigned int _sc;
+    unsigned int _pages;
+    unsigned int _nodeindex;
+    char        * _bumpPointer;
+    char        * _bumpPointerEnd;
+    FreeList     _flist;
 
-#define MT_MIDDLE_SPAN_THRESHOLD (PAGE_SIZE * NUMA_NODES)
-#define MT_BIG_SPAN_THESHOLD BIG_OBJECT_SIZE_THRESHOLD
-#define MT_BIG_OBJECTS_NUM 2048
-
-// We will use twice as one bag, which is the unit for the shadow memory
-#define BAG_SIZE_SMALL_OBJECTS (2 * MT_MIDDLE_SPAN_THRESHOLD)
-#define TIMES 128
-
-  class mtBigObjects {
-    private:
-      char * _bpBig;
-      char * _bpBigEnd;
-      PerNodeBigObjects  _bigObjects;
-      int    _nodeIndex;
-
-    public:
-    void initialize(void * start, size_t size, int nodeindex) {
-      _bpBig = (char *)start;
-      _bpBigEnd = _bpBig + size;
-      _nodeIndex = nodeindex;
-
-      // Get a chunk of space to store the objects
-      int metasize = _bigObjects.computeImplicitSize(size);
-      char * ptr = (char *)MM::mmapFromNode(alignup(metasize, PAGE_SIZE), nodeindex);
-      _bigObjects.initialize(ptr, start, size);
+  public:
+    
+    void initialize(unsigned int sc, unsigned int classsize, unsigned int nodeindex) {
+      _sc = sc;
+      _csize = classsize;
+      _nodeindex = nodeindex;
+      _pages = classsize >> PAGE_SIZE_SHIFT;
+      _bumpPointer = NULL;
+      _bumpPointerEnd = NULL;
+      _flist.Init();
     }
 
-    void * allocate(size_t size) {
-      void * ptr = NULL;
+    bool hasObject() {
+      return ((_flist.length() > 0) || (_bumpPointer < _bumpPointerEnd));
+    }
 
-      //fprintf(stderr, "allocateBigObject at node %d: size %lx\n", _nodeindex, size);
-      // Allocate from the free list at first
-      ptr = _bigObjects.allocate(size);
-      if(ptr == NULL) {
-        // Now allocate from the bump pointer
-        allocateFromBumppointer(size);
+    // The current object will be pushed with a new block of memory
+    void updateBumpPointer(char * start, size_t size) {
+      _bumpPointer = start;
+      _bumpPointerEnd = start + size;
+    }
+
+    unsigned int getClassSize() {
+      return _csize;
+    }
+
+    void * allocate(void) {
+      void * ptr = NULL; 
+
+      // Allocate from the freelist first.
+      if(_flist.hasItems()) { 
+        ptr = _flist.Pop(); 
+      }
+      else { 
+        // Allocate from the bump pointer right now. 
+        ptr = _bumpPointer;
+        _bumpPointer += _csize;
+
+        // Notify the OS to allocate physical memory in the block-wise way
+        MM::bindMemoryBlockwise((char *)ptr, _pages, _nodeindex);
       }
 
       return ptr;
     }
 
-    // Utilize the bump pointer to allocate a new object
-    void * allocateFromBumppointer(size_t sz) {
-      void * ptr = NULL;
-      bool isHugePage = false; 
-      
-      size_t size = alignup(sz, PAGE_SIZE);
-      ptr = _bpBig;
-      size_t pages = size/PAGE_SIZE;
-      if(size > SIZE_HUGE_PAGE * (NUMA_NODES-1)) {
-        // Get the number of huge pages at first
-        pages = size/SIZE_HUGE_PAGE; 
-        if(size/SIZE_HUGE_PAGE != 0) {
-          pages += 1;
-        }
-
-        // Compute the blockSize. We will try to be balanced.
-        // Overall, we don't want one node that has 1 more blocks than the others. 
-        size = pages * SIZE_HUGE_PAGE;
-        isHugePage = true;
-        
-        ptr = (void *)alignup((uintptr_t)ptr, SIZE_HUGE_PAGE); 
-        //fprintf(stderr, "BigObject allocate: size %lx, pages %lx, ptr %p\n", sz, pages, ptr); 
-        _bpBig = (char *)ptr;   
-     }
-     else {
-       size = alignup(size, SIZE_ONE_MB_BAG);
-     }
-     
-     _bpBig += size;
-
-     // Allocate the memory from the OS 
-     ptr = MM::mmapAllocatePrivate(size, ptr, isHugePage);
-     
-     // Now binding the memory to different nodes. 
-     MM::bindMemoryBlockwise((char *)ptr, pages, _nodeIndex, isHugePage); 
-       
-     // Mark the object size
-     markPerMBInfo(ptr, size, size);
-     return ptr;
-   }
-
-    void markPerMBInfo(void * blockStart, size_t blockSize, size_t size) {
-      _bigObjects.markPerMBInfo(blockStart, blockSize, size);
-    }
-
     void deallocate(void * ptr) {
-      size_t size = getSize(ptr);
-      _bigObjects.deallocate(ptr, size); 
+      _flist.Push(ptr);
     }
-
-    size_t getSize(void * ptr) {
-      // Check the 1MB information in order to find the size. 
-      return _bigObjects.getSize(ptr);
-    }
-  };
-
-  class PerBagInfo {
-    public: 
-      unsigned int size;
-  };
+  }; 
+    
 
   private:
     char * _begin;
     char * _end;
    
+    unsigned int  _nodeindex;
+    bool    _mainHeapPhase; 
+    size_t  _scMagicValue; 
+
     char * _bpSmall;
     char * _bpSmallEnd;
-    char * _bpMiddle;
-    char * _bpMiddleEnd;
-
-    size_t _scMagicValue; 
-
-    int   _numClasses;
-    int   _nodeindex;
-    int   _bagShiftBits;
-
-    // We will update the phase information.
-    bool  _mainHeapPhase; 
-
-    class mtBigObjects  _bigObjects;
+    char * _bpBig;
+    char * _bpBigEnd;
+    pthread_spinlock_t _lock;
 
     // Currently, size class is from 2^4 to 2^19 (512 KB), with 16 sizes in total.
-    MainHeapSizeClass  ** _sizes;
+    MainThreadSizeClass _sizes[SMALL_SIZE_CLASSES];
 
-    // The size of bag will be BAG_SIZE_SMALL_OBJECTS 
-    PerBagInfo * _info;  
+    // _bigObjects will also maintain the PerMBINfo
+    PerNodeBigObjects _bigObjects;
 
  public:
-   size_t computeMetadataSize(void) {
-     size_t size = 0;
-
-      // Compute the size for _classes
-      size += (sizeof(MainHeapSizeClass) + sizeof(MainHeapSizeClass *)) * SMALL_SIZE_CLASSES;
-
-      // Getting the size for each freeArray. 
-      unsigned long classSize = 16; 
-      for(int i = 0; i < SMALL_SIZE_CLASSES; i++) { 
-        unsigned long numObjects = (SIZE_ONE_MB_BAG * TIMES)/classSize; 
-        if(numObjects < 2048) {
-          numObjects = 2048;
-        }
-
-        size += numObjects * sizeof(void *);
-        classSize *= 2;
-      }
-
-      // Now reserve the space for the information. 
-      size += ((SIZE_PER_SPAN/BAG_SIZE_SMALL_OBJECTS)*sizeof(PerBagInfo))*2;
-      return size;
-   }
-
 
    void initialize(int nodeindex, void * begin) {
-      // Save the heap related information
+      size_t heapsize = 2 * SIZE_PER_SPAN;
+
+     // Save the heap related information
       _begin = (char *)begin;
-      _end = _begin + (3 * SIZE_PER_SPAN);
+      _end = _begin + heapsize;
 
-      // Map an interleaved block for the small pages.
-      _bpSmall = (char *)MM::mmapPageInterleaved(SIZE_PER_SPAN, (void *)_begin);
-      //_bpSmall = (char *)MM::mmapAllocatePrivate(SIZE_PER_SPAN, (void *)_begin);
+      //_bpSmall = (char *)MM::mmapFromNode(SIZE_PER_SPAN, nodeindex, (void *)begin, false);
+      _bpSmall = (char *)MM::mmapAllocatePrivate(SIZE_PER_SPAN, (void *)begin);
+     // _bpSmall = (char *)MM::mmapPageInterleaved(SIZE_PER_SPAN, (void *)begin);
       _bpSmallEnd = _bpSmall + SIZE_PER_SPAN;
-//      fprintf(stderr, "_bpSmall is %p\n", _bpSmall);
 
-      // MMap the next span at first, and then use mbind to change the binding only
-      // Note that we may only need to change it to huge page support (VERY RARE), if the allocation is 
-      // larger than HUGE_PAGE_SIZE * NUMA_NODES
-      _bpMiddle = (char *)MM::mmapAllocatePrivate(SIZE_PER_SPAN,_bpSmallEnd);
-      _bpMiddleEnd = _bpMiddle + SIZE_PER_SPAN;
-
-      // Note that the _bpBig is not initialized at first.
-      _bigObjects.initialize(_bpMiddleEnd, SIZE_PER_SPAN, nodeindex);
+      // Initialize the big heap. Differently, we don't do mmap at first, since 
+      // the only way to use huge page is through mmap. Then we will do the allocation 
+      // on demand, based on the requirement.
+      _bpBig = _bpSmallEnd;
+      _bpBigEnd = _bpBig + SIZE_PER_SPAN;  
 
       _nodeindex = nodeindex; 
-      _numClasses = SMALL_SIZE_CLASSES;
       _scMagicValue = 32 - LOG2(SIZE_CLASS_START_SIZE);
      
-      switch(NUMA_NODES) {
-        case 16: 
-          _bagShiftBits = 17;
-          break;
-
-        case 8:
-          _bagShiftBits = 16;
-          break;
-
-        case 4: 
-          _bagShiftBits = 15;
-          break;
-
-        case 2: 
-          _bagShiftBits = 14;
-          break;
-
-        default:
-          fprintf(stderr, "Please provide more support for specified %d nodes\n", NUMA_NODES);
-       };
-      
-      // Compute the metadata size for the management.
-      size_t metasize = computeMetadataSize();
+      // Compute the metadata size for PerNodeHeap
+      size_t metasize = _bigObjects.computeImplicitSize(heapsize);
 
       // Binding the memory to the specified node.
       char * ptr = (char *)MM::mmapFromNode(alignup(metasize, PAGE_SIZE), nodeindex);
-      
-      // Initilize the size classes; 
-      _sizes = (MainHeapSizeClass **)ptr;
-      ptr += sizeof(MainHeapSizeClass *) * SMALL_SIZE_CLASSES;
+      _bigObjects.initialize(ptr, _bpSmall, SIZE_PER_SPAN*2);
 
-      // Initialize the _sizes array, since every element points to an actual MainHeapSizeClass object
+      // Initialize all size classes. 
+      unsigned long classSize = 16;
       for(int i = 0; i < SMALL_SIZE_CLASSES; i++) {
-        _sizes[i] = (MainHeapSizeClass *)ptr;
-        ptr += sizeof(MainHeapSizeClass);
-      } 
-      
-      unsigned long classSize = 16; 
-      unsigned long size; 
-      for(int i = 0; i < SMALL_SIZE_CLASSES; i++) {
-        unsigned long numObjects = (SIZE_ONE_MB_BAG * TIMES)/classSize; 
-        if(numObjects < 2048) {
-          numObjects = 2048;
-        }
-        size = numObjects * sizeof(void *);
-        // Each element of 
-        _sizes[i]->initialize(classSize, numObjects, (void **)ptr);
-        ptr += size;
+        // Each element of
+        _sizes[i].initialize(i, classSize, nodeindex);
 
         classSize *= 2;
       }
 
-      // Now initialize the PerBagInfo 
-      _info = (PerBagInfo *)ptr;
+      // Initialize the lock
+      pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
    } 
 
-  // We will reserve a block of memory to store the size information of each chunk,
-  // in the unit of four pages. 
-  int getSizeClass(void * ptr) {
+   inline size_t getSize(void * ptr) {
+      return _bigObjects.getSize(ptr);
+   } 
+
+  inline int getSizeClass(void * ptr) {
     size_t size = getSize(ptr); 
    // fprintf(stderr, "getSizeClass ptr %p size %lx\n", ptr, size); 
     return getSizeClass(size);
   }
 
-  int getSizeClass(size_t size) {
-    int sc;
 
-    if(size <= SIZE_CLASS_START_SIZE) {
-      sc = 0;
+  inline int getSizeClass(size_t size) {
+    return _scMagicValue - __builtin_clz(size - 1);
+  }
+
+  // allocate a big object with the specified size
+  void * allocateBigObject(size_t size) {
+    void * ptr = NULL;
+    size = alignup(size, SIZE_ONE_MB_BAG);
+
+    // Allocate from the free list at first
+    ptr = _bigObjects.allocate(size);
+    if(ptr == NULL) {
+      // Now allocate from the bump pointer
+      allocateFromBigBumppointer(size);
     }
-    else {
-      sc = _scMagicValue - __builtin_clz(size - 1);
-    }
+    return ptr;
+  }
+
+  void * allocateFromBigBumppointer(size_t sz) {
+      void * ptr = NULL;
+      bool isHugePage = false;
+
+      size_t size = sz;
+      ptr = _bpBig;
+      size_t pages = size/PAGE_SIZE;
+
+      // If it is possible to use huge pages
+      if(size > SIZE_HUGE_PAGE * (NUMA_NODES-1)) {
+        // Get the number of huge pages at first
+        pages = size>>SIZE_HUGE_PAGE_SHIFT;
+        if((size & SIZE_HUGE_PAGE_MASK) != 0) {
+          pages += 1;
+        }
+
+        // Compute the blockSize. We will try to be balanced.
+        // Overall, we don't want one node that has 1 more blocks than the others.
+        size = pages * SIZE_HUGE_PAGE;
+        isHugePage = true;
+
+       // fprintf(stderr, "Size is %lx _bpBig %p ptr %p\n", size, _bpBig, ptr);
+        ptr = (void *)alignup((uintptr_t)ptr, SIZE_HUGE_PAGE);
+        //fprintf(stderr, "BigObject allocate: size %lx, pages %lx, ptr %p\n", sz, pages, ptr);
+        _bpBig = (char *)ptr;
+     }
+    
+     //fprintf(stderr, "allocate size %lx _bpBig %p ptr %p\n", size, _bpBig, ptr); 
+     _bpBig += size;
+
+     // Allocate the memory from the OS
+     ptr = MM::mmapAllocatePrivate(size, ptr, isHugePage);
+
+     // Now binding the memory to different nodes.
+     MM::bindMemoryBlockwise((char *)ptr, pages, _nodeindex, isHugePage);
+
+     // Mark the object size
+     markPerMBInfo(ptr, size, size);
  
-    return sc;
-  }
+     return ptr;
+   }
 
-  inline int getBagIndex(void * ptr) {
-    return ((uintptr_t)ptr - (uintptr_t)_begin) >> _bagShiftBits;
-  }
+   void markPerMBInfo(void * blockStart, size_t blockSize, size_t size) {
+     _bigObjects.markPerMBInfo(blockStart, blockSize, size);
+   }
 
-  // The size is the actual size for each object. 
-  void markPerBagInfo(void * start, size_t blockSize, size_t realsize) {
-    int count = blockSize >> _bagShiftBits; 
+   void * allocate(size_t size) {
+     if(isBigObject(size)) {
+       //fprintf(stderr, "Allocate big object with size %lx\n", size);
+       return allocateBigObject(size);
+     }
+     else {
+       return allocateSmallObject(size);
+     }
+   }
 
-    unsigned long index = getBagIndex(start);
+   inline bool isBigObject(size_t size) {
+      return (size >= BIG_OBJECT_SIZE_THRESHOLD) ? true : false;
+   }
 
-    PerBagInfo * info = &_info[index];
-    // fprintf(stderr, "start %p, index %ld, count %d, info %p (offset %lx), realsize %lx, blocksize %lx\n", start, index, count, info, (&_info[index] - &_info[0]), realsize, blockSize);
+   void * allocateSmallObject(size_t size) {
+    int sc; 
 
-    // fprintf(stderr, "start %p, index %ld, count %d, info %p, realsize %ld, blocksize %lx\n", start, index, count, info, realsize, blockSize);
-    for(int i = 0; i < count; i++) {
-      info->size = realsize;
-      info++;
+    // If it is small object, allocate from the freelist at first.
+    sc = getSizeClass(size);
+    if(!_sizes[sc].hasObject()) {
+      void * ptr = _bpSmall;
+      _bpSmall += SIZE_ONE_MB_BAG;
+      _sizes[sc].updateBumpPointer((char *)ptr, SIZE_ONE_MB_BAG);
+
+      //fprintf(stderr, "allocate small object\n");
+      // Update the PerMBInfo as well
+      markPerMBInfo(ptr, SIZE_ONE_MB_BAG, _sizes[sc].getClassSize()); 
     }
+
+    return _sizes[sc].allocate();
   }
 
-  size_t getSize(void * ptr) {
-    // Check the shadow information in order to find the size. 
-    unsigned long index = getBagIndex(ptr); 
-    return _info[index].size; 
+  char * allocateFromSmallBumppointer(size_t size, int sc) {
+     char * ptr = NULL;
+
+     ptr = (char *)_bpSmall;
+     _bpSmall += size;
+
+     // We should not consume all memory. If yes, then we should make the heap bigger.
+     // Since we don't check normally  to reduce the overhead, we will use the assertion here
+     assert(_bpSmall < _bpSmallEnd);
+
+     return ptr;
   }
 
-  inline bool isBigObject(size_t size) {
-    return (size >= MT_BIG_SPAN_THESHOLD) ? true : false;
-  }
+   void deallocate(void * ptr) {
+     size_t size = getSize(ptr);
+     if(!isBigObject(size)) {
+       int sc = getSizeClass(size); 
+      
+      if(!_mainHeapPhase) { 
+        pthread_spin_lock(&_lock);
+        // Return to the size class
+        _sizes[sc].deallocate(ptr);
+        pthread_spin_unlock(&_lock);
+      }
+      else {
+        _sizes[sc].deallocate(ptr);
+      }
+     }
+     else {
+      if(!_mainHeapPhase) { 
+        pthread_spin_lock(&_lock);
+        _bigObjects.deallocate(ptr, size);
+        pthread_spin_unlock(&_lock);
+      }
+      else {
+        _bigObjects.deallocate(ptr, size);
+      }
+     }
+   }
 
-  void * allocate(size_t size);
-  void deallocate(void * ptr);
+
  
 };
 #endif

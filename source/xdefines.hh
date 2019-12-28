@@ -91,6 +91,7 @@ inline size_t aligndown(size_t addr, size_t alignto) { return (addr & ~(alignto 
 
 // Normal page size is still 4K
 #define PAGE_SIZE 0x1000
+#define PAGE_SIZE_SHIFT 12
 #define INLINE      		inline __attribute__((always_inline))
 
 #include <sys/mman.h>
@@ -147,8 +148,10 @@ struct callstack {
 #define SIZE_PER_NODE_SHIFT 42
 #define SIZE_ONE_MB_BAG 0x100000
 #define SIZE_ONE_MB_MASK 0xFFFF
-#define SIZE_HUGE_PAGE 0x200000
 #define SIZE_ONE_MB_SHIFT 20
+#define SIZE_HUGE_PAGE      0x200000
+#define SIZE_HUGE_PAGE_MASK 0x1FFFFF
+#define SIZE_HUGE_PAGE_SHIFT 21
 #define SMALL_SIZE_CLASSES 16
 
 #define SIZE_CLASS_START_SIZE 16

@@ -77,7 +77,8 @@ public:
     return ptr;
   }
 
-  static void bindMemoryBlockwise(char * pointer, size_t pages, int startNodeIndex, bool isHugePage) {
+  static void bindMemoryBlockwise(char * pointer, size_t pages, int startNodeIndex, bool isHugePage = false) {
+#if 1
     int pagesPerNode = pages/NUMA_NODES;
 
     double totalStrides = (double)(pages - pagesPerNode*NUMA_NODES)/NUMA_NODES;
@@ -104,6 +105,7 @@ public:
         nindex = 0;
       }
     }
+#endif   
   }
 
   static void * mmapFromNode(size_t sz, int nodeindex, void * startaddr = NULL, bool isHugePage = false) {

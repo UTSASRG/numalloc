@@ -17,7 +17,7 @@ public:
     unsigned long classSize = 16;
     unsigned long size = 0; 
     for(i = 0; i < SMALL_SIZE_CLASSES; i++) {
-      unsigned int objects = SIZE_ONE_MB_BAG/classSize;
+      unsigned int objects = SIZE_ONE_MB_BAG * 4/classSize;
       _sclass[i].initialize(nindex, classSize, i, objects); 
       classSize *= 2;
     }
