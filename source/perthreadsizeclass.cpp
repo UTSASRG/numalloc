@@ -31,7 +31,7 @@ int PerThreadSizeClass::moveObjectsFromNodeFreelist() {
 void PerThreadSizeClass::donateObjectsToNodeFreelist() {
   void * head, * tail;
   
-  fprintf(stderr, "Thread %d :donate batch %d to node list, remain objects %ld\n", getNodeIndex(), _batch, _flist.length());
+  fprintf(stderr, "Thread %d, SIZE %ld donate batch %d to node list, remain objects %ld\n", getNodeIndex(), _size, _batch, _flist.length());
 
   _flist.PopRange(_batch, &head, &tail);
 
@@ -41,11 +41,16 @@ void PerThreadSizeClass::donateObjectsToNodeFreelist() {
 }
 
 void * PerThreadSizeClass::allocate() {
-    if(_flist.hasItems()) {
-      return allocateFromFreelist(); 
-    }
-   
     void * ptr = NULL; 
+    if(_flist.hasItems()) {
+      ptr = allocateFromFreelist();
+
+      //if(_size == 64) {
+      //if((_size == 64) && ((ptr != (void *)0x1000003002c0) && (ptr != (void *)0x1400003002c0))) {
+      //  fprintf(stderr, "SIZE 64 allocate with ptr %p, length is %d\n", ptr, _flist.length());
+      //}  
+      return ptr; 
+    }
       
     if(_allocs >= _allocsBeforeCheck) {
       _allocs = 0;
@@ -87,35 +92,45 @@ void * PerThreadSizeClass::allocate() {
       }
 
       // Now allocate from the never used ones
-      if(_bumpPointer < _bumpPointerEnd) {
-        ptr = _bumpPointer;
-        if(_size >= _warmupSize/2) {
-          _bumpPointer += _size;
-        }
-        else {
-          _bumpPointer += _warmupSize;
-          // Split the block into pieces and add to the free-list
-          char * iptr = ((char*)ptr) + _size;
-          void * head = iptr;
-          void ** tail = (void **)head;
-          while (iptr <= (_bumpPointer - _size)) {
-            iptr += _size;
-          //fprintf(stderr, "tail %p set to iptr %p\n", tail, iptr);
-            *tail = iptr;
-            tail = reinterpret_cast<void**>(iptr);
-          //tail = reinterpret_cast<void**>(ptr);
-          }
-
-          // Add the remaining objects to the freelist.
-          _flist.PushRange(_warmupObjects, head, tail);
-        }
+      ptr = _bumpPointer;
+#if 1
+        _bumpPointer += _size;
+#else 
+      //if(_size >= _warmupSize/2) {
+      if(_size != 64) {
+        _bumpPointer += _size;
       }
+      else {
+        _bumpPointer += _warmupSize;
+        
+        // Split the block into pieces and add to the free-list
+        char * iptr = ((char*)ptr) + _size;
+        void * head = iptr;
+        void ** tail = (void **)head;
+        while (iptr <= (_bumpPointer - _size)) {
+          iptr += _size;
+          *tail = iptr;
+          tail = reinterpret_cast<void**>(iptr);
+          //tail = reinterpret_cast<void**>(ptr);
+        }
+        tail = (void **)(iptr-_size);
+
+        if(_flist.length() != 0)
+        fprintf(stderr, "SIZE %d: adding remaining objects %d (head %p tail %p) to the freelist. Before push, length is %ld.\n", _size, _warmupObjects, head, tail, _flist.length());
+        // Add the remaining objects to the freelist.
+        _flist.PushRange(_warmupObjects, head, tail);
+          //fprintf(stderr, "SIZE %d: adding remaining objects %d to the freelist. After push, length %ld.\n", _size, _warmupObjects, _flist.length());
+      }
+ #endif
     }
     return ptr;
   }
  
   // Return an object starting with ptr to the PerThreadSizeClass
   void PerThreadSizeClass::deallocate(void *ptr) {
+      //if((_size == 64) && ((ptr != (void *)0x1000003002c0) && (ptr != (void *)0x1400003002c0))) {
+      //  fprintf(stderr, "SIZE 64 deaallocate with ptr %p, length is %d\n", ptr, _flist.length());
+      //}  
     // Put this entry to the list. 
     _flist.Push(ptr);
 

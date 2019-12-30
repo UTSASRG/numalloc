@@ -157,7 +157,7 @@ class xthread {
     if(current->inited == false) 
       initCurrentHeap(current->index, current->nindex); 
 
-    current->startFrame = (char *)__builtin_frame_address(0);
+    //current->startFrame = (char *)__builtin_frame_address(0);
   }
 
 	/// @ internal function: allocation a thread index when spawning.
@@ -245,7 +245,11 @@ private:
 
     //fprintf(stderr, "InitCurrentHeap with Size %lx", size);
     char * ptr = (char *)MM::mmapFromNode(size, current->nindex);
-    //fprintf(stderr, "InitCurrentHeap thread %d: with ptr %p\n", tindex, ptr);
+    if(ptr == 0) { 
+      fprintf(stderr, "InitCurrentHeap thread %d: with ptr %p\n", tindex, ptr);
+      assert(ptr != 0);
+    }
+
     current->outputBuf = (char *)ptr;
     ptr += LOG_SIZE;
 

@@ -42,7 +42,7 @@ public:
     // the unit of warmupSize. The first object will be returned to the user, and 
     // other objects will be added to the freelist so that we could quickly warmup
     // the objects in the cache line. This idea will be good for the performance for raytrace 
-    _warmupSize = 16 * 1024;
+    _warmupSize = 8 * 1024;
     _warmupObjects = _warmupSize/size - 1; 
 
     //_allocMBs = 0;

@@ -32,7 +32,7 @@
 #include "xdefines.hh"
 #include "perthread.hh"
 
-#define GET_TIME 0
+#define GET_TIME 1
 #if GET_TIME
 #include "time.h"
 
@@ -191,6 +191,7 @@ void heapinitialize() {
       if((allocs % 1000000) == 0) {
         fprintf(stderr, "Runtime is %lld totalAllocCycles %lld, allocs %lld. current length %lld\n", rdtscp()-origTime, totalAllocCycles, allocs, length);
       }
+      //if(allocs == 2000000) { exit(0); }
       //fprintf(stderr, "totalAllocCycles %lld length %lld\n", totalAllocCycles, length);
 #endif
       //fprintf(stderr, "malloc size %ld ptr %p\n", size, ptr);

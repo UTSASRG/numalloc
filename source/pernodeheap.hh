@@ -204,7 +204,7 @@ class PerNodeHeap {
     char * ptr = NULL; 
 
     // Check the freed bigObjects at first, since they may be still hot in cache. 
- //   ptr = allocateFromFreelist(SIZE_ONE_MB_BAG); 
+//    ptr = allocateFromFreelist(SIZE_ONE_MB_BAG); 
     
     // If there is no freed bigObjects, getting one from the bump pointer
     if(ptr == NULL) {
