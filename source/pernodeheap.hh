@@ -202,19 +202,22 @@ class PerNodeHeap {
     // TODO: use skiplist instead of doubly linked list for efficiency
     do {
       object = (BigObject *)entry; 
+      fprintf(stderr, "search biglist with object %p size %lx request size %lx\n", object, object->size, size);
       if(object->size >= size) {
         // Find one available object, which will be allocated from.
         // We already sort the objects based on the size and timestamp
         break; 
       }
-
       entry = entry->next;
     } while(!isListTail(entry, &_bigList)); 
 
     // We will allocate only if the object has been found
     if(object->size >= size) {
       if(object->size > size) {
-        fprintf(stderr, "in bigObjectListAllocate. object %p Object->size %lx size %lx\n", object, object->size, size);
+        if((list_t *)object == &_bigList) {
+          fprintf(stderr, "entry %p object %p _bigList %p first %p last %p\n", entry, object, &_bigList, _bigList.next, _bigList.prev);
+        }
+        fprintf(stderr, "in bigObjectListAllocate. biglist %p object %p Object->size %lx size %lx\n", &_bigList, object, object->size, size);
         object->size -= size;
 
         // Change the object size for the first part
@@ -222,9 +225,9 @@ class PerNodeHeap {
  
         // Use the second part as the new object, avoiding the change of the link list
         ptr = (char *)object + object->size;
-        fprintf(stderr, "in bigObjectListAllocate. now Object->size %lx size %lx ptr %p\n", object->size, size, ptr);
       }
       else {
+        fprintf(stderr, "in bigObjectListAllocate. delete object %p size %lx\n", object, size);
         // Remove the object from the freed list
         listRemoveNode(&object->list);
         
@@ -279,7 +282,7 @@ class PerNodeHeap {
     char * addr = NULL;
 
     assert(order <= ORDER_ONE_MB);
-   fprintf(stderr, "splitPageHeapObject ptr %p order %d reqOrder %d\n", ptr, order, reqOrder);
+   //fprintf(stderr, "splitPageHeapObject ptr %p order %d reqOrder %d\n", ptr, order, reqOrder);
 
     while(--order >= reqOrder) {
       unsigned long newPower = order + PAGE_HEAP_START_POWER;
@@ -290,7 +293,7 @@ class PerNodeHeap {
       // Set freed status for the second part
       setFreePageHeap(addr, newPower);
 
-     fprintf(stderr, "Put object %p to freelist with order %d newPower %ld size %x. reqOrder %d\n", addr, order, newPower, 1<<newPower, reqOrder);
+     //fprintf(stderr, "Put object %p to freelist with order %d newPower %ld size %x. reqOrder %d\n", addr, order, newPower, 1<<newPower, reqOrder);
       // Add the object to the freelist (lock will be acquired inside)
       _pageHeap[order].deallocate(addr);
     }
@@ -330,7 +333,7 @@ class PerNodeHeap {
       }
     }
    
-    fprintf(stderr, "pageheapAllocate with ptr %p order %d!!!\n", ptr, reqOrder); 
+    //fprintf(stderr, "pageheapAllocate with ptr %p order %d!!!\n", ptr, reqOrder); 
     return ptr;
   }
 
@@ -637,8 +640,9 @@ class PerNodeHeap {
 
       entry = entry->next;
     }
+    fprintf(stderr, "insert node object %p entry %p (prev %p next %p) _bigList.next %p size %lx\n", object, entry, entry->prev, entry->next, _bigList.next, size); 
     listInsertNode(&object->list, entry); 
-    
+   
     // Set the free and size of the big object
     setFreeMbsMapping((void *)object, size);
   }
