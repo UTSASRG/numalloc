@@ -62,109 +62,22 @@ inline void insertListEnd(dlistHead * list, dlist * newnode) {
    }
 }
 
-// Whether a list is empty
-inline bool isListEmpty(dlist* head) { return (head->next == head); }
+inline void removeFromList (dlistHead * list, dlist * node) {
+    if (node->prev == NULL) {
+      // First node 
+      list->first  = node->next;
+    }
+    else {
+      node->prev->next  = node->next;
+    }
 
-// We donot check whether the list is empty or not?
-inline dlist* tailList(dlist* head) {
-  dlist* tail = NULL;
-  if(!isListEmpty(head)) {
-    tail = head->prev;
-  }
-
-  return tail;
+    if (node->next == NULL) {
+      // Last node 
+      list->last  = node->prev;
+    }
+    else {
+      node->next->prev  = node->prev;
+    }
 }
-
-// Insert one entry to two consequtive entries
-inline void __insert_between(dlist* node, dlist* prev, dlist* next) {
-  node->next = next;
-  node->prev = prev;
-  prev->next = node;
-  next->prev = node;
-}
-
-// Insert one entry to after specified entry prev (prev, prev->next)
-inline void listInsertNodeAfter(dlist* node, dlist* prev) { __insert_between(node, prev, prev->next); }
-inline void listInsertNode(dlist* node, dlist* curr) { __insert_between(node, curr->prev, curr); }
-
-// Insert one entry to the tail of specified list.
-// Insert between tail and head
-inline void listInsertTail(dlist* node, dlist* head) {
-  __insert_between(node, head->prev, head);
-}
-
-inline void listUpdateEntry(dlist * node) {
-  __insert_between(node, node->prev, node->next);
-}
-
-// Insert one entry to the head of specified list.
-// Insert between head and head->next
-inline void listInsertHead(dlist* node, dlist* head) { __insert_between(node, head, head->next); }
-
-// Internal usage to link p with n
-// Never use directly outside.
-inline void __list_link(dlist* p, dlist* n) {
-  p->next = n;
-  n->prev = p;
-}
-
-// We need to verify this
-// Insert one entry to the head of specified list.
-// Insert the list between where and where->next
-inline void listInsertList(dlist* list, dlist* where) {
-  // Insert after where.
-  __list_link(where, list);
-
-  // Then modify other pointer
-  __list_link(list->prev, where->next);
-}
-
-// Delete an entry and re-initialize it.
-inline void listRemoveNode(dlist* node) {
-  __list_link(node->prev, node->next);
-  nodeInit(node);
-}
-
-// Delete an entry without re-initialization.
-inline void listRemoveNodeOnly(dlist* node) {
-  __list_link(node->prev, node->next);
-}
-
-// Check whether current node is the tail of a list
-inline bool isListTail(dlist* node, dlist *list) { return (node->next = list); }
-
-// Retrieve the first item form a list
-// Then this item will be removed from the list.
-inline dlist* listRetrieveItem(dlist* list) {
-  dlist* first = NULL;
-
-  // Retrieve item when the list is not empty
-  if(!isListEmpty(list)) {
-    first = list->next;
-    listRemoveNode(first);
-  }
-
-  return first;
-}
-
-// Retrieve all items from a list and re-initialize all source list.
-inline void listRetrieveAllItems(dlist* dest, dlist* src) {
-  dlist* first, *last;
-  first = src->next;
-  last = src->prev;
-
-  first->prev = dest;
-  last->next = dest;
-  dest->next = first;
-  dest->prev = last;
-
-  // reinitialize the source list
-  listInit(src);
-}
-
-/* Get the pointer to the struct this entry is part of
- *
- */
-#define listEntry(ptr, type, member) ((type*)((char*)(ptr) - (unsigned long)(&((type*)0)->member)))
 
 #endif
