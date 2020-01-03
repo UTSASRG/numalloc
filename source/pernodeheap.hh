@@ -696,6 +696,6 @@ class PerNodeHeap {
 
     void unlockSmallHeap() {
       pthread_spin_unlock(&_smallLock);
-
+    }
 };
 #endif

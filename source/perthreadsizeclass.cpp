@@ -14,7 +14,6 @@ void * PerThreadSizeClass::allocateFromFreelist() {
     src->PopRange(batch_size, &head, &tail);
     central_cache[cl].InsertRange(head, tail, batch_size);
 */
-
 int PerThreadSizeClass::moveObjectsFromNodeFreelist() {
   int ret;
   void * head, * tail;
@@ -42,10 +41,6 @@ void * PerThreadSizeClass::allocate() {
     void * ptr = NULL; 
     if(_flist.hasItems()) {
       ptr = allocateFromFreelist();
-
-      //if((_size == 64) && ((ptr != (void *)0x1000003002c0) && (ptr != (void *)0x1400003002c0))) {
-      //  fprintf(stderr, "SIZE 64 allocate with ptr %p, length is %d\n", ptr, _flist.length());
-      //}  
       return ptr; 
     }
       
@@ -82,7 +77,7 @@ void * PerThreadSizeClass::allocate() {
       // Get a new block if necessary 
       if(_bumpPointer == _bumpPointerEnd) {
         // Now get a chunk from the current PerNodeHeap: either from big objects or never allocated ones
-        _bumpPointer = NumaHeap::getInstance().allocateOneBagFromNode(getNodeIndex(), _size, _bagSize); 
+        _bumpPointer = (char *)NumaHeap::getInstance().allocateOneBagFromNode(getNodeIndex(), _size, _bagSize); 
         _bumpPointerEnd = _bumpPointer + _bagSize;
       }
 

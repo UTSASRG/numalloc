@@ -149,7 +149,7 @@ public:
     return _nodes[nindex]->allocateBatch(sc, num, head, tail);
   }
 
-  char * allocateOnebagFromNode(int nindex, size_t size, size_t bagSize) {
+  void * allocateOneBagFromNode(int nindex, size_t size, size_t bagSize) {
     return _nodes[nindex]->allocateOneBag(size, bagSize);
   }
   
