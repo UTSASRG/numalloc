@@ -20,7 +20,7 @@ class PerNodeSizeClass {
 
       _size = size;
 
-      // Map a chunk of memory in the local node
+      // Initialize the freelist
       _flist.Init();
     }  
 

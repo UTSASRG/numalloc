@@ -173,11 +173,13 @@ class PerNodeHeap {
   }
 
   // Allocate one mb from big objects
-  void * bigObjectAllocateOneMb(void) {
+  void * bigObjectListAllocateOneMb(void) {
     void * ptr = bigObjectListAllocate(SIZE_ONE_MB);
 
     // Clear the mapping of this block. Now it will hold small objects only
-    clearFreeMbsMapping(ptr);
+    if(ptr != NULL) {
+      clearFreeMbsMapping(ptr);
+    }
 
     return ptr;
   }
@@ -268,24 +270,28 @@ class PerNodeHeap {
     _pagesMapping[pageIndex] = ((power << 1) | 0x1);
   }
 
-  void * splitPageHeapObject(void * ptr, unsigned int order, unsigned int reqOrder, unsigned int power) {
+  // Note that order and reqOrder should use int, instead of unsigned. 
+  void * splitPageHeapObject(void * ptr, int order, int reqOrder, unsigned int power) {
     char * addr = NULL;
 
     assert(order <= ORDER_ONE_MB);
+
 
     while(--order >= reqOrder) {
       unsigned long newPower = order + PAGE_HEAP_START_POWER;
 
       // Adding the second part to the free list. 
-      addr = (char *)ptr + (2 << newPower);
+      addr = (char *)ptr + (1 << newPower);
       
       // Set freed status for the second part
       setFreePageHeap(addr, newPower);
 
+//      fprintf(stderr, "Put object %p to freelist with order %d newPower %ld size %x. reqOrder %d\n", addr, order, newPower, 1<<newPower, reqOrder);
       // Add the object to the freelist (lock will be acquired inside)
       _pageHeap[order].deallocate(addr);
     }
 
+  //  fprintf(stderr, "return ptr %p\n", ptr);
     // The first part will be used for the allocation
     setUsePageHeap(ptr, power);
    
@@ -355,7 +361,7 @@ class PerNodeHeap {
     // If _pageHeap can't allocate it, try other cases.
     if(ptr == NULL) {
       // Check the freed bigObjects at first, since they may be still hot in cache. 
-      ptr = bigObjectAllocateOneMb(); 
+      ptr = bigObjectListAllocateOneMb(); 
     
       // If there is no freed bigObjects, getting one MB from the bump pointer
       if(ptr == NULL) {
@@ -371,6 +377,7 @@ class PerNodeHeap {
         setUsePageHeap(ptr, power);
       }
       else {
+        //fprintf(stderr, "Allocate one bag from big objets freelist %p\n", ptr);
         // Adding the remaining one to the PageHeap, which should return ptr.
         splitPageHeapObject(ptr, ORDER_ONE_MB, order, power);
         increasePageHeapSize(SIZE_ONE_MB - bagSize);
@@ -424,7 +431,7 @@ class PerNodeHeap {
     size_t offset = ((intptr_t)ptr - (intptr_t)_nodeBegin);
     unsigned long mbIndex = offset >> SIZE_ONE_MB_SHIFT;
     if(_mbsMapping[mbIndex] == 0) {
-      size = 2 << getPowerPagesMapping(offset >> PAGE_SIZE_SHIFT);
+      size = 1 << getPowerPagesMapping(offset >> PAGE_SIZE_SHIFT);
     }
     else {
       size = getSizeFromMbs(mbIndex); 
@@ -445,7 +452,7 @@ class PerNodeHeap {
       unsigned int  power; 
 
       power = getPowerPagesMapping(pgIndex);
-      size = 2 << power; 
+      size = 1 << power; 
 
       // Check whether the perthreadsizeclass is full or not
       if(size <= MAX_SMALL_CLASSES) {

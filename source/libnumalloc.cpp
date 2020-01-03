@@ -32,7 +32,7 @@
 #include "xdefines.hh"
 #include "perthread.hh"
 
-#define GET_TIME 1
+#define GET_TIME 0
 #if GET_TIME
 #include "time.h"
 
@@ -144,6 +144,7 @@ void heapinitialize() {
     // Thread initialization, which can be occurred before or after numap heap initialization
 		xthread::getInstance().initialize();
 
+    fprintf(stderr, "heap is initialized\n");
     heapInitStatus = E_HEAP_INIT_DONE;
 	} 
   else {
