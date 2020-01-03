@@ -91,7 +91,7 @@ class PerNodeHeap {
       return size;
    }
 
-   void initialize(int nodeindex, char * start) {
+   void initialize(unsigned int nodeindex, char * start) {
       size_t heapsize = 2 * SIZE_PER_SPAN;
 
       // Save the heap related information
@@ -111,7 +111,7 @@ class PerNodeHeap {
       // Initialize the heap for big objects, which will be allocated using huge pages.
       _bpBig = (char *)MM::mmapFromNode(SIZE_PER_SPAN, nodeindex, _bpSmallEnd, true); 
       _bpBigEnd = _bpBig + SIZE_PER_SPAN;
-   
+  
       _scMagicValue = 32 - LOG2(SIZE_CLASS_START_SIZE);
       // For each page, 2^12 (sc will be 8), but the order will be 0, which is 8 less than the sc
       _orderMagicValue = 24 - LOG2(SIZE_CLASS_START_SIZE);
@@ -122,7 +122,7 @@ class PerNodeHeap {
       // Allocate the memory from the current node.
       char * ptr = (char *)MM::mmapFromNode(alignup(metasize, PAGE_SIZE), nodeindex);
 
-      fprintf(stderr, "metasize is %lx\n", metasize);
+      //fprintf(stderr, "metasize is %lx. _nodeBegin %p _bigBegin %p\n", metasize, _nodeBegin, _bpBig);
       // Initilize the mappings
       _pagesMapping = (unsigned char *)ptr;
       ptr += (sizeof(unsigned char) * (heapsize >> PAGE_SIZE_SHIFT));
@@ -199,7 +199,7 @@ class PerNodeHeap {
     BigObject * object = NULL;
     list_t * entry = _bigList.next;
 
-    // TODO: use skiplist instead of doubly linked list
+    // TODO: use skiplist instead of doubly linked list for efficiency
     do {
       object = (BigObject *)entry; 
       if(object->size >= size) {
@@ -209,16 +209,20 @@ class PerNodeHeap {
       }
 
       entry = entry->next;
-    } while(!isListTail(entry)); 
+    } while(!isListTail(entry, &_bigList)); 
 
     // We will allocate only if the object has been found
     if(object->size >= size) {
       if(object->size > size) {
-        // Set free for the first part
-        setFreeMbsMapping((void *)object, object->size - size);
+        fprintf(stderr, "in bigObjectListAllocate. object %p Object->size %lx size %lx\n", object, object->size, size);
+        object->size -= size;
+
+        // Change the object size for the first part
+        setFreeMbsMapping((void *)object, object->size);
  
         // Use the second part as the new object, avoiding the change of the link list
-        ptr = (char *)object + size;
+        ptr = (char *)object + object->size;
+        fprintf(stderr, "in bigObjectListAllocate. now Object->size %lx size %lx ptr %p\n", object->size, size, ptr);
       }
       else {
         // Remove the object from the freed list
@@ -247,7 +251,7 @@ class PerNodeHeap {
     _smallSizes[sc].deallocateBatch(num, head, tail);   
   }
 
-  inline unsigned int getPageIndex(void * ptr) {
+  inline unsigned long getPageIndex(void * ptr) {
     size_t offset = ((intptr_t)ptr - (intptr_t)_nodeBegin);
     return offset >> PAGE_SIZE_SHIFT;
   }
@@ -257,14 +261,14 @@ class PerNodeHeap {
   // Since we don't care the invalid frees right now, we will only set the size for
   // the first page of each PageHeap object 
   inline void setUsePageHeap(void * ptr, unsigned int power) {
-    unsigned int pageIndex = getPageIndex(ptr);
+    unsigned long pageIndex = getPageIndex(ptr);
 
     // We will save the power with one bit shift
     _pagesMapping[pageIndex] = power << 1;
   }
 
   inline void setFreePageHeap(void * ptr, unsigned int power) {
-    unsigned int pageIndex = getPageIndex(ptr);
+    unsigned long pageIndex = getPageIndex(ptr);
 
     // We will save the power with one bit shift
     _pagesMapping[pageIndex] = ((power << 1) | 0x1);
@@ -275,7 +279,7 @@ class PerNodeHeap {
     char * addr = NULL;
 
     assert(order <= ORDER_ONE_MB);
-
+   fprintf(stderr, "splitPageHeapObject ptr %p order %d reqOrder %d\n", ptr, order, reqOrder);
 
     while(--order >= reqOrder) {
       unsigned long newPower = order + PAGE_HEAP_START_POWER;
@@ -286,7 +290,7 @@ class PerNodeHeap {
       // Set freed status for the second part
       setFreePageHeap(addr, newPower);
 
-//      fprintf(stderr, "Put object %p to freelist with order %d newPower %ld size %x. reqOrder %d\n", addr, order, newPower, 1<<newPower, reqOrder);
+     fprintf(stderr, "Put object %p to freelist with order %d newPower %ld size %x. reqOrder %d\n", addr, order, newPower, 1<<newPower, reqOrder);
       // Add the object to the freelist (lock will be acquired inside)
       _pageHeap[order].deallocate(addr);
     }
@@ -299,7 +303,7 @@ class PerNodeHeap {
   }
 
   // Allocate an object from the page heap directly
-  void * pageHeapAllocate(unsigned int order, unsigned int power) {
+  void * pageHeapAllocate(int order, int power) {
     unsigned int reqOrder = order; 
 
     void * ptr = NULL; 
@@ -325,7 +329,8 @@ class PerNodeHeap {
         splitPageHeapObject(ptr, order, reqOrder, power);
       }
     }
-    
+   
+    fprintf(stderr, "pageheapAllocate with ptr %p order %d!!!\n", ptr, reqOrder); 
     return ptr;
   }
 
@@ -350,8 +355,8 @@ class PerNodeHeap {
     void * ptr = NULL; 
 
     // Get one bag from the _pageHeap first
-    unsigned int order = getOrder(bagSize);
-    unsigned int power = getPower(size);
+    int order = getOrder(bagSize);
+    int power = getPower(size);
 
     // If the _pageHeap has some objects, try to allocate from it first.
     if(bagSize <= getPageHeapSize()) {
@@ -362,7 +367,7 @@ class PerNodeHeap {
     if(ptr == NULL) {
       // Check the freed bigObjects at first, since they may be still hot in cache. 
       ptr = bigObjectListAllocateOneMb(); 
-    
+      fprintf(stderr, "get object from BIG OBJECT ptr %p\n", ptr); 
       // If there is no freed bigObjects, getting one MB from the bump pointer
       if(ptr == NULL) {
         lockSmallHeap();
@@ -418,10 +423,11 @@ class PerNodeHeap {
       setUseMbsMapping(ptr, size);
     }
 
+    fprintf(stderr, "allocateBigObject %p: size %lx\n", ptr, size);
     return ptr;
   }
 
-  unsigned int getPowerPagesMapping(unsigned int index) {
+  unsigned int getPowerPagesMapping(unsigned long index) {
     return (_pagesMapping[index] >> 1);
   }
 
@@ -472,8 +478,9 @@ class PerNodeHeap {
         }
       }
       else if(size <= MAX_PAGE_HEAP) {
-        unsigned int order = power - PAGE_HEAP_START_POWER; 
+        int order = power - PAGE_HEAP_START_POWER; 
 
+        fprintf(stderr, "page heap deallocate ptr %p order %d\n", ptr, order);
         // Now let's put this object to the common _pageHeap
         pageHeapDeallocate(ptr, order, pgIndex);
 
@@ -482,13 +489,14 @@ class PerNodeHeap {
       }
     }
     else {
+      fprintf(stderr, "deallocateBigObject %p\n", ptr);
       // Deallocate this big object to _bigList
       bigObjectsDeallocate(ptr, mbIndex);
     }
   }
 
   // Deallocate this object to the page heap, which hold the list of "power of 2" pages
-  void pageHeapDeallocate(void * ptr, unsigned int order, int pageIndex) {
+  void pageHeapDeallocate(void * ptr, unsigned int order, unsigned long pageIndex) {
 #if 0
     // Implement the buddy mechanism as Linux 
     unsigned long index, page_idx, mask, flags;
@@ -527,73 +535,76 @@ class PerNodeHeap {
     markFreePageObject(pageIndex);  
   }
 
-  inline void markFreePageObject(unsigned int index) {
+  inline void markFreePageObject(unsigned long index) {
     _pagesMapping[index] |= 0x1;
   }
 
   inline void clearFreeMbsMapping(void * ptr) {
-    unsigned int index = ((intptr_t)ptr - (intptr_t)_nodeBegin) >> SIZE_ONE_MB_SHIFT;
+    unsigned long index = ((intptr_t)ptr - (intptr_t)_nodeBegin) >> SIZE_ONE_MB_SHIFT;
     _mbsMapping[index] = 0;
   }
 
-  inline void clearFreeMbsMapping(unsigned int index, unsigned int last) {
+  inline void clearFreeMbsMapping(unsigned long index, unsigned long last) {
     _mbsMapping[index] = 0;
     _mbsMapping[last] = 0;
   }
 
-  inline void setFreeMbsMapping(unsigned int index, unsigned int last, size_t size) {
+  inline void setFreeMbsMapping(unsigned long index, unsigned long last, size_t size) {
     _mbsMapping[index] = (size <<1) | 0x1;
     _mbsMapping[last] = (size <<1) | 0x1;
   }
 
   inline void setFreeMbsMapping(void * ptr, size_t size) {
-    unsigned int index = ((intptr_t)ptr - (intptr_t)_nodeBegin) >> SIZE_ONE_MB_SHIFT;
-    unsigned int mbs = size >> SIZE_ONE_MB_SHIFT;
-    setFreeMbsMapping(index, index + mbs, size);
+    unsigned long index = ((intptr_t)ptr - (intptr_t)_nodeBegin) >> SIZE_ONE_MB_SHIFT;
+    unsigned long mbs = size >> SIZE_ONE_MB_SHIFT;
+    setFreeMbsMapping(index, index + mbs - 1, size);
   }
   
-  inline void setUseMbsMapping(unsigned int index, unsigned int last, size_t size) {
+  inline void setUseMbsMapping(unsigned long index, unsigned long last, size_t size) {
     _mbsMapping[index] = (size <<1);
     _mbsMapping[last] = (size <<1);
   }
 
   inline void setUseMbsMapping(void * ptr, size_t size) {
-    unsigned int index = ((intptr_t)ptr - (intptr_t)_nodeBegin) >> SIZE_ONE_MB_SHIFT;
-    unsigned int mbs = size >> SIZE_ONE_MB_SHIFT;
-    setUseMbsMapping(index, index + mbs, size);
+    unsigned long index = ((intptr_t)ptr - (intptr_t)_nodeBegin) >> SIZE_ONE_MB_SHIFT;
+    unsigned long mbs = size >> SIZE_ONE_MB_SHIFT;
+    setUseMbsMapping(index, index + mbs - 1, size);
   }
 
-  inline void markFreeMbsMapping(unsigned int index) {
+  inline void markFreeMbsMapping(unsigned long index) {
     // When setting the index, we will set the first one and the last one
     _mbsMapping[index] |= 0x1;
   }
 
-  inline bool isBigObjectFree(unsigned int index) {
-    return ((_mbsMapping[index - 1] & 0x1) != 0);
+  inline bool isBigObjectFree(unsigned long index) {
+    return ((_mbsMapping[index] & 0x1) != 0);
   }
 
-  inline int getPrevFreeMbs(unsigned int mbIndex, size_t * size) {
-    int ret = -1; 
+  inline unsigned long getPrevFreeMbs(unsigned long mbIndex, size_t * size) {
+    unsigned long ret = -1; 
 
     if(isBigObjectFree(mbIndex - 1)) {
       *size = getSizeFromMbs(mbIndex-1);
       ret = mbIndex - ((*size) >> SIZE_ONE_MB_SHIFT);
+      //fprintf(stderr, "size is %lx ret %d\n", *size, ret);
     }
 
     return ret; 
   }
 
-  inline size_t getSizeFromMbs(unsigned int index) {
+  inline size_t getSizeFromMbs(unsigned long index) {
     return (_mbsMapping[index] >> 1);
   }
 
-  inline void * getBigObject(unsigned int index) {
-    return _nodeBegin + (index << SIZE_ONE_MB_SHIFT);
+  inline void * getBigObject(unsigned long index) {
+    return _nodeBegin + (index * SIZE_ONE_MB);
   }
 
-  void * removeBigObject(unsigned int index, unsigned long last) {
+  void * removeBigObject(unsigned long index, unsigned long last) {
     // Turn the index into the address 
     void * ptr = getBigObject(index);
+
+    //fprintf(stderr, "removeBigObject ptr %p nodeBegin index %d\n", ptr, index);
 
     // Remove this object from the freelist
     listRemoveNode((list_t *)ptr);
@@ -604,17 +615,21 @@ class PerNodeHeap {
     return ptr;
   }
 
-  void insertBigObject(BigObject * object, unsigned int findex) {
+  void insertFreeBigObject(BigObject * object, unsigned long findex) {
     size_t size = object->size;
     unsigned int mbs = size >> SIZE_ONE_MB_SHIFT;
 
-    // TODO: check it carefully
+    //fprintf(stderr, "insertFreeBigObject %p with size %lx\n", object, size);
     // Insert this object to the freelist based on the size
     // If there are multiple objects in the freelist, then the current one
     // will be inserted into the beginning
     // Therefore, we will find the first object that satisfy the condition
     list_t * entry = _bigList.next;
-    while(!isListTail(entry)) {
+   // if(isListTail(entry, &_bigList)) {
+    //  fprintf(stderr, "entry %p is tal\n", entry);
+   // }
+
+    while(!isListTail(entry, &_bigList)) {
       BigObject * lobject = (BigObject *)entry; 
       if(lobject->size >= size) {
         break; 
@@ -623,32 +638,28 @@ class PerNodeHeap {
       entry = entry->next;
     }
     listInsertNode(&object->list, entry); 
-
-    // Mark the setting of big objects
-    markFreeMbsMapping(findex);
-
-    // Also mark the last one
-    if(size > SIZE_ONE_MB) {
-      markFreeMbsMapping(findex+ (size>> SIZE_ONE_MB_SHIFT));
-    }
+    
+    // Set the free and size of the big object
+    setFreeMbsMapping((void *)object, size);
   }
 
-  void bigObjectsDeallocate(void * ptr, unsigned int mbIndex) {
+  void bigObjectsDeallocate(void * ptr, unsigned long mbIndex) {
     BigObject * object; 
-    unsigned int findex = mbIndex;
+    unsigned long findex = mbIndex;
     size_t mysize = getSizeFromMbs(mbIndex);
 
     lockBigHeap();
 
     // We only merge one object if it is larger than one mb.
     if(mysize > SIZE_ONE_MB) {
-      unsigned int index;
+      unsigned long index;
       size_t size; 
 
       // Try to merger with its previous mbs. 
       index = getPrevFreeMbs(mbIndex, &size);
       if(index != -1) {
-        // Let's remove the previous object. 
+      //  fprintf(stderr, "bigobject deallocate ptr %p. mbIndex %d index %d\n", ptr, mbIndex, index);
+        // Let's remove the previous object from the freelist. 
         object = (BigObject *)removeBigObject(index, mbIndex-1);
 
         // Now let's combine with the current object. 
@@ -664,7 +675,7 @@ class PerNodeHeap {
       object->timestamp = _bigTimestamp++;
 
       // Try to merge with its next object
-      index = mbIndex + (mysize >> SIZE_ONE_MB_SHIFT) + 1;
+      index = mbIndex + (mysize >> SIZE_ONE_MB_SHIFT);
       if(isBigObjectFree(index)) {
         size = getSizeFromMbs(index);
         removeBigObject(index, index + (size >> SIZE_ONE_MB_SHIFT)); 
@@ -680,7 +691,7 @@ class PerNodeHeap {
     // Insert the object to the freelist. 
     // The freelist will be sorted first as the size, and then timestamp
     // Therefore, we will always get the first one with the specified size
-    insertBigObject(object, findex);
+    insertFreeBigObject(object, findex);
   
     // Update the size information right now
     _bigSize += mysize;

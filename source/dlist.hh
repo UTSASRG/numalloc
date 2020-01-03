@@ -16,7 +16,7 @@ inline void listInit(list_t* node) { nodeInit(node); }
 // Whether a list is empty
 inline bool isListEmpty(list_t* head) { return (head->next == head); }
 
-// We donot check whetehr the list is empty or not?
+// We donot check whether the list is empty or not?
 inline list_t* tailList(list_t* head) {
   list_t* tail = NULL;
   if(!isListEmpty(head)) {
@@ -82,7 +82,7 @@ inline void listRemoveNodeOnly(list_t* node) {
 }
 
 // Check whether current node is the tail of a list
-inline bool isListTail(list_t* node) { return (node->next == node); }
+inline bool isListTail(list_t* node, list_t *list) { return (node->next = list); }
 
 // Retrieve the first item form a list
 // Then this item will be removed from the list.
