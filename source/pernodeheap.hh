@@ -306,7 +306,7 @@ class PerNodeHeap {
 
     // Get one bag from the page heap at first
     while(order <= MAX_ORDER) {
-      if(_pageHeap[order].getSize() > 0) {
+      if(_pageHeap[order].hasItems()) {
         // Allocate one object from the specified page heap list
         ptr = _pageHeap[order].allocate(); 
         break;

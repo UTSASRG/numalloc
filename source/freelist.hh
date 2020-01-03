@@ -7,7 +7,7 @@
 class FreeList {
 private:
     void*    _list;
-    uint32_t _length;     // Current length
+    int32_t _length;     // Current length
 
 public:
   void Init() {
@@ -26,7 +26,7 @@ public:
   }
   
   bool hasItems() const {
-    return _list != NULL;
+    return _length > 0;
   }
 
   void Push(void* ptr) {

@@ -74,8 +74,11 @@ class PerNodeSizeClass {
       return;
     }
 
+    inline bool hasItems() {
+      return _flist.hasItems();
+    }
 
-    inline size_t getSize() {
+    inline size_t getSizeClass() {
       return _size;
     }
 
