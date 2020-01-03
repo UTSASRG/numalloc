@@ -2,8 +2,7 @@
 #define __SLIST_H__
 
 /***************************************************************************************
- * Note: the following singly linked list code is
- * copied from TCMalloc. 
+ * Note: the following singly linked list code is copied from TCMalloc. 
  * They are located at between line 325 and line 384 of NUMA-aware_TCMalloc/src/tcmalloc.cc
  ******************************************************************************************/
 static inline void *SLL_Next(void *t) {

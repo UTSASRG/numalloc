@@ -31,9 +31,9 @@
 #include "dlist.hh"
 #include "pernodeheap.hh"
 #include "perthread.hh"
-//#ifdef SPEC_MAINTHREAD_SUPPORT
+#ifdef SPEC_MAINTHREAD_SUPPORT
 #include "mainheap.hh"
-//#endif
+#endif
 
 /* How to deal with the heap allocation. If one thread continuously allocates 
  * large chunk of data, such as over the number of allocations and the total size.
@@ -82,16 +82,20 @@ public:
     // The main thread's memory is always located in the beginning of the heap
     // For it, we will maintain the memory location for each page, so that the memory can be re-utilized.
     //initMainThreadMemory(_heapBegin); 
-    
+
+    // Allocate memory from PerNode    
     // Initialize for each PerNodeHeap right now. 
     for(int i = 0; i < NUMA_NODES; i++) {
-      _nodes[i].initialize(i, pnheapPointer); 
+      _nodes[i] = (PerNodeHeap *)MM::mmapFromNode(alignup(sizeof(PerNodeHeap), PAGE_SIZE), i);
+
+      // Allocate the memory for pernode structure at first. 
+      _nodes[i]->initialize(i, pnheapPointer); 
 
       // Binding the memory to the specific node
-      unsigned long mask = 1 << i;
-      if(mbind(pnheapPointer, SIZE_PER_NODE, MPOL_PREFERRED, &mask, 32, 0) == -1) {
-        fprintf(stderr, "Binding failure for address ptr %p, with error %s\n", pnheapPointer, strerror(errno));
-      }
+      //unsigned long mask = 1 << i;
+      //if(mbind(pnheapPointer, SIZE_PER_NODE, MPOL_PREFERRED, &mask, 32, 0) == -1) {
+      //  fprintf(stderr, "Binding failure for address ptr %p, with error %s\n", pnheapPointer, strerror(errno));
+      //}
 
       pnheapPointer += SIZE_PER_NODE;
     }
@@ -111,7 +115,6 @@ public:
 
   void * allocate(size_t size) {
     void * ptr = NULL; 
-//   fprintf(stderr, "Thread %d: allocate size %ld\n", current->index, size);
 
 #ifdef SPEC_MAINTHREAD_SUPPORT
     //if(_mainHeapPhase){
@@ -134,7 +137,7 @@ public:
       int index = getNodeIndex();
 
       // Always allocate a large object from PerNodeHeap directly 
-      ptr = _nodes[index].allocateBigObject(size);
+      ptr = _nodes[index]->allocateBigObject(size);
     }
 
    
@@ -143,16 +146,16 @@ public:
 
   // Allocate the specified number of freed objects from the specified node(nindex)'s size class (sc).
   int moveBatchFromNodeFreelist(int nindex, int sc, unsigned long num, void ** head, void ** tail) {
-    return _nodes[nindex].allocateBatch(sc, num, head, tail);
+    return _nodes[nindex]->allocateBatch(sc, num, head, tail);
   }
 
-  char * allocateOnembFromNode(int nindex, size_t size) {
-    return _nodes[nindex].allocateOnemb(size);
+  char * allocateOnebagFromNode(int nindex, size_t size, size_t bagSize) {
+    return _nodes[nindex]->allocateOneBag(size, bagSize);
   }
   
   // Contribure some objects to the node's freelist
   void donateBatchToNodeFreelist(int nindex, int sc, unsigned long num, void * head, void *tail) {
-    _nodes[nindex].deallocateBatch(sc, num, head, tail);
+    _nodes[nindex]->deallocateBatch(sc, num, head, tail);
   }
 
   void deallocate(void * ptr) {
@@ -170,11 +173,10 @@ public:
 
     // Compute the node index by the offset
     int index = offset >> SIZE_PER_NODE_SHIFT;
-
+    
     // Return it to the PerNodeHeap, since we will have to check PerOnembInfo to get the actual size. 
     // After that, the object  may return to the PerThreadHeap or PerNodeHeap
-    _nodes[index].deallocate(index, ptr);
-    //fprintf(stderr, "deallocate index %d ptr %p\n", index, ptr);
+    _nodes[index]->deallocate(index, ptr);
   }
 
   size_t getSize(void *ptr) {
@@ -189,7 +191,7 @@ public:
     // Compute the node index by the offset
     int index = offset >> SIZE_PER_NODE_SHIFT;
 
-    return _nodes[index].getSize(ptr);
+    return _nodes[index]->getSize(ptr);
   }
 
 private:
@@ -201,7 +203,7 @@ private:
   void   * _skipCheckAddr; 
 #endif
   size_t _heapEnd; 
-  PerNodeHeap _nodes[NUMA_NODES];
+  PerNodeHeap * _nodes[NUMA_NODES];
 };	
 
 #endif // __NUMAHEAP_HH__	

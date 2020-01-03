@@ -35,7 +35,8 @@ inline void __insert_between(list_t* node, list_t* prev, list_t* next) {
 }
 
 // Insert one entry to after specified entry prev (prev, prev->next)
-inline void listInsertNode(list_t* node, list_t* prev) { __insert_between(node, prev, prev->next); }
+inline void listInsertNodeAfter(list_t* node, list_t* prev) { __insert_between(node, prev, prev->next); }
+inline void listInsertNode(list_t* node, list_t* curr) { __insert_between(node, curr->prev, curr); }
 
 // Insert one entry to the tail of specified list.
 // Insert between tail and head

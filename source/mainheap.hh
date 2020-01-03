@@ -177,7 +177,7 @@ class MainHeap {
   // allocate a big object with the specified size
   void * allocateBigObject(size_t size) {
     void * ptr = NULL;
-    size = alignup(size, SIZE_ONE_MB_BAG);
+    size = alignup(size, SIZE_ONE_MB);
 
     // Allocate from the free list at first
     ptr = _bigObjects.allocate(size);
@@ -255,12 +255,12 @@ class MainHeap {
     sc = getSizeClass(size);
     if(!_sizes[sc].hasObject()) {
       void * ptr = _bpSmall;
-      _bpSmall += SIZE_ONE_MB_BAG;
-      _sizes[sc].updateBumpPointer((char *)ptr, SIZE_ONE_MB_BAG);
+      _bpSmall += SIZE_ONE_MB;
+      _sizes[sc].updateBumpPointer((char *)ptr, SIZE_ONE_MB);
 
       //fprintf(stderr, "allocate small object\n");
       // Update the PerMBInfo as well
-      markPerMBInfo(ptr, SIZE_ONE_MB_BAG, _sizes[sc].getClassSize()); 
+      markPerMBInfo(ptr, SIZE_ONE_MB, _sizes[sc].getClassSize()); 
     }
 
     return _sizes[sc].allocate();

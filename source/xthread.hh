@@ -199,7 +199,6 @@ class xthread {
 
   inline thread_t* getThread(int index) { return &_threads[index]; }
 
-	int thread_create(pthread_t * thread, const pthread_attr_t * attr, threadFunction * fn, void * arg);
 
   static void * startThread(void * arg) {
     thread_t * current = (thread_t *) arg;
@@ -226,6 +225,7 @@ class xthread {
     return index; 
   }
 
+	int thread_create(pthread_t * thread, const pthread_attr_t * attr, threadFunction * fn, void * arg);
 	int thread_join(pthread_t thread, void ** retval);
 
 	void lock() {

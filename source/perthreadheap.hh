@@ -8,6 +8,7 @@
 class PerThreadHeap {
 private:
   size_t _scMagicValue;
+
   PerThreadSizeClass _sclass[SMALL_SIZE_CLASSES];
 
 public:
@@ -17,8 +18,14 @@ public:
     unsigned long classSize = 16;
     unsigned long size = 0; 
     for(i = 0; i < SMALL_SIZE_CLASSES; i++) {
-      unsigned int objects = SIZE_ONE_MB_BAG * 4/classSize;
-      _sclass[i].initialize(nindex, classSize, i, objects); 
+      // Try to set perthreadsize classes
+      unsigned int objects = SIZE_ONE_MB * 4/classSize;
+      if(classSize < PAGE_SIZE) {
+        _sclass[i].initialize(nindex, classSize, i, objects, PAGE_SIZE);
+      }
+      else {
+        _sclass[i].initialize(nindex, classSize, i, objects, classSize);
+      } 
       classSize *= 2;
     }
 

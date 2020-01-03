@@ -113,7 +113,7 @@ public:
     void * ptr; 
 
     // Check whether a block should be allocated from the big heap
-    if(sz >= SIZE_ONE_MB_BAG) {
+    if(sz >= SIZE_ONE_MB) {
       size = alignup(sz, SIZE_HUGE_PAGE);
       ptr = mmapAllocatePrivate(size, startaddr, isHugePage);
       //ptr = mmapAllocatePrivate(sz);

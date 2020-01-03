@@ -3,7 +3,7 @@
 
 #include "mm.hh"
 #include "freelist.hh"
-#include "pthread.h"
+#include "perthread.hh"
 
 // For small objects, each size class will maintain
 // one bumppointer and one freelist
@@ -43,6 +43,17 @@ class PerNodeSizeClass {
 
       return numb;
     }
+    
+    void * allocate(void) {
+      void * ptr = NULL;
+
+      lock();
+      ptr = _flist.Pop();
+      unlock();
+
+      return ptr;
+    }
+
 
     void deallocate(void * ptr) {
       lock();
@@ -61,7 +72,8 @@ class PerNodeSizeClass {
       unlock();
 
       return;
-   }
+    }
+
 
     inline size_t getSize() {
       return _size;

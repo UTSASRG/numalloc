@@ -14,8 +14,7 @@ private:
   unsigned int _watermark; 
   unsigned int _batch; // Allocate or contribute this number if necessary 
 
-  unsigned int _warmupSize; 
-  unsigned int _warmupObjects; 
+  unsigned int _bagSize; // Allocate one bag from outside each time 
   // During the allocation,  reutilizing freed objects in the same node will be at a higher priority. 
   // However, we don't want to keep checking the per-node list if it fails. 
   // Therefore, we will utilize some heuristics to avoid frequent checks. 
@@ -30,28 +29,20 @@ private:
   FreeList _flist; 
 
 public: 
-  void initialize(int nodeindex, int size, int sc, int batch) {
+  void initialize(int nodeindex, int size, int sc, int batch, int bagsize) {
     _size = size;
     _sc = sc;
     _batch = batch;
+    _bagSize = bagsize;
     _nodeindex = nodeindex; 
     _watermark = batch * 2;
     _allocsCheckMin = batch / 4;
     
-    // We learn from TcMalloc and will increase the bumppointer in 
-    // the unit of warmupSize. The first object will be returned to the user, and 
-    // other objects will be added to the freelist so that we could quickly warmup
-    // the objects in the cache line. This idea will be good for the performance for raytrace 
-    _warmupSize = 8 * 1024;
-    _warmupObjects = _warmupSize/size - 1; 
-
-    //_allocMBs = 0;
     if(_allocsCheckMin <= 1) {
       _allocsCheckMin = 1;
     }
     _allocsCheckMax = batch * 4;
 
-    // Map a chunk of memory in the local node
     _flist.Init();
 
     _allocsBeforeCheck = _batch/4;

@@ -36,7 +36,6 @@
 #if GET_TIME
 #include "time.h"
 
-
 volatile unsigned long long origTime = 0;
 volatile unsigned long long allocs = 0;
 volatile unsigned long long totalAllocCycles = 0;
@@ -52,6 +51,7 @@ inline unsigned long long rdtscp() {
     return retval;
 }
 #endif
+
 // Define a thread local variable--current. Based on the evaluation, 
 // http://david-grs.github.io/tls_performance_overhead_cost_linux/, 
 // TLS is very efficient. I also have verified this by myself. 
@@ -191,7 +191,7 @@ void heapinitialize() {
       if((allocs % 1000000) == 0) {
         fprintf(stderr, "Runtime is %lld totalAllocCycles %lld, allocs %lld. current length %lld\n", rdtscp()-origTime, totalAllocCycles, allocs, length);
       }
-      //if(allocs == 2000000) { exit(0); }
+      if(allocs == 16000000) { exit(0); }
       //fprintf(stderr, "totalAllocCycles %lld length %lld\n", totalAllocCycles, length);
 #endif
       //fprintf(stderr, "malloc size %ld ptr %p\n", size, ptr);
