@@ -46,9 +46,10 @@ class PerNodeSizeClass {
     
     void * allocate(void) {
       void * ptr = NULL;
-
+     
       lock();
-      ptr = _flist.Pop();
+      if(_flist.hasItems()) 
+        ptr = _flist.Pop();
       unlock();
 
       return ptr;

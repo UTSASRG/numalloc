@@ -315,9 +315,12 @@ class PerNodeHeap {
     // Get one bag from the page heap at first
     while(order <= MAX_ORDER) {
       if(_pageHeap[order].hasItems()) {
+//        fprintf(stderr, "_pageHeap order %d has items\n", order);
         // Allocate one object from the specified page heap list
         ptr = _pageHeap[order].allocate(); 
-        break;
+//        fprintf(stderr, "_pageHeap order %d has items ptr %p\n", order, ptr);
+        if(ptr) 
+          break;
       }
 
       // Otherwise, try to get one object from the higher order
@@ -386,7 +389,7 @@ class PerNodeHeap {
         setUsePageHeap(ptr, power);
       }
       else {
-        //fprintf(stderr, "Allocate one bag from big objets freelist %p\n", ptr);
+       // fprintf(stderr, "Allocate one bag from big objets freelist %p\n", ptr);
         // Adding the remaining one to the PageHeap, which should return ptr.
         splitPageHeapObject(ptr, ORDER_ONE_MB, order, power);
         increasePageHeapSize(SIZE_ONE_MB - bagSize);
@@ -499,6 +502,7 @@ class PerNodeHeap {
     }
   }
 
+  // TODO: maybe we will support the merge of page heap
   // Deallocate this object to the page heap, which hold the list of "power of 2" pages
   void pageHeapDeallocate(void * ptr, unsigned int order, unsigned long pageIndex) {
 #if 0
