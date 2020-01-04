@@ -32,7 +32,7 @@
 #include "xdefines.hh"
 #include "perthread.hh"
 
-#define GET_TIME 1
+#define GET_TIME 0
 #if GET_TIME
 #include "time.h"
 

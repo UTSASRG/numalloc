@@ -55,14 +55,15 @@ inline void insertListBeginning(dlistHead * list, dlist * newnode) {
 
 inline void insertListEnd(dlistHead * list, dlist * newnode) {
    if(list->last == NULL) {
+     // No existing node
      insertListBeginning(list, newnode);
    }
    else {
-     insertListAfter(list, list->last, newnode);
+     listInsertAfter(list, list->last, newnode);
    }
 }
 
-inline void removeFromList (dlistHead * list, dlist * node) {
+inline void listRemoveNode (dlistHead * list, dlist * node) {
     if (node->prev == NULL) {
       // First node 
       list->first  = node->next;

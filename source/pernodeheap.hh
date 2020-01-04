@@ -21,7 +21,7 @@ class PerNodeHeap {
   // Big objects are those ones with the size larger than 1MB
   class BigObject {
   public:
-    list_t  list; // We will use the doubly-link list for the performance reason
+    dlist   list; // We will use the doubly-link list for the performance reason
     size_t  size;
     unsigned long timestamp; 
   };
@@ -60,7 +60,7 @@ class PerNodeHeap {
     size_t _pageHeapSize;
 
     // Larger than 1MB will be located in the MB list
-    list_t _bigList; // the doubly linklist 
+    dlistHead _bigList; // the doubly linklist 
     size_t _bigSize; // total size
     // If the total size is larger than this watermark, then we will start to freed some memory
     // Currently, the watermark is set to 128MB
@@ -197,40 +197,41 @@ class PerNodeHeap {
 
     // _bigList is not empty (at least with one element), since _bigSize is not 0
     BigObject * object = NULL;
-    list_t * entry = _bigList.next;
+    bool    isFound = false;
+    dlist * entry = _bigList.first;
 
     // TODO: use skiplist instead of doubly linked list for efficiency
-    do {
+    while(entry != NULL) {
       object = (BigObject *)entry; 
-      fprintf(stderr, "search biglist with object %p size %lx request size %lx\n", object, object->size, size);
+      //fprintf(stderr, "search biglist with object %p size %lx request size %lx\n", object, object->size, size);
       if(object->size >= size) {
+        isFound = true;
         // Find one available object, which will be allocated from.
         // We already sort the objects based on the size and timestamp
         break; 
       }
       entry = entry->next;
-    } while(!isListTail(entry, &_bigList)); 
+    } 
 
     // We will allocate only if the object has been found
-    if(object->size >= size) {
+    if(isFound) {
       if(object->size > size) {
-        if((list_t *)object == &_bigList) {
-          fprintf(stderr, "entry %p object %p _bigList %p first %p last %p\n", entry, object, &_bigList, _bigList.next, _bigList.prev);
-        }
-        fprintf(stderr, "in bigObjectListAllocate. biglist %p object %p Object->size %lx size %lx\n", &_bigList, object, object->size, size);
+        //fprintf(stderr, "in bigObjectListAllocate. biglist %p object %p with size %lx request-size %lx\n", &_bigList, object, object->size, size);
         object->size -= size;
 
-        // Change the object size for the first part
-        setFreeMbsMapping((void *)object, object->size);
+        // Remove this object from the list, since it may be inserted into a different place (due to the changed size)
+        listRemoveNode(&_bigList, &object->list);
+
+        // Now insert the first part back to the freelist
+        insertFreeBigObject(object);
  
         // Use the second part as the new object, avoiding the change of the link list
         ptr = (char *)object + object->size;
       }
       else {
-        fprintf(stderr, "in bigObjectListAllocate. delete object %p size %lx\n", object, size);
+        //fprintf(stderr, "in bigObjectListAllocate. delete object %p size %lx\n", object, size);
         // Remove the object from the freed list
-        listRemoveNode(&object->list);
-        
+        listRemoveNode(&_bigList, &object->list);
         ptr = (void *)object;
       }
 
@@ -370,7 +371,7 @@ class PerNodeHeap {
     if(ptr == NULL) {
       // Check the freed bigObjects at first, since they may be still hot in cache. 
       ptr = bigObjectListAllocateOneMb(); 
-      fprintf(stderr, "get object from BIG OBJECT ptr %p\n", ptr); 
+      //fprintf(stderr, "get object from BIG OBJECT ptr %p\n", ptr); 
       // If there is no freed bigObjects, getting one MB from the bump pointer
       if(ptr == NULL) {
         lockSmallHeap();
@@ -426,7 +427,7 @@ class PerNodeHeap {
       setUseMbsMapping(ptr, size);
     }
 
-    fprintf(stderr, "allocateBigObject %p: size %lx\n", ptr, size);
+    //fprintf(stderr, "allocateBigObject %p: size %lx\n", ptr, size);
     return ptr;
   }
 
@@ -483,7 +484,7 @@ class PerNodeHeap {
       else if(size <= MAX_PAGE_HEAP) {
         int order = power - PAGE_HEAP_START_POWER; 
 
-        fprintf(stderr, "page heap deallocate ptr %p order %d\n", ptr, order);
+        //fprintf(stderr, "page heap deallocate ptr %p order %d\n", ptr, order);
         // Now let's put this object to the common _pageHeap
         pageHeapDeallocate(ptr, order, pgIndex);
 
@@ -492,7 +493,7 @@ class PerNodeHeap {
       }
     }
     else {
-      fprintf(stderr, "deallocateBigObject %p\n", ptr);
+      //fprintf(stderr, "deallocateBigObject %p\n", ptr);
       // Deallocate this big object to _bigList
       bigObjectsDeallocate(ptr, mbIndex);
     }
@@ -610,7 +611,7 @@ class PerNodeHeap {
     //fprintf(stderr, "removeBigObject ptr %p nodeBegin index %d\n", ptr, index);
 
     // Remove this object from the freelist
-    listRemoveNode((list_t *)ptr);
+    listRemoveNode(&_bigList, (dlist *)ptr);
 
     // Cleanup the size information
     clearFreeMbsMapping(index, last);     
@@ -618,32 +619,32 @@ class PerNodeHeap {
     return ptr;
   }
 
-  void insertFreeBigObject(BigObject * object, unsigned long findex) {
+  void insertFreeBigObject(BigObject * object) {
     size_t size = object->size;
-    unsigned int mbs = size >> SIZE_ONE_MB_SHIFT;
 
-    //fprintf(stderr, "insertFreeBigObject %p with size %lx\n", object, size);
-    // Insert this object to the freelist based on the size
-    // If there are multiple objects in the freelist, then the current one
-    // will be inserted into the beginning
-    // Therefore, we will find the first object that satisfy the condition
-    list_t * entry = _bigList.next;
-   // if(isListTail(entry, &_bigList)) {
-    //  fprintf(stderr, "entry %p is tal\n", entry);
-   // }
-
-    while(!isListTail(entry, &_bigList)) {
-      BigObject * lobject = (BigObject *)entry; 
-      if(lobject->size >= size) {
+    // Insert this object to the freelist based on the size and timestamp
+    // If there are multiple objects in the freelist, we will use the timestamp.
+    // The one with the larger timestamp (which indicates the newer one) will be placed in the header
+    dlist * node = _bigList.first;
+    bool isFound = false;
+    // Find a good placement to insert this object
+    while(node != NULL) {
+      BigObject * lobject = (BigObject *)node; 
+      if((lobject->size > size) || ((lobject->size == size) && (lobject->timestamp < object->timestamp)))  {
+        isFound = true;
         break; 
       } 
 
-      entry = entry->next;
+      node = node->next;
     }
-    fprintf(stderr, "insert node object %p entry %p (prev %p next %p) _bigList.next %p size %lx\n", object, entry, entry->prev, entry->next, _bigList.next, size); 
-    listInsertNode(&object->list, entry); 
-   
-    // Set the free and size of the big object
+
+    if(isFound == true) {
+      listInsertBefore(&_bigList, node, (dlist *)object);
+    }
+    else {
+      insertListEnd(&_bigList, (dlist *)object);
+    }
+    // Set the free status and size of the big object
     setFreeMbsMapping((void *)object, size);
   }
 
@@ -675,7 +676,8 @@ class PerNodeHeap {
         object = (BigObject *)ptr;
         object->size = mysize;
       }
-        
+       
+      // Should we compute the timestamp based on the ratio 
       object->timestamp = _bigTimestamp++;
 
       // Try to merge with its next object
@@ -687,15 +689,16 @@ class PerNodeHeap {
       }
     }
     else {
-      // Make the current prt as the starting address
+      // Make the current ptt as the starting address
       object = (BigObject *)ptr;
       object->size = mysize;
+      object->timestamp = _bigTimestamp++;
     }
       
     // Insert the object to the freelist. 
     // The freelist will be sorted first as the size, and then timestamp
     // Therefore, we will always get the first one with the specified size
-    insertFreeBigObject(object, findex);
+    insertFreeBigObject(object);
   
     // Update the size information right now
     _bigSize += mysize;
