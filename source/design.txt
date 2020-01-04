@@ -1,3 +1,21 @@
+Todo list:
+
+1. Utilize the per-thread heap for small objects between 4k to 512K, instead of the global solution right now. 
+2. Maybe dynamically decide the bag for small objects, based on the frequency or requirement of each size class.
+This will avoid the continuously operate on the pageHeap, and also setting the address frequently. 
+3. Merge the adjacent pages to support.
+4. Try to use the hashtable to share the pages across multiple nodes, if the objects are shared.
+5. Check  the memory use of raytrace when using the shared memory 
+  
+Share the memory if it is larger than 1 page. 
+2. For big objects, whenever one object is deallocated, try to merge with its neighbour. 
+When allocation, let's just use the smallest first, since that may avoid more cache misses. 
+
+TcMalloc is running faster on Raytrace. The internal reason is that it utilizes all deallocations with the size larger than 1 page (due to their page span design). Therefore, they actually causes less L1 cache misses due to the 
+re-utilization. 
+
+
+
 How to design a NUMA support? 
 
 Per-Node heap: 
