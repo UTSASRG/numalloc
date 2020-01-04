@@ -117,7 +117,7 @@ public:
     void * ptr = NULL; 
 
 #ifdef SPEC_MAINTHREAD_SUPPORT
-    //if(_mainHeapPhase){
+   // if(_mainHeapPhase){
     if(_mainHeapPhase && (size > (PAGE_SIZE * NUMA_NODES/2))) {
       ptr = _mainHeap.allocate(size);
       if(ptr) { 
@@ -126,7 +126,8 @@ public:
     }
     // Now the corresponding address is failed. 
 #endif
-   // Check the size information. 
+   
+    // Check the size information. 
     if(size <= BIG_OBJECT_SIZE_THRESHOLD) {
       // Small objects will be always allocated via PerThreadSizeClass
       // although PerThreadSizeClass may get objects from PerNodeHeap as well 

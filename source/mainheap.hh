@@ -126,8 +126,8 @@ class MainHeap {
       _end = _begin + heapsize;
 
       //_bpSmall = (char *)MM::mmapFromNode(SIZE_PER_SPAN, nodeindex, (void *)begin, false);
-      _bpSmall = (char *)MM::mmapAllocatePrivate(SIZE_PER_SPAN, (void *)begin);
-     // _bpSmall = (char *)MM::mmapPageInterleaved(SIZE_PER_SPAN, (void *)begin);
+    //  _bpSmall = (char *)MM::mmapAllocatePrivate(SIZE_PER_SPAN, (void *)begin);
+      _bpSmall = (char *)MM::mmapPageInterleaved(SIZE_PER_SPAN, (void *)begin);
       _bpSmallEnd = _bpSmall + SIZE_PER_SPAN;
 
       // Initialize the big heap. Differently, we don't do mmap at first, since 

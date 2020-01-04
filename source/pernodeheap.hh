@@ -248,11 +248,22 @@ class PerNodeHeap {
   }
 
   int allocateBatch(int sc, unsigned long num, void ** head, void ** tail) {
-    return _smallSizes[sc].allocateBatch(num, head, tail);   
+    if(sc < LIST_SMALL_CLASSES) { 
+      return _smallSizes[sc].allocateBatch(num, head, tail);
+    } 
+    else {
+      // Getting the objects from the page heap
+      return 0; 
+    }  
   }
 
   void deallocateBatch(int sc, unsigned long num, void *head, void *tail) {
-    _smallSizes[sc].deallocateBatch(num, head, tail);   
+    if(sc <= LIST_SMALL_CLASSES - 1) { 
+      _smallSizes[sc].deallocateBatch(num, head, tail);   
+    }
+    else {
+      // Return this object to the page heap
+    }
   }
 
   inline unsigned long getPageIndex(void * ptr) {
@@ -319,6 +330,8 @@ class PerNodeHeap {
         // Allocate one object from the specified page heap list
         ptr = _pageHeap[order].allocate(); 
 //        fprintf(stderr, "_pageHeap order %d has items ptr %p\n", order, ptr);
+        // It is possible that multiple threads may check concurrently, 
+        // we will check whether we could get the item for the safety reason
         if(ptr) 
           break;
       }
@@ -379,6 +392,14 @@ class PerNodeHeap {
       if(ptr == NULL) {
         lockSmallHeap();
 
+#if DEBUG
+        if(size == 64) { 
+          _allocMBs += bagSize;
+          if(_allocMBs % 1048576 == 0) {
+            fprintf(stderr, "now memory allocation is %d mbs\n", _allocMBs/ 1048576);
+          }
+        }
+#endif
         // Allocate one bag from the bump pointer
         ptr = (char *)_bpSmall;
         _bpSmall += bagSize;
@@ -469,6 +490,7 @@ class PerNodeHeap {
 
       // Check whether the perthreadsizeclass is full or not
       if(size <= MAX_SMALL_CLASSES) {
+     // if(size <= MAX_PAGE_HEAP) {
         // If the node index is the same as the current thread, 
         // Return this object to per-thread's cache
         int index = getNodeIndex(); 
@@ -479,9 +501,19 @@ class PerNodeHeap {
           current->ptheap->deallocate(ptr, sc);
         }
         else {
-          // Return this object to the current node's freelist for different size classes
-          // Based on NumaHeap, this address belongs to the current node.
-          _smallSizes[sc].deallocate(ptr);
+          if(size <= MAX_SMALL_CLASSES) {  
+            // Return this object to the current node's freelist for different size classes
+            // Based on NumaHeap, this address belongs to the current node.
+            _smallSizes[sc].deallocate(ptr);
+          }
+          else {
+            int order = power - PAGE_HEAP_START_POWER;
+        
+            pageHeapDeallocate(ptr, order, pgIndex);
+
+            // increase the size.
+            increasePageHeapSize(size); 
+          }
         }
       }
       else if(size <= MAX_PAGE_HEAP) {

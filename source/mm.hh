@@ -137,10 +137,12 @@ private:
     sharedInfo |= ((startaddr != (void*)0) ? MAP_FIXED : 0);
     sharedInfo |= MAP_NORESERVE;
 
+#ifdef USE_HUGE_PAGE
     if(isHugePage) {
      sharedInfo |= MAP_HUGETLB;
       //sharedInfo |= MAP_HUGETLB | MAP_HUGE_2MB;
     }
+#endif
 
     void* ptr = mmap(startaddr, sz, protInfo, sharedInfo, fd, 0);
     if(ptr == MAP_FAILED) {

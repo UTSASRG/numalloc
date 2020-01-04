@@ -35,9 +35,11 @@ class PerNodeSizeClass {
         numb = requestNumb;
       }
       
-      // Pop the specified number of entries; 
+      fprintf(stderr, "size %ld: Move batch from the pernode list.\n", _size); 
+      // Pop the specified number of entries;
+      if(numb > 0)  
       _flist.PopRange(numb, head, tail); 
-//      fprintf(stderr, "Move batch from the pernode lsit.\n"); 
+      fprintf(stderr, "size %ld: Move batch %d from the pernode list.\n", _size, numb); 
            
       unlock();
 
