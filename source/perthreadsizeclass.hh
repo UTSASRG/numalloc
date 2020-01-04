@@ -29,11 +29,11 @@ private:
   FreeList _flist; 
 
 public: 
-  void initialize(int nodeindex, int size, int sc, int batch, int bagsize) {
+  void initialize(int nodeindex, int size, int sc, int batch) {
     _size = size;
     _sc = sc;
     _batch = batch;
-    _bagSize = bagsize;
+    _bagSize = SIZE_ONE_MB;;
     _nodeindex = nodeindex; 
     _watermark = batch * 2;
     _allocsCheckMin = batch / 4;

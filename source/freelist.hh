@@ -7,7 +7,7 @@
 class FreeList {
 private:
     void*    _list;
-    int32_t _length;     // Current length
+    uint32_t _length;     // Current length
 
 public:
   void Init() {

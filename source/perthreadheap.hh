@@ -20,12 +20,7 @@ public:
     for(i = 0; i < SMALL_SIZE_CLASSES; i++) {
       // Try to set perthreadsize classes
       unsigned int objects = SIZE_ONE_MB * 4/classSize;
-      if(classSize < PAGE_SIZE) {
-        _sclass[i].initialize(nindex, classSize, i, objects, PAGE_SIZE);
-      }
-      else {
-        _sclass[i].initialize(nindex, classSize, i, objects, classSize);
-      } 
+      _sclass[i].initialize(nindex, classSize, i, objects);
       classSize *= 2;
     }
 

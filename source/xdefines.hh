@@ -152,19 +152,10 @@ struct callstack {
 #define SIZE_HUGE_PAGE      0x200000
 #define SIZE_HUGE_PAGE_MASK 0x1FFFFF
 #define SIZE_HUGE_PAGE_SHIFT 21
-
-#define SIZE_CLASS_START_SIZE 16
-#define SIZE_CLASS_START_POWER 4
-#define LIST_SMALL_CLASSES 8  // 16~2K (power of 2)
-#define SMALL_SIZE_CLASSES 16  // 16~2K (power of 2)
-#define MAX_SMALL_CLASSES 2048 
-#define LIST_PAGE_HEAP 8      // 4K~512K (power of 2)
-#define PAGE_HEAP_START_POWER 12
-#define ORDER_ONE_MB   8
-#define MAX_ORDER   7  // 512K. 2^7 pages
-#define MAX_PAGE_HEAP  (SIZE_ONE_MB/2) 
+#define SMALL_SIZE_CLASSES 16
 #define BIG_OBJECTS_WATERMARK (128 * SIZE_ONE_MB)
 
+#define SIZE_CLASS_START_SIZE 16
 #define LOG2(x) ((unsigned) (8*sizeof(unsigned long long) - __builtin_clzll((x)) - 1))
 }; // extern "C"
 #endif
