@@ -140,13 +140,14 @@ class PerNodeHeap {
       return ptr;
     }
 
-    lockBigHeap();
 
     // _bigList is not empty (at least with one element), since _bigSize is not 0
     BigObject * object = NULL;
     bool    isFound = false;
-    dlist * entry = _bigList.first;
+    
+    lockBigHeap();
 
+    dlist * entry = _bigList.first;
     // TODO: use skiplist instead of doubly linked list for efficiency
     while(entry != NULL) {
       object = (BigObject *)entry;
@@ -172,7 +173,7 @@ class PerNodeHeap {
         // Now insert the first part back to the freelist
         insertFreeBigObject(object);
 
-        // Use the second part as the new object, avoiding the change of the link list
+        // Use the second part as the new object.
         ptr = (char *)object + object->size;
       }
       else {
@@ -429,7 +430,7 @@ class PerNodeHeap {
       index = mbIndex + (mysize >> SIZE_ONE_MB_SHIFT);
       if(isBigObjectFree(index)) {
         size = getSizeFromMbs(index);
-        removeBigObject(index, index + (size >> SIZE_ONE_MB_SHIFT));
+        removeBigObject(index, index + (size >> SIZE_ONE_MB_SHIFT) -1);
         object->size += size;
       }
     }
