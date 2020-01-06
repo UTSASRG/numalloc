@@ -36,7 +36,8 @@ class PerNodeSizeClass {
       }
       
       // Pop the specified number of entries; 
-      _flist.PopRange(numb, head, tail); 
+      if(numb > 0) 
+        _flist.PopRange(numb, head, tail); 
 //      fprintf(stderr, "Move batch from the pernode lsit.\n"); 
            
       unlock();

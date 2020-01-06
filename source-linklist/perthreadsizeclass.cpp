@@ -23,7 +23,8 @@ int PerThreadSizeClass::moveObjectsFromNodeFreelist() {
   ret = NumaHeap::getInstance().moveBatchFromNodeFreelist(_nodeindex, _sc, _batch, &head, &tail);
 
   // Now place these objects to the freelist
-  _flist.PushRange(ret, head, tail);
+  if(ret > 0)
+    _flist.PushRange(ret, head, tail);
 
   return ret;
 }
