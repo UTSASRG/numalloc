@@ -393,12 +393,12 @@ class PerNodeHeap {
         lockSmallHeap();
 
 #if DEBUG
-        if(size == 64) { 
-          _allocMBs += bagSize;
-          if(_allocMBs % 1048576 == 0) {
-            fprintf(stderr, "now memory allocation is %d mbs\n", _allocMBs/ 1048576);
-          }
-        }
+       // if(size == 64) { 
+       //   _allocMBs += bagSize;
+       //   if(_allocMBs % 1048576 == 0) {
+       //     fprintf(stderr, "now memory allocation is %d mbs\n", _allocMBs/ 1048576);
+       //   }
+       // }
 #endif
         // Allocate one bag from the bump pointer
         ptr = (char *)_bpSmall;
@@ -720,7 +720,7 @@ class PerNodeHeap {
       index = mbIndex + (mysize >> SIZE_ONE_MB_SHIFT);
       if(isBigObjectFree(index)) {
         size = getSizeFromMbs(index);
-        removeBigObject(index, index + (size >> SIZE_ONE_MB_SHIFT)); 
+        removeBigObject(index, index + (size >> SIZE_ONE_MB_SHIFT) - 1); 
         object->size += size;
       }
     }
