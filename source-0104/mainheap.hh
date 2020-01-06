@@ -171,7 +171,12 @@ class MainHeap {
 
 
   inline int getSizeClass(size_t size) {
-    return _scMagicValue - __builtin_clz(size - 1);
+    if(size <= 16) {
+      return 0;
+    }
+    else {
+      return _scMagicValue - __builtin_clz(size - 1);
+    }
   }
 
   // allocate a big object with the specified size

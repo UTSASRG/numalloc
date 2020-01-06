@@ -83,8 +83,10 @@ class MainHeap {
         ptr = _bumpPointer;
         _bumpPointer += _csize;
 
-        // Notify the OS to allocate physical memory in the block-wise way
-        MM::bindMemoryBlockwise((char *)ptr, _pages, _nodeindex);
+        if(_csize > (PAGE_SIZE * NUMA_NODES/2)) {
+          // Notify the OS to allocate physical memory in the block-wise way
+          MM::bindMemoryBlockwise((char *)ptr, _pages, _nodeindex);
+        }
       }
 
       return ptr;
@@ -171,7 +173,12 @@ class MainHeap {
 
 
   inline int getSizeClass(size_t size) {
-    return _scMagicValue - __builtin_clz(size - 1);
+    if(size <= 16) {
+      return 0;
+    }
+    else {
+      return _scMagicValue - __builtin_clz(size - 1);
+    }
   }
 
   // allocate a big object with the specified size
@@ -266,19 +273,6 @@ class MainHeap {
     return _sizes[sc].allocate();
   }
 
-  char * allocateFromSmallBumppointer(size_t size, int sc) {
-     char * ptr = NULL;
-
-     ptr = (char *)_bpSmall;
-     _bpSmall += size;
-
-     // We should not consume all memory. If yes, then we should make the heap bigger.
-     // Since we don't check normally  to reduce the overhead, we will use the assertion here
-     assert(_bpSmall < _bpSmallEnd);
-
-     return ptr;
-  }
-
    void deallocate(void * ptr) {
      size_t size = getSize(ptr);
      if(!isBigObject(size)) {
@@ -305,8 +299,6 @@ class MainHeap {
       }
      }
    }
-
-
  
 };
 #endif
