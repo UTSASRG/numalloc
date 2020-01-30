@@ -3,7 +3,8 @@ SRCS = real.cpp							\
 perthreadsizeclass.cpp          \
 			 libnumalloc.cpp			
 
-INCS = dlist.hh               \
+INCS = numas.hh           \
+        dlist.hh               \
 		numaheap.hh						\
 		pernodeheap.hh				\
 		pernodesizeclass.hh      \
