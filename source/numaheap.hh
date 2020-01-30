@@ -31,6 +31,7 @@
 #include "dlist.hh"
 #include "pernodeheap.hh"
 #include "perthread.hh"
+#include "real.hh"
 #ifdef SPEC_MAINTHREAD_SUPPORT
 #include "mainheap.hh"
 #endif
@@ -51,7 +52,8 @@
                                                     
                                        --> PerNodeSizeClass
 */
- 
+unsigned long long rdtscp();
+extern volatile unsigned long long allocsfor48; 
 class NumaHeap {
 public:
   static NumaHeap& getInstance() {
@@ -126,9 +128,16 @@ public:
     }
     // Now the corresponding address is failed. 
 #endif
-   
+ 
+#ifdef TRY_TCMALLOC
+   if(size == 48) {
+      ptr = Real::malloc(size);
+   }
+   else { 
+#endif
     // Check the size information. 
     if(size <= BIG_OBJECT_SIZE_THRESHOLD) {
+     // fprintf(stderr, "allocate from numaheap size %lx\n", size);
       // Small objects will be always allocated via PerThreadSizeClass
       // although PerThreadSizeClass may get objects from PerNodeHeap as well 
       ptr = current->ptheap->allocate(size);
@@ -141,6 +150,9 @@ public:
       ptr = _nodes[index]->allocateBigObject(size);
     }
 
+#ifdef TRY_TCMALLOC
+  }
+#endif
    
     return ptr;
   } 
@@ -166,6 +178,11 @@ public:
     }
 #endif
     if((uintptr_t)ptr < _heapBegin || (uintptr_t)ptr > _heapEnd) {
+#ifdef TRY_TCMALLOC
+      allocsfor48 ++;
+      //fprintf(stderr, "ptr is %p\n", ptr);
+      Real::free(ptr);
+#endif
       return; 
     }
     

@@ -65,6 +65,7 @@ class xthread {
       _nodeMax = NUMA_NODES;
 
 
+      fprintf(stderr, "Main thread is at node %d\n", _nodeIndex);
       int num_cpus = get_nprocs();
 
       cpu_set_t *cpusetp;
@@ -144,6 +145,7 @@ class xthread {
     //getThread(tindex);
     initializeCurrentThread(getThread(tindex));
     
+    fprintf(stderr, "Initialization, Main thread is at node %d\n", current->nindex);
 		// Adding the thread's pthreadt.
 		current->thread = pthread_self();
 

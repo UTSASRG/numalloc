@@ -34,10 +34,12 @@
 
 #define GET_TIME 0
 volatile unsigned long long allocs = 0;
-#if GET_TIME
+volatile unsigned long long allocsfor48 = 0;
 volatile unsigned long long origTime = 0;
+#if GET_TIME
 volatile unsigned long long totalAllocCycles = 0;
 volatile unsigned long long totalFreeCycles = 0;
+#endif
 inline unsigned long long rdtscp() {
     unsigned int lo, hi;
     asm volatile (
@@ -48,7 +50,6 @@ inline unsigned long long rdtscp() {
     unsigned long long retval = ((unsigned long long)lo) | (((unsigned long long)hi) << 32);
     return retval;
 }
-#endif
 
 // Define a thread local variable--current. Based on the evaluation, 
 // http://david-grs.github.io/tls_performance_overhead_cost_linux/, 
@@ -115,20 +116,18 @@ extern "C" {
 void heapinitialize();
 
 __attribute__((constructor)) void initializer() {
-#if GET_TIME
   origTime = rdtscp();
-#endif
   heapinitialize();
 }
 
 
 __attribute__((destructor)) void finalizer() {
   #if GET_TIME
-    unsigned long long lastTime = rdtscp() - origTime;
-    fprintf(stderr, "total runtime is %lld, percentage %lf", lastTime, ((double)lastTime)/((double)(totalAllocCycles + totalFreeCycles)));
     fprintf(stderr, "total alloc cycles %lld, free cycles %lld\n", totalAllocCycles, totalFreeCycles);
   #endif
-  
+    fprintf(stderr, "total allocs for 48 is %llx\n", allocsfor48);  
+    unsigned long long lastTime = rdtscp() - origTime;
+    fprintf(stderr, "total runtime is %lld, percentage %lf", lastTime, ((double)lastTime)/((double)(allocsfor48)));
 }
 
 void * operator new (size_t sz) {
