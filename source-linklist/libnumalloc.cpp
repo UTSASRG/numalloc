@@ -94,6 +94,22 @@ extern "C" {
                                         alias("xxposix_memalign")));
 }
 
+void * operator new (size_t sz) {
+  return xxmalloc(sz);
+}
+
+void * operator new (size_t sz, const std::nothrow_t&) throw() {
+  return xxmalloc(sz);
+}
+
+void operator delete (void * ptr) __THROW {
+  xxfree (ptr);
+}
+
+void * operator new[] (size_t sz) {
+  return xxmalloc(sz);
+}
+
 void heapinitialize();
 
 __attribute__((constructor)) void initializer() {

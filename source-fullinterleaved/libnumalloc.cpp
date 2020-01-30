@@ -100,6 +100,23 @@ __attribute__((destructor)) void finalizer() {
 
 }
 
+void * operator new (size_t sz) {
+  return xxmalloc(sz);
+}
+
+void * operator new (size_t sz, const std::nothrow_t&) throw() {
+  return xxmalloc(sz);
+}
+
+void operator delete (void * ptr) __THROW {
+  xxfree (ptr);
+}
+
+void * operator new[] (size_t sz) {
+  return xxmalloc(sz);
+}
+
+
 /* Adding the following data structure to 
  * collect numa topology, such as 
  * the number of nodes, and the latency of accessing
