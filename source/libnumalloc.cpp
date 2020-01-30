@@ -33,11 +33,9 @@
 #include "perthread.hh"
 
 #define GET_TIME 0
-#if GET_TIME
-#include "time.h"
-
-volatile unsigned long long origTime = 0;
 volatile unsigned long long allocs = 0;
+#if GET_TIME
+volatile unsigned long long origTime = 0;
 volatile unsigned long long totalAllocCycles = 0;
 volatile unsigned long long totalFreeCycles = 0;
 inline unsigned long long rdtscp() {
@@ -133,6 +131,21 @@ __attribute__((destructor)) void finalizer() {
   
 }
 
+void * operator new (size_t sz) {
+  return xxmalloc(sz);
+}
+
+void * operator new (size_t sz, const std::nothrow_t&) throw() {
+  return xxmalloc(sz);
+}
+
+void operator delete (void * ptr) __THROW {
+  xxfree (ptr);
+}
+
+void * operator new[] (size_t sz) {
+  return xxmalloc(sz);
+}
 
 // Heap initialization function
 void heapinitialize() {
@@ -144,7 +157,7 @@ void heapinitialize() {
     // Thread initialization, which can be occurred before or after numap heap initialization
 		xthread::getInstance().initialize();
 
-    fprintf(stderr, "heap is initialized\n");
+    fprintf(stderr, "heap is initialized now\n");
     heapInitStatus = E_HEAP_INIT_DONE;
 	} 
   else {
@@ -184,18 +197,22 @@ void heapinitialize() {
 #if GET_TIME
      unsigned long long start = rdtscp(); 
 #endif
-      ptr = NumaHeap::getInstance().allocate(size); 
+//     fprintf(stderr, "allocate right now with size %lx\n", size);
+      ptr = NumaHeap::getInstance().allocate(size);
 #if GET_TIME
+     //if(size != 57) {
+     // fprintf(stderr, "malloc size %ld ret %p\n", size, ptr);
+    // } 
       unsigned long long length = rdtscp() - start;
-      allocs++;
       totalAllocCycles += length;
       if((allocs % 1000000) == 0) {
         fprintf(stderr, "Runtime is %lld totalAllocCycles %lld, allocs %lld. current length %lld\n", rdtscp()-origTime, totalAllocCycles, allocs, length);
       }
-      if(allocs == 16000000) { exit(0); }
       //fprintf(stderr, "totalAllocCycles %lld length %lld\n", totalAllocCycles, length);
-#endif
+      allocs++;
+      if(allocs == 15000000) { exit(0); }
       //fprintf(stderr, "malloc size %ld ptr %p\n", size, ptr);
+#endif
       break;
   
     }
