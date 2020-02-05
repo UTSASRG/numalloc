@@ -4,6 +4,7 @@ perthreadsizeclass.cpp          \
 			 libnumalloc.cpp			
 
 INCS = numas.hh           \
+       jumpfreelist.hh     \
         dlist.hh               \
 		numaheap.hh						\
 		pernodeheap.hh				\
