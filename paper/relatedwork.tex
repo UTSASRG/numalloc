@@ -4,22 +4,41 @@
 
 \paragraph{NUMA-aware Allocators:} 
 
-\todo{All of the following papers are not read carefully. Most sentences are copied from the abstract}
-Ogasawara proposes a NUMA-aware memory allocation for Java virtual machine~\cite{Ogasawara:2009:NMM:1640089.1640117}. The basic idea is to identify the Dominant Thread (DoT) via thread stack, synchronization information, and object reference graph.  
+Ogasawara focuses on finding the preferred node location for JAVA objects during the garbage collection and memory allocations~\cite{Ogasawara:2009:NMM:1640089.1640117}, via thread stack, synchronization information, and object reference graph. The proposed method is not suitable for C/C++ applications, since the objects were tighten to physical pages. 
 
 ~\cite{wagle2015numa} focuses on the specific scenario, which is in-memory databases. 
 
+~\cite{kim2013node}
+
+~\cite{tcmallocnew} utilizes two mechanisms to support the NUMA architecture based on TcMalloc. First, it adds additional node-based freelists and free spans to store freed objects and pages belonging to the same node. Second, it also invokes the \texttt{mbind} system call to bind physical memory allocations to the node that the current thread is running on.  However, it does not support huge pages and the special allocations from the main thread, invokes too many \texttt{mbind} system calls, and does not handle the metadata's locality. 
+
+
+
+%However, there are multiple issues of this approach. It always assumes that the physical memory will be always allocated in the same node as the thread who requests the memory. It is not true due to the load-balance inside the OS, and some threads may allocate some objects that are exclusively used by other threads. Second, it did not handle the metadata of different nodes. Third, it does not bind threads to different nodes, which may cause large amount of remote accesses when a thread is scheduled to a different core. 
+
+
+
+~\cite{Majo:2015:LPC:2688500.2688509} proposes to set task-to-thread affinity, and pin threads to specific cores to achieve a better performance. It is not a memory management policy, and mainly talks about the detail implementation of task binding over different levels of the TBB library. 
+
+NumaGiC reduces the remote accesses in garbage collection phases with a mostly-distributed design that each GC thread will mostly collect memory references locally, and utilize a work-stealing mode only when no local references are available~\cite{NumaGiC}.  
+
+
+~\cite{diener2015automatic} proposes to combine the task management and memory management to achieve the better performance. For task mapping, it proposes to place tasks that shared the data onto the cores that share the cache, in order to reduce the cache misses and the communication overhead. For memory management, it utilizes the page faults to analyze the memory access behavior, and then migrate pages between nodes to improve the performance. Basically, this is still a proactive approach, which cannot achieve the optimal performance promised by the hardware. Also, it requires the changes of the underlying OS, and will impose some overhead of understanding the communicating tasks and memory access behavior via analyzing page faults.  
+
+ 
 ~\cite{1419934}
 Kaminski et al. proposes to make TCMalloc NUMA-aware~\cite{tcmallocnew}, with the very minimum effort. The idea is to maximize the local memory allocation with the node-based free list and page heap. However, this mechanism assumes that the memory deallocation from the current node will be always allocated from the local node. This is unfortunately not true for many cases, such as a producer-consumer model. Also, this allocator does not take advantage of 
 
-~\cite{Majo:2011:MMN:1993478.1993481} :
-Observation: it should take both data locality and cache contention into account to achieve good performance, and memory management cannot be decoupled from process scheduling. 
+~\cite{Majo:2011:MMN:1993478.1993481} proposes to consider both data locality and cache contention, and combine memory management with task scheduling to achieve better performance. Mostly, it is focuses on the task scheduling. 
+ 
 We describe two scheduling algorithms: maximum-local, which optimizes for maximum data locality, and its extension, N-MASS, which reduces data locality to avoid the performance degradation caused by cache contention. N-MASS is fine-tuned to support memory management on NUMA-multicores and improves performance up to 32\%, and 7\% on average, over the default setup in current Linux implementations.
+
+%~\cite{memarzia2019toward} investigates the performance impact of utilizing different memory allocators, different task assignment, different memory allocation policies, and different OS configuration. It showed that some specific allocator could improve the performance up to $20\times$ when using the interleaved memory allocation policy and modify the OS configuration. 
 
 % http://memkind.github.io/memkind/ 
 % Use this to compare the performance difference
 % However, this will require the change of applications to use their library. 
-~\cite{cantalupo2015memkind} proposes a new library that allows users to manage their memory in very fine-granularity. However, they are not targeting for a general purpose allocator, which requires programmers to manage the memory explicitly. Unfortunately, this place unacceptable burden to programmers. More importantly, the explicit management based on one existing topology may not work well for a different topology. 
+~\cite{cantalupo2015memkind} proposes a new library that allows users to manage their memory in fine granularity by combining with multiple existing system calls. However, they are not targeting for a general purpose allocator, since it requires programmers to manage the memory explicitly. Unfortunately, this place unacceptable burden to programmers. More importantly, the explicit management based on one existing topology may not work well for the hardware with a different topology. 
 
 
 

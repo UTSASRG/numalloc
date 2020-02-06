@@ -2,6 +2,28 @@
 \section{Introduction}
 \label{sec:intro}
 
+The Non-Uniform Memory Access (NUMA) architecture is a basic solution and an appealing solution for the scalability of multi-core era. Compared to Uniform Memory Access (NMUA) architecture, the NUMA architecture avoids the bottleneck of a central memory system: each processor (also known as a domain or node) consists of multiple cores, while each node has its own local memory. The nodes are connected via high-speed inter-connection (such as Quick Path Interconnect (QPI)~\cite{intelqpi} or HyperTransport bus~\cite{hypertransport}) to form a cache-coherent system that presents an abstraction of a single globally addressable memory. For such cache-coherent NUMA (ccNUMA) systems, programmers may not need to change their programs to run on them. 
+
+However, NUMA systems may have serious performance issues if programs have one of the following issues, such as large amount of remote accesses, load imbalance, contention for interconnection and last level cache~\cite{Blagodurov:2011:CNC:2002181.2002182, Dashti:2013:TMH:2451116.2451157}. There exists different types of approaches that devoting to improve the performance of NUMA systems. 
+
+First, some research may rely on programmers to manage memory allocations and task assignments explicitly~\cite{Zhang:2015:NGA:2688500.2688507, Kaestle:2015:SSA:2813767.2813787, Lin:2016:MTP:2872362.2872401, Majo:2017:LPC:3057718.3040222}. Although they could improve the performance greatly, they typically require large amount of human effort. Also, existing legacy systems cannot take advantage of such approaches, if without further investment.  
+
+Second, some researchers propose the method of migrating tasks or physical pages reactively, in order to achieve the better performance~\cite{Blagodurov:2011:CNC:2002181.2002182, AutoNUMA, Dashti:2013:TMH:2451116.2451157, Lepers:2015:TMP:2813767.2813788}. The migration will be based on memory access patterns, or other hardware characteristics. However, some of these approaches are not architecture or OS independent, such as Carrefour~\cite{Dashti:2013:TMH:2451116.2451157}. More importantly, they cannot achieve the optimal performance due to the reactive approach that only migrates a task or memory pages when something is wrong. For instance, if multiple threads access objects that are located in the same page, the page placement may not offer much benefit~\cite{Gaud:2014:LPM:2643634.2643659}. 
+
+
+Third, some researchers focus on the memory management by providing a new memory manager for existing software~\cite{}. 
+However, none of these systems could achieve the performance promised by the hardware. Given a simple example, if one page is fulled with objects that are utilized by different threads running on different nodes, then it is not able to achieve the best performance no matter where this page is located. Similarly, the pemissive tracking of memory ownership of an object cannot completely avoid the ownership drifting problem, where the . 
+
+In this paper, we propose a new memory management method that employs the proactive memory management policy. 
+There are multiple approaches: first, it combines the affinity of memory management and task management. Tasks were bound to memory nodes initially, and memory management will be based on the placement of each thread. Second, it proactively bound the memory to different nodes, so that it could reduce the . Third, it takes a different method to deal with allocations from main thread, Fourth, it takes the advantage of hardware progress automatically, e.g., huge pages. One application achieves 10\% performance speedup with this consideration.  
+
+
+There are other implementation issues that may also contribute to the performance improvement. For instance, the metadata will be always allocated locally. The big objects will be re-utilized by small objects automatically, in order to reduce the potential cache misses. 
+
+We have designed a memory allocator based on the  methods described above, and have evaluated it on a range of benchmarks and real applications on two different NUMA architecture. The evaluation showed that \NA{} could significant improve the performance by up to 2X, with the average of 10\% performance. The evaluation also show that \NA{} has a bigger performance improvement on  
+
+
+ 
 How to design the new allocator? This is the new one. 
 
 We will try to achieve the following target. 
@@ -74,6 +96,8 @@ Therefore, a good NUMA allocator should deal with these inherent imbalance of pr
 \item For producer-consumer threads, we will also track which objects are allocated and freed in different threads. For those objects, maybe they could utilize the same mechanism as the main thread. But we will do this in the future.
 %\item Could we use page-spans instead to ensure the sharing? 
 \item Intercepting mmap and use the mainthread's interleaved idea. 
+
+\item We will use huge pages by default in order to improve the performance. But we will utilize small bags for small size classes, which we will learn from TcMalloc. That is, we don't want to use 1 Megabyte information. Instead, we may utilize the 4 pages as an unit. 
 
 	
 \end{enumerate}

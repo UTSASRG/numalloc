@@ -8,3 +8,34 @@ Basically, upon receiving a request, \NM{} will check the size of the object at 
 
 For small objects, \NM{} will always allocate them from the PerThreadHeap. Since a PerThreadHeap will be only utilized by one thread, it won't need the synchronization, and possibly has the better scalability. 
 
+\subsection{Special Support for Main Thread}
+\NM{} provides the special support for the main thread, which is motivated by a lot of existing tools ~\cite{XULIU, MemProf}. Based on their paper, many of NUMA related performance problems are caused by one type of objects that were allocated in the main thread but shared by multiple children threads. To prevent these issues, they proposed to change the code explicitly, using a group of threads that were bound to different nodes to perform the initialization. However, these changes are not automated, which should also rely on the test results of these NUMA tools.  
+
+Instead, \NM{} proposes an automatic method to deal with these issues. Due to the fact that many objects will be shared by children threads later, \NM{} allocates objects from the main thread in a separate heap, which mainly focuses on the load imbalance. To achieve the load balance, one simple technique is to allocate objects that will be physically allocated with an interleaved way. However, this simple technique does not work due to the following reasons. 
+
+First, not all objects are shared by multiple threads. Some objects will be just accessed by the main thread. For these objects, if their corresponding physical pages are allocated in remote nodes, they could  incur remote accesses unnecessarily. Therefore, \NM{} should avoid unnecessary remote accesses by recognizing which objects are private objects, and allocating these objects locally.  
+
+Second, load balance alone cannot guarantee the optimal performance, if objects are accessed block-wise by multiple threads. In fact, this is more common based on existing studies~\cite{XULIU, MemProf}. \NM{} supports block-wise memory allocation for big objects.  
+
+Third, the allocation should take advantage of huge pages that is already available in most existing hardware. \NM{} takes this into account for its design and implementation. In fact, \NM{} divides the memory into three spans. 
+
+Fourth, big objects will utilize a lot of memory, which should be handled carefully. We can't reutilize these objects for node-local allocations, which may incur unnecessary remote accesses. Also, we don't want to waste the physical memory for these objects. Instead, \NM{}  will return these objects to the OS directly during the deallocation. 
+
+During the implementation, \NM{} should detect private objects. It utilizes a simple rule to detect private objects: if an object is deallocated in the main thread before the creation of children threads, then this object is not shared by other threads. However, if an object has been allocated in the special heap, it cannot be changed easily with a low overhead. We further propose a call-site based mechanism: objects from the same callsite will typically have the same deallocation behavior. Objects will be allocated in the special heap at first, but will be allocated in the normal heap if some objects from the call callsite were identified as private objects. \NM{} therefore maintains two hashmap to track such objects: one hashmap is used to track private callsite, and another hashmap is used to track the relationship between objects and their corresponding callsites. 
+During the allocation, \NM{} will check whether the callsite is private or not. If the corresponding callsite has been identified as the shared one, then it will be allocated from the special heap. If the corresponding callsite has not been tracked before, then this object will be allocated form the special heap, and the corresponding object will be placed in the hashmap that tracks the relationship between objects and their corresponding callsites. 
+
+During the deallocation, \NM{} will check the callsite in the hashmap as well. 
+
+For private objects, its deallocation phase is the same as the allocation phase. Therefore, we will track the phase information there. 
+We will use the phase 0 to indicate that the phase is not in the main thread phase. Otherwise, we will use the number to indicate it.   
+
+\subsection{Huge Page Support}
+
+Modern hardware typically installs with huge page support. Huge page is a special page that its page size is much larger than 4 kilobytes. Currently, the Linux system has two page sizes, 4 Kilobytes and 2 Megabytes.  
+Based on the existing study~\cite{hugepages}, huge page will be beneficial to the performance by reducing Translation Look-aside Buffer (TLB) misses.  Currently, modern OS typically employs multi-level page table design, in order to reduce physical pages used for the page table and avoid using the continuous physical pages for the page table. Due to the wide range of virtual address, now Linux employs four level page table design. However, this also indicates the huge performance lost due to the TLB misses. If a mapping cannot be satisfied in the TLB buffer, the OS will be forced to load four page table entries to perform the address translation. The loading of page table entries, typically into the data cache, could also significantly pollute the data cache. 
+ 
+Huge page could reduce the TLB misses, and further reduce the cache pollution caused by TLB misses. However, 
+However, it is 
+
+
+

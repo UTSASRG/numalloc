@@ -2,13 +2,38 @@
 
 \subsection{Performance Evaluation}
 
-\subsubsection{NUMA Architecture}
-We will compare with popular allocator, such as glibc, or tcmalloc, or NUMA-aware tcmalloc , jemalloc, scalloc. 
+
+We compare \NM{} with multiple popular allocators, such as Linux's glibc allocator, TcMalloc~\cite{tcmalloc}, or NUMA Aware TcMalloc~\cite{tcmallocnew}, jemalloc~\cite{jemalloc}, Scalloc~\cite{Scalloc}. For the simplicity, NUMA aware TcMalloc is called as TcMalloc-NUMA in the remainder of this paper. 
+
+Performance evaluation will be performed on two different hardware as further described in the Table~\ref{table:Machine}:
+
+%numactl --hardware Finding out latency information across nodes. 
+% numactl --show Will show the physical core id information. 
+
+\begin{table}[h]
+  \footnotesize
+  \setlength{\tabcolsep}{1.0em}
+\begin{tabular}{c c c}
+\hline
+System & \textbf{Machine A} & \textbf{Machine B} \\ \hline
+CPUs/Model & Xeon Gold 6138	& \\ \hline
+NUMA Nodes & 2 & 8 \\ \hline
+Physical Cores & 2$\times$20 & 8$\times$16 \\ \hline
+Node Latency & \specialcell{local: 1.0 \\ 1 hop: 2.1} & \\ \hline
+Interconnect Bandwidth & 8GT/s & \\ \hline
+Memory Bandwidth & 19.87 GB/s & \\ \hline
+  \end{tabular}
+  \centering
+  \caption{Machine Specifications.\label{table:Machine}}
+\end{table}
+
+
 
 %Scalloc is located in https://github.com/cksystemsgroup/scalloc
 
 % Christoph also has a benchmark suite to evaluate the performance of memory allocator. 
 
+% export LD_LIBRARY_PATH="/usr/local/lib/" for running tcmalloc.
 
-\subsubsection{UMA Architecture}
-We will compare the performance even on non-numa architecture, which could be more general. 
+
+\paragraph{Application Statistics} We also checked the corresponding details of 
