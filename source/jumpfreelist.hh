@@ -99,7 +99,7 @@ public:
     void Push(void *ptr) {
         FreeList::Push(ptr);
         this->firstBatchNum++;
-        if (this->empty()) {
+        if (this->isJumpListEmpty()) {
             this->insertIntoJumpListHead(ptr);
             return;
         }
