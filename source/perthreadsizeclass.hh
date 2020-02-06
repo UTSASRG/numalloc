@@ -3,6 +3,7 @@
 
 #include "mm.hh"
 #include "freelist.hh"
+#include "jumpfreelist.hh"
 
 #define DEBUG 1
 class PerThreadSizeClass {
@@ -25,10 +26,10 @@ private:
   unsigned int _nodeindex; 
 #ifdef DEBUG
 //  unsigned long _allocMBs;
-#endif 
-  FreeList _flist; 
+#endif
+  JumpFreeList _flist;
 
-public: 
+public:
   void initialize(int nodeindex, int size, int sc, int batch) {
     _size = size;
     _sc = sc;
@@ -43,7 +44,7 @@ public:
     }
     _allocsCheckMax = batch * 4;
 
-    _flist.Init();
+      _flist.Init(FREE_LIST_INTERVAL(size));
 
     _allocsBeforeCheck = _batch/4;
     _allocs = 0;

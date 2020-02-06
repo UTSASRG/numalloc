@@ -176,6 +176,9 @@ public:
         this->firstBatchNum = this->jumpIntervals;
     }
 
+    long getJumpIntervals() const {
+        return jumpIntervals;
+    }
 
 };
 

@@ -195,12 +195,12 @@ class PerNodeHeap {
     return ptr;
   }
 
-  int allocateBatch(int sc, unsigned long num, void ** head, void ** tail) {
-    return _smallSizes[sc].allocateBatch(num, head, tail);   
+  void allocateBatch(int sc, unsigned long num, JumpFreeList* list) {
+    return _smallSizes[sc].allocateBatch(num, list);
   }
 
-  void deallocateBatch(int sc, unsigned long num, void *head, void *tail) {
-    _smallSizes[sc].deallocateBatch(num, head, tail);   
+  void deallocateBatch(int sc, JumpFreeList* list) {
+    _smallSizes[sc].deallocateBatch(list);
   }
 
   // Allocate one MB from the current node, and will use it for small objects with size _size

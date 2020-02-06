@@ -9,6 +9,8 @@ void * PerThreadSizeClass::allocateFromFreelist() {
   return _flist.Pop();
 }
 
+thread_local JumpFreeList _back_list;
+
 /*
     void *tail, *head;
     src->PopRange(batch_size, &head, &tail);
@@ -17,25 +19,26 @@ void * PerThreadSizeClass::allocateFromFreelist() {
 int PerThreadSizeClass::moveObjectsFromNodeFreelist() {
   int ret;
   void * head, * tail;
+  _back_list.Init(this->_flist.getJumpIntervals());
 
   // Get the objects from the node's freelist. 
-  ret = NumaHeap::getInstance().moveBatchFromNodeFreelist(_nodeindex, _sc, _batch, &head, &tail);
-
+  NumaHeap::getInstance().moveBatchFromNodeFreelist(_nodeindex, _sc, _batch, &_back_list);
+  ret = _back_list.length();
   // Now place these objects to the freelist
   if(ret > 0)
-    _flist.PushRange(ret, head, tail);
+      _flist.PushRange(&_back_list);
 
   return ret;
 }
 
 void PerThreadSizeClass::donateObjectsToNodeFreelist() {
   void * head, * tail;
-  
-  _flist.PopRange(_batch, &head, &tail);
+    _back_list.Init(this->_flist.getJumpIntervals());
+    _flist.PopRange(_batch, &_back_list);
 
   // Donate objects to the node's freelist
   //fprintf(stderr, "Thread %d :donate batch %d to node list, remain objects %ld\n", getNodeIndex(), _batch, _flist.length());
-  NumaHeap::getInstance().donateBatchToNodeFreelist(_nodeindex, _sc, _batch, head, tail);
+  NumaHeap::getInstance().donateBatchToNodeFreelist(_nodeindex, _sc, &_back_list);
 }
 
 void * PerThreadSizeClass::allocate() {
@@ -91,7 +94,7 @@ void * PerThreadSizeClass::allocate() {
     }
     return ptr;
   }
- 
+
   // Return an object starting with ptr to the PerThreadSizeClass
   void PerThreadSizeClass::deallocate(void *ptr) {
     // Put this entry to the list. 
@@ -99,7 +102,7 @@ void * PerThreadSizeClass::allocate() {
 
     // If there is no spot to hold next deallocation, put some objects to PerNodeSizeClass 
     if(_flist.length() >= _watermark) {
-      // Donate the _batch items to the pernodefreelist 
+      // Donate the _batch items to the pernodefreelist
       donateObjectsToNodeFreelist();
     }
 
