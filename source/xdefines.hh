@@ -157,7 +157,8 @@ struct callstack {
 
 #define SIZE_CLASS_START_SIZE 16
 #define LOG2(x) ((unsigned) (8*sizeof(unsigned long long) - __builtin_clzll((x)) - 1))
-#define FREE_LIST_INTERVAL(class_size) ((SIZE_ONE_MB_BAG * BAG_SIZE_PER_THREAD_SIZE_CLASS / class_size)/2)
+#define BAG_SIZE_PER_THREAD_SIZE_CLASS 4
+#define FREE_LIST_INTERVAL(class_size) ((SIZE_ONE_MB * BAG_SIZE_PER_THREAD_SIZE_CLASS / class_size)/2)
 
 }; // extern "C"
 #endif
