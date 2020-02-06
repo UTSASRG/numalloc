@@ -128,7 +128,8 @@ public:
     }
     // Now the corresponding address is failed. 
 #endif
- 
+
+   fprintf(stderr, "allocate size at %p\n", &size); 
 #ifdef TRY_TCMALLOC
    if(size == 48) {
       ptr = Real::malloc(size);

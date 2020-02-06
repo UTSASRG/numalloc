@@ -7,6 +7,8 @@
 #include "mm.hh"
 #include "pernodebigobjects.hh"
 #include "real.hh"
+#include "hashmap.hh"
+#include "hashfuncs.hh"
 #include "perthread.hh"
 
 /* Basic memory mechanism for main thread.
@@ -118,6 +120,69 @@ class MainHeap {
     // _bigObjects will also maintain the PerMBINfo
     PerNodeBigObjects _bigObjects;
 
+    class CallsiteInfo {
+      bool _isPrivate; // Is known to be private or not.
+      int  _allocNum;  // How many allocations in this callsite?
+
+      public:
+        CallsiteInfo() {
+          _isPrivate = false;
+          _allocNum = 1;
+        }
+
+        inline bool isPrivateCallsite() {
+          return _isPrivate;
+        }
+
+        inline void updateAlloc() {
+          _allocNum++;
+        }
+
+        inline void setPrivateCallsite() {
+          _isPrivate = true;
+        }
+    };
+
+    // We should get a big chunk at first and do our allocation. 
+    // Typically, there is no need to do the deallocation in the main thread.
+    class localAllocator {
+      public:
+      static void * allocate(size_t size) {
+        return Real::malloc(size);
+      }
+
+      static void free(void *ptr) {
+        return Real::free(ptr);
+      }
+    };
+
+    // CallsiteMap is used to save the callsite and corresponding information (whether it is
+    // private or not).
+    typedef HashMap<callstack, CallsiteInfo, localAllocator> CallsiteMap;
+    CallsiteMap _callsiteMap;
+
+    class ObjectInfo {
+    public:
+      int    _allocSequence;
+      CallsiteInfo * _callsiteInfo;
+
+      ObjectInfo(int sequence, CallsiteInfo * info) {
+        _allocSequence = sequence;
+        _callsiteInfo = info;
+      }
+
+      int getSequence() {
+        return _allocSequence;
+      }
+
+      CallsiteInfo * getCallsiteInfo() {
+        return _callsiteInfo;
+      }
+    };
+    // ObjectsMap will save the mapping between the object address and its callsite
+    typedef HashMap<void *, ObjectInfo, localAllocator> ObjectsHashMap;
+    ObjectsHashMap _objectsMap;
+
  public:
 
    void initialize(int nodeindex, void * begin) {
@@ -159,6 +224,11 @@ class MainHeap {
 
       // Initialize the lock
       pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
+
+      // Call stack map
+      _callsiteMap.initialize(HashFuncs::hashCallStackT, HashFuncs::compareCallStackT);
+      _objectsMap.initialize(HashFuncs::hashAddr, HashFuncs::compareAddr);
+
    } 
 
    inline size_t getSize(void * ptr) {
