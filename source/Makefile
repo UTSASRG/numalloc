@@ -27,8 +27,9 @@ CXX = clang++
 #CFLAGS = -g -std=c++14 -Wno-unused-result -O2  -DNUMA_NODES=2 -DTRY_TCMALLOC
 #-DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE
 #CFLAGS = -g -std=c++14 -Wno-unused-result -O2  -DNUMA_NODES=2 -DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE
+CFLAGS = -g -std=c++14 -Wno-unused-result -O2  -DNUMA_NODES=2 -DUSE_HUGE_PAGE
 #CFLAGS = -g -std=c++14 -Wno-unused-result -O2  -DNUMA_NODES=2 -DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE
-CFLAGS = -g -std=c++14 -Wno-unused-result -O2 -DNUMA_NODES=2 -DUSE_HUGE_PAGE
+#CFLAGS = -g -std=c++14 -Wno-unused-result -O2 -DNUMA_NODES=2 -DUSE_HUGE_PAGE
 #CFLAGS = -g -std=c++14 -Wno-unused-result -DNDEBUG -O2 -DNUMA_NODES=2
 #CFLAGS = -g -Wno-unused-result -DNDEBUG -O2 -DNUMA_NODES=2
 #CFLAGS = -g -Wno-unused-result -DNDEBUG -O3 --std=c++11 -DNEW_BIG_HEAP -DNUMA_NODES=2

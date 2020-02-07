@@ -71,7 +71,6 @@ public:
     _mainHeapBegin = _heapBegin - 2*SIZE_PER_NODE;
     _mainHeap.initialize(getRealNodeIndex(), (void *)_mainHeapBegin);
     _mainHeapPhase = true;  
-    _skipCheckAddr = NULL;
 #endif
 
   // fprintf(stderr, "_heapBegin is %lx\n", _heapBegin);
@@ -118,6 +117,7 @@ public:
   void * allocate(size_t size) {
     void * ptr = NULL; 
 
+    //fprintf(stderr, "size %lx\n", size);
 #ifdef SPEC_MAINTHREAD_SUPPORT
    // if(_mainHeapPhase){
     if(_mainHeapPhase && (size > (PAGE_SIZE * NUMA_NODES/2))) {
@@ -129,13 +129,7 @@ public:
     // Now the corresponding address is failed. 
 #endif
 
-   fprintf(stderr, "allocate size at %p\n", &size); 
-#ifdef TRY_TCMALLOC
-   if(size == 48) {
-      ptr = Real::malloc(size);
-   }
-   else { 
-#endif
+   //fprintf(stderr, "allocate size at %p\n", &size); 
     // Check the size information. 
     if(size <= BIG_OBJECT_SIZE_THRESHOLD) {
      // fprintf(stderr, "allocate from numaheap size %lx\n", size);
@@ -151,10 +145,6 @@ public:
       ptr = _nodes[index]->allocateBigObject(size);
     }
 
-#ifdef TRY_TCMALLOC
-  }
-#endif
-   
     return ptr;
   } 
 
@@ -179,11 +169,6 @@ public:
     }
 #endif
     if((uintptr_t)ptr < _heapBegin || (uintptr_t)ptr > _heapEnd) {
-#ifdef TRY_TCMALLOC
-      allocsfor48 ++;
-      //fprintf(stderr, "ptr is %p\n", ptr);
-      Real::free(ptr);
-#endif
       return; 
     }
     
@@ -219,7 +204,6 @@ private:
   size_t _mainHeapBegin;
   MainHeap _mainHeap;
   bool   _mainHeapPhase;
-  void   * _skipCheckAddr; 
 #endif
   size_t _heapEnd; 
   PerNodeHeap * _nodes[NUMA_NODES];

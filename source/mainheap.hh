@@ -343,7 +343,7 @@ class MainHeap {
     return _sizes[sc].allocate();
   }
 
-   void deallocate(void * ptr) {
+  void deallocate(void * ptr) {
      size_t size = getSize(ptr);
      if(!isBigObject(size)) {
        int sc = getSizeClass(size); 
