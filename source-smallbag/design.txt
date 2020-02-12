@@ -1,0 +1,82 @@
+Todo list:
+
+1. Utilize the per-thread heap for small objects between 4k to 512K, instead of the global solution right now. 
+2. Maybe dynamically decide the bag for small objects, based on the frequency or requirement of each size class.
+This will avoid the continuously operate on the pageHeap, and also setting the address frequently. 
+3. Merge the adjacent pages to support.
+4. Try to use the hashtable to share the pages across multiple nodes, if the objects are shared.
+5. Check  the memory use of raytrace when using the shared memory 
+  
+Share the memory if it is larger than 1 page. 
+2. For big objects, whenever one object is deallocated, try to merge with its neighbour. 
+When allocation, let's just use the smallest first, since that may avoid more cache misses. 
+
+TcMalloc is running faster on Raytrace. The internal reason is that it utilizes all deallocations with the size larger than 1 page (due to their page span design). Therefore, they actually causes less L1 cache misses due to the 
+re-utilization. 
+
+
+
+How to design a NUMA support? 
+
+Per-Node heap: 
+This is critical so that we can know the origin of an object.
+For each node, we will have different size-class freelists, which holds objects of different size classes.
+Also, we will have a bump pointer to allocate a big chunk for the specified size, and then marked this on the 
+per-node information (locally).    
+
+
+About the usage of libnuma apis, maybe we could check http://developer.amd.com/wordpress/media/2012/10/LibNUMA-WP-fv1.pdf.
+
+mmap(): utilize the huge page
+numa_tonode_memory(): setting the range to the specific node.
+
+int numa_sched_setaffinity(pid_t pid, struct bitmask *mask);
+void numa_interleave_memory(void *start, size_t size, struct bitmask *nodemask);
+
+Inside the per-node heap:
+We will have the size-based bags. Inside each bag, the size will be the same.
+But instead of using the pre-defined design, maybe we should allocate an chunk on-demand. 
+Then we will maintain the size information in the shadow memory to not using the computation.  
+
+
+For the performance perspective, maybe we could utilize the first two words of each object as the prev and next pointer inside each bag, so that we don't waste the space.  
+
+During the deallocations, we will check the origin at first. If the origin is coming from a different node, we will 
+put the object back to its original node (by putting it into a per-node freelist).
+Otherwise, we will return the object back to the current thread (as always), therefore, there is no need to acquire the lock.
+
+We will utilize Pengcheng's mechanism to decide the contributation when the number of objects are larger than one threshold.   
+
+For big heap, we will not utilize the similar method as before. If the object is used, then let's keep in the memory without munmap, even without madvise. Until after some time, or the memory is not used, then we will use madvise to 
+deallocate it.  
+
+
+We should try to utilize huge-page if possible.
+We can check whether huge-page is disabled or not by checking /proc/meminfo. 
+grep -i HugePages_Total /proc/meminfo
+
+Similarly, if the value in /proc/sys/vm/nr_hugepages file or vm.nr_hugepages sysctl parameter is "0" it means HugePages is disabled on the system:
+
+# cat /proc/sys/vm/nr_hugepages 
+0
+# sysctl vm.nr_hugepages
+vm.nr_hugepages = 0
+
+To enable it, 
+sudo sysctl -w vm.nr_hugepages=128
+vm.nr_hugepages = 128
+
+# cat /proc/meminfo | grep Huge
+
+Then you will see the following:
+HugePages_Total:     128
+HugePages_Free:      128
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:       2048 kB
+
+1. First step, we don't allow the merge of big objects. That is, the PerNodeMBInfo will be located in a different 
+file, instead of the same file as PerNodeBibObjects. 
+2. We will support the merge of big objects. That is, we will put PerNodeMBInfo into the same class of PerNodeBigObjects. We can't put both of them to PerNodeHeap, since they will introduce too much cache invication, due to a large number of changes of PerNodeBigObjects and PerNodeMBInfo. 
+
+3. We will make main thread allocating from a separate heap that is allocated from memory that is interleaved between nodes. The idea of doing this is that the main thread may allocate a large number of objects and then pass to different threads.   

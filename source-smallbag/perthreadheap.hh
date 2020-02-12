@@ -19,7 +19,7 @@ public:
     unsigned long size = 0; 
     for(i = 0; i < SMALL_SIZE_CLASSES; i++) {
       // Try to set perthreadsize classes
-      unsigned int objects = SIZE_ONE_MB * 4/classSize;
+      unsigned int objects = SIZE_ONE_MB * BAG_SIZE_PER_THREAD_SIZE_CLASS /classSize;
       _sclass[i].initialize(nindex, classSize, i, objects);
       classSize *= 2;
     }

@@ -1,0 +1,5 @@
+
+1. If a thread has exit, then its heap (freed objects) should be able to be utilized by other threads. 
+2. We will contribute the lru, instead of MRU. But that will need to change the th starting point. 
+3. We will merge big objects. 
+4. WE will make the main thread to have a separate heap, which will be allocated interleavedly from different node. 

@@ -4,6 +4,7 @@
 #include "mm.hh"
 #include "freelist.hh"
 #include "perthread.hh"
+#include "jumpfreelist.hh"
 
 // For small objects, each size class will maintain
 // one bumppointer and one freelist
@@ -11,7 +12,7 @@ class PerNodeSizeClass {
   private: 
     pthread_spinlock_t _lock; 
     unsigned long _size; // Size of this size class
-    FreeList _flist;
+    JumpFreeList _flist;
 
  public:
     void initialize(unsigned long size) {
@@ -21,12 +22,16 @@ class PerNodeSizeClass {
       _size = size;
 
       // Initialize the freelist
-      _flist.Init();
+      _flist.Init(FREE_LIST_INTERVAL(size));
     }  
 
     // Allocate multiple objects in a batch from the pernode's size class 
-    int allocateBatch(unsigned long requestNumb, void ** head, void ** tail) {
+    void allocateBatch(unsigned long requestNumb, JumpFreeList* list) {
       int  numb = 0;
+
+      if(_flist.length()<=0){
+          return;
+      }
 
       lock();
       
@@ -37,13 +42,12 @@ class PerNodeSizeClass {
       
       //#fprintf(stderr, "size %ld: Move batch from the pernode list.\n", _size); 
       // Pop the specified number of entries;
-      if(numb > 0)  
-      _flist.PopRange(numb, head, tail); 
+      if(numb > 0)
+      _flist.PopRange(numb, list);
       //fprintf(stderr, "size %ld: Move batch %d from the pernode list.\n", _size, numb); 
            
       unlock();
 
-      return numb;
     }
     
     void * allocate(void) {
@@ -66,11 +70,11 @@ class PerNodeSizeClass {
 
 
     // Deallocate multiple objects to the pernode's size class. 
-    void deallocateBatch(unsigned long numb, void *head, void * tail) {
+    void deallocateBatch(JumpFreeList* list) {
       lock();
      
       //fprintf(stderr, "Donate batch to the pernode lsit.\n"); 
-      _flist.PushRange(numb, head, tail);
+      _flist.PushRange(list);
        
       unlock();
 

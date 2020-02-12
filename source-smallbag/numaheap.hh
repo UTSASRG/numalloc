@@ -149,8 +149,8 @@ public:
   } 
 
   // Allocate the specified number of freed objects from the specified node(nindex)'s size class (sc).
-  int moveBatchFromNodeFreelist(int nindex, int sc, unsigned long num, void ** head, void ** tail) {
-    return _nodes[nindex]->allocateBatch(sc, num, head, tail);
+  void moveBatchFromNodeFreelist(int nindex, int sc, unsigned long num, JumpFreeList* list) {
+    return _nodes[nindex]->allocateBatch(sc, num,list);
   }
 
   void * allocateOneBagFromNode(int nindex, size_t size, size_t bagSize) {
@@ -158,8 +158,8 @@ public:
   }
   
   // Contribure some objects to the node's freelist
-  void donateBatchToNodeFreelist(int nindex, int sc, unsigned long num, void * head, void *tail) {
-    _nodes[nindex]->deallocateBatch(sc, num, head, tail);
+  void donateBatchToNodeFreelist(int nindex, int sc, JumpFreeList* list) {
+    _nodes[nindex]->deallocateBatch(sc, list);
   }
 
   void deallocate(void * ptr) {
