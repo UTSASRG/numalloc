@@ -145,6 +145,7 @@ struct callstack {
   }
 };
 
+
 #define SIZE_PER_NODE_SHIFT 42
 #define SIZE_ONE_MB 0x100000
 #define SIZE_ONE_MB_MASK 0xFFFF
@@ -152,10 +153,48 @@ struct callstack {
 #define SIZE_HUGE_PAGE      0x200000
 #define SIZE_HUGE_PAGE_MASK 0x1FFFFF
 #define SIZE_HUGE_PAGE_SHIFT 21
-#define SMALL_SIZE_CLASSES 16
+#define SMALL_SIZE_CLASSES (16+7)
 #define BIG_OBJECTS_WATERMARK (128 * SIZE_ONE_MB)
 
+#define SIZE_MINI_BAG 8192
+#define SIZE_CLASS_TINY_SIZE 128
+#define SIZE_CLASS_BASE_SMALL_SIZE 7
+#define SIZE_CLASS_SMALL_SIZE 256
 #define SIZE_CLASS_START_SIZE 16
 #define LOG2(x) ((unsigned) (8*sizeof(unsigned long long) - __builtin_clzll((x)) - 1))
+  
+
+  inline int size2Class(size_t sz) {
+    int sc;
+    unsigned long offset; 
+    bool aligned = true; 
+
+    if(sz <= SIZE_CLASS_START_SIZE) {
+      sc = 0;
+    }
+    else if (sz <= SIZE_CLASS_TINY_SIZE) {
+      offset = sz - SIZE_CLASS_START_SIZE;
+      sc = offset >> 4;
+      if(offset > (16*sc)) {
+        sc += 1;
+      }
+    }
+    else if (sz <= SIZE_CLASS_SMALL_SIZE) {
+      offset = sz - SIZE_CLASS_TINY_SIZE;
+      sc = offset >> 5; 
+      if(offset > (32* sc)) {
+        sc += 1 + SIZE_CLASS_BASE_SMALL_SIZE;
+      }
+      else {
+        sc += SIZE_CLASS_BASE_SMALL_SIZE;
+      } 
+    }
+    else {
+      // Note that 35 is the magic number, but it is only used here.
+      sc = 35 - __builtin_clz(sz - 1);
+    }
+
+    return sc;
+  }
 }; // extern "C"
 #endif

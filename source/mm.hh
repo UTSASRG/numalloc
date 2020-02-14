@@ -139,8 +139,7 @@ private:
 
 #ifdef USE_HUGE_PAGE
     if(isHugePage) {
-     sharedInfo |= MAP_HUGETLB;
-      //sharedInfo |= MAP_HUGETLB | MAP_HUGE_2MB;
+      sharedInfo |= MAP_HUGETLB;
     }
 #endif
 
@@ -150,9 +149,6 @@ private:
             strerror(errno), startaddr, sz, protInfo, sharedInfo);
 			exit(-1);
     }
-   // else {
-   //    fprintf (stderr, "Successful map 0x%lx.\n", sz);
-   // }
 
     return ptr;
   }

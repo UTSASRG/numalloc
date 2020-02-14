@@ -45,7 +45,7 @@ class MainHeap {
     unsigned int _nodeindex;
     char        * _bumpPointer;
     char        * _bumpPointerEnd;
-    FreeList     _flist;
+    PerSizeClassList _list;
 
   public:
     
@@ -56,11 +56,11 @@ class MainHeap {
       _pages = classsize >> PAGE_SIZE_SHIFT;
       _bumpPointer = NULL;
       _bumpPointerEnd = NULL;
-      _flist.Init();
+      _list.initialize();
     }
 
     bool hasObject() {
-      return ((_flist.length() > 0) || (_bumpPointer < _bumpPointerEnd));
+      return ((_list.length() > 0) || (_bumpPointer < _bumpPointerEnd));
     }
 
     // The current object will be pushed with a new block of memory
@@ -77,8 +77,8 @@ class MainHeap {
       void * ptr = NULL; 
 
       // Allocate from the freelist first.
-      if(_flist.hasItems()) { 
-        ptr = _flist.Pop(); 
+      if(_list.hasItems()) { 
+        ptr = _list.pop(); 
       }
       else { 
         // Allocate from the bump pointer right now. 
@@ -95,7 +95,7 @@ class MainHeap {
     }
 
     void deallocate(void * ptr) {
-      _flist.Push(ptr);
+      _list.push(ptr);
     }
   }; 
     
@@ -106,7 +106,6 @@ class MainHeap {
    
     unsigned int  _nodeindex;
     bool    _mainHeapPhase; 
-    size_t  _scMagicValue; 
 
     char * _bpSmall;
     char * _bpSmallEnd;
@@ -192,8 +191,6 @@ class MainHeap {
       _begin = (char *)begin;
       _end = _begin + heapsize;
 
-      //_bpSmall = (char *)MM::mmapFromNode(SIZE_PER_SPAN, nodeindex, (void *)begin, false);
-    //  _bpSmall = (char *)MM::mmapAllocatePrivate(SIZE_PER_SPAN, (void *)begin);
       _bpSmall = (char *)MM::mmapPageInterleaved(SIZE_PER_SPAN, (void *)begin);
       _bpSmallEnd = _bpSmall + SIZE_PER_SPAN;
 
@@ -204,7 +201,6 @@ class MainHeap {
       _bpBigEnd = _bpBig + SIZE_PER_SPAN;  
 
       _nodeindex = nodeindex; 
-      _scMagicValue = 32 - LOG2(SIZE_CLASS_START_SIZE);
      
       // Compute the metadata size for PerNodeHeap
       size_t metasize = _bigObjects.computeImplicitSize(heapsize);
@@ -216,10 +212,17 @@ class MainHeap {
       // Initialize all size classes. 
       unsigned long classSize = 16;
       for(int i = 0; i < SMALL_SIZE_CLASSES; i++) {
-        // Each element of
         _sizes[i].initialize(i, classSize, nodeindex);
-
-        classSize *= 2;
+      
+        if(classSize < SIZE_CLASS_TINY_SIZE) {
+          classSize += 16;
+        }
+        else if(classSize < SIZE_CLASS_SMALL_SIZE) {
+          classSize += 32;
+        }
+        else {
+          classSize *= 2;
+       }
       }
 
       // Initialize the lock
@@ -228,28 +231,11 @@ class MainHeap {
       // Call stack map
       _callsiteMap.initialize(HashFuncs::hashCallStackT, HashFuncs::compareCallStackT);
       _objectsMap.initialize(HashFuncs::hashAddr, HashFuncs::compareAddr);
-
    } 
 
    inline size_t getSize(void * ptr) {
       return _bigObjects.getSize(ptr);
    } 
-
-  inline int getSizeClass(void * ptr) {
-    size_t size = getSize(ptr); 
-   // fprintf(stderr, "getSizeClass ptr %p size %lx\n", ptr, size); 
-    return getSizeClass(size);
-  }
-
-
-  inline int getSizeClass(size_t size) {
-    if(size <= 16) {
-      return 0;
-    }
-    else {
-      return _scMagicValue - __builtin_clz(size - 1);
-    }
-  }
 
   // allocate a big object with the specified size
   void * allocateBigObject(size_t size) {
@@ -329,7 +315,7 @@ class MainHeap {
     int sc; 
 
     // If it is small object, allocate from the freelist at first.
-    sc = getSizeClass(size);
+    sc = size2Class(size);
     if(!_sizes[sc].hasObject()) {
       void * ptr = _bpSmall;
       _bpSmall += SIZE_ONE_MB;
@@ -346,7 +332,7 @@ class MainHeap {
   void deallocate(void * ptr) {
      size_t size = getSize(ptr);
      if(!isBigObject(size)) {
-       int sc = getSizeClass(size); 
+       int sc = size2Class(size); 
       
       if(!_mainHeapPhase) { 
         pthread_spin_lock(&_lock);

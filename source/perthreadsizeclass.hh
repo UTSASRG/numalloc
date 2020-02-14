@@ -2,9 +2,8 @@
 #define __PER_THREAD_SIZE_CLASS_HH__
 
 #include "mm.hh"
-#include "freelist.hh"
+#include "persizeclasslist.hh"
 
-#define DEBUG 1
 class PerThreadSizeClass {
 private:
   char        * _bumpPointer; 
@@ -14,6 +13,11 @@ private:
   unsigned int _watermark; 
   unsigned int _batch; // Allocate or contribute this number if necessary 
 
+  // We will learn from TcMalloc. We will add all objects in the miniBag to the freelist in order
+  // to warmup the objects. 
+  unsigned int _miniBagSize;
+  unsigned int _miniBagObjects;
+  unsigned int _bagUsableSize;
   unsigned int _bagSize; // Allocate one bag from outside each time 
   // During the allocation,  reutilizing freed objects in the same node will be at a higher priority. 
   // However, we don't want to keep checking the per-node list if it fails. 
@@ -23,10 +27,7 @@ private:
   unsigned int _allocsCheckMin;
   unsigned int _allocsCheckMax;
   unsigned int _nodeindex; 
-#ifdef DEBUG
-//  unsigned long _allocMBs;
-#endif 
-  FreeList _flist; 
+  PerSizeClassList _list; 
 
 public: 
   void initialize(int nodeindex, int size, int sc, int batch) {
@@ -34,7 +35,15 @@ public:
     _sc = sc;
     _batch = batch;
     _bagSize = SIZE_ONE_MB;;
-    _nodeindex = nodeindex; 
+    _nodeindex = nodeindex;
+
+    if(size <= SIZE_CLASS_SMALL_SIZE) {
+      // We will warmup the objects beforehand
+      _miniBagSize = (SIZE_MINI_BAG/size) * size;
+      _miniBagObjects = _miniBagSize/size - 1;
+      _bagUsableSize = (_bagSize/size) * size;
+    } 
+
     _watermark = batch * 2;
     _allocsCheckMin = batch / 4;
     
@@ -43,7 +52,7 @@ public:
     }
     _allocsCheckMax = batch * 4;
 
-    _flist.Init();
+    _list.initialize();
 
     _allocsBeforeCheck = _batch/4;
     _allocs = 0;
@@ -51,11 +60,9 @@ public:
     _bumpPointer = NULL;
     _bumpPointerEnd = _bumpPointer; 
   }
- 
   // Allocate reversely. Since _next always points to 
   // the next availabe slot, we will use the object pointed by _next-1 
-  void * allocateFromFreelist();
-  int moveObjectsFromNodeFreelist();
+  int  moveObjectsFromNodeFreelist();
   void donateObjectsToNodeFreelist();
   void * allocate();
 

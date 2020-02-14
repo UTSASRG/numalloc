@@ -2,13 +2,12 @@
 #define __PER_THREAD_HEAP_HH__
 
 #include "xdefines.hh"
+#include "persizeclasslist.hh"
 #include "perthreadsizeclass.hh"
 
 // PerThreadHeap only tracks freed small objects. 
 class PerThreadHeap {
 private:
-  size_t _scMagicValue;
-
   PerThreadSizeClass _sclass[SMALL_SIZE_CLASSES];
 
 public:
@@ -20,24 +19,25 @@ public:
     for(i = 0; i < SMALL_SIZE_CLASSES; i++) {
       // Try to set perthreadsize classes
       unsigned int objects = SIZE_ONE_MB * 4/classSize;
-      _sclass[i].initialize(nindex, classSize, i, objects);
-      classSize *= 2;
-    }
 
-    _scMagicValue = 32 - LOG2(SIZE_CLASS_START_SIZE); 
+  //   fprintf(stderr, "sc %d classSize %ld\n", i, classSize);
+      _sclass[i].initialize(nindex, classSize, i, objects);
+
+      if(classSize < SIZE_CLASS_TINY_SIZE) {
+        classSize += 16;
+      }
+      else if(classSize < SIZE_CLASS_SMALL_SIZE) {
+        classSize += 32;
+      }
+      else {
+        classSize *= 2;
+      }
+    }
   }
 
   PerThreadSizeClass * getPerThreadSizeClassFromSize(size_t sz) {
-    int sc;
-
-    if(sz <= SIZE_CLASS_START_SIZE) {
-      sc = 0;
-    }
-    else {
-      sc = _scMagicValue - __builtin_clz(sz - 1);
-      //fprintf(stderr, "sz %lx __builin %d _scMagivValue %ld sc %d\n", sz, __builtin_clz(sz - 1), _scMagicValue, sc); 
-    }
-    
+    int sc = size2Class(sz);
+   //fprintf(stderr, "sz %ld sc %d\n", sz, sc); 
     return &_sclass[sc];
   } 
 
@@ -48,6 +48,7 @@ public:
   void * allocate(size_t sz) {
     void * ptr = NULL; 
 
+  //  fprintf(stderr, "PERHEA allocate sz %d\n", sz);
     PerThreadSizeClass * ptclass = getPerThreadSizeClassFromSize(sz);
 
     // First, we will allocate from the per-thread size class. 
@@ -68,7 +69,6 @@ public:
     ptclass->deallocate(ptr);
     return;
   } 
-
 };
 
 #endif

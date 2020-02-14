@@ -32,6 +32,7 @@
 #include "pernodeheap.hh"
 #include "perthread.hh"
 #include "real.hh"
+#include "persizeclasslist.hh"
 #ifdef SPEC_MAINTHREAD_SUPPORT
 #include "mainheap.hh"
 #endif

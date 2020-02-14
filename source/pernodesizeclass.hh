@@ -1,57 +1,44 @@
 #ifndef __PER_NODE_SIZE_CLASS_HH__
 #define __PER_NODE_SIZE_CLASS_HH__
 
+#include <pthread.h>
 #include "mm.hh"
-#include "freelist.hh"
-#include "perthread.hh"
+#include "persizeclasslist.hh"
 
 // For small objects, each size class will maintain
 // one bumppointer and one freelist
 class PerNodeSizeClass {
   private: 
     pthread_spinlock_t _lock; 
-    unsigned long _size; // Size of this size class
-    FreeList _flist;
+    PerSizeClassList   _list;
 
  public:
     void initialize(unsigned long size) {
       // Initialize the lock
       pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
 
-      _size = size;
-
       // Initialize the freelist
-      _flist.Init();
+      _list.initialize();
     }  
 
     // Allocate multiple objects in a batch from the pernode's size class 
     int allocateBatch(unsigned long requestNumb, void ** head, void ** tail) {
-      int  numb = 0;
+      int  numb;
 
       lock();
       
-      numb = _flist.length(); 
-      if(numb > requestNumb) {
-        numb = requestNumb;
-      }
-      
-      //#fprintf(stderr, "size %ld: Move batch from the pernode list.\n", _size); 
-      // Pop the specified number of entries;
-      if(numb > 0)  
-      _flist.PopRange(numb, head, tail); 
-      //fprintf(stderr, "size %ld: Move batch %d from the pernode list.\n", _size, numb); 
-           
+      numb = _list.popRange(requestNumb, head, tail);
+
       unlock();
 
       return numb;
     }
-    
+   
     void * allocate(void) {
       void * ptr = NULL;
      
       lock();
-      if(_flist.hasItems()) 
-        ptr = _flist.Pop();
+      ptr = _list.pop();
       unlock();
 
       return ptr;
@@ -60,29 +47,20 @@ class PerNodeSizeClass {
 
     void deallocate(void * ptr) {
       lock();
-      _flist.Push(ptr);
+      _list.push(ptr);
       unlock();
     }
-
 
     // Deallocate multiple objects to the pernode's size class. 
     void deallocateBatch(unsigned long numb, void *head, void * tail) {
       lock();
      
       //fprintf(stderr, "Donate batch to the pernode lsit.\n"); 
-      _flist.PushRange(numb, head, tail);
+      _list.pushRange(numb, head, tail);
        
       unlock();
 
       return;
-    }
-
-    inline bool hasItems() {
-      return _flist.hasItems();
-    }
-
-    inline size_t getSizeClass() {
-      return _size;
     }
 
  private:

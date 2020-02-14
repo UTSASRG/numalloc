@@ -9,7 +9,6 @@
 #include "pernodesizeclass.hh"
 #include "perthread.hh"
 
-#define DEBUG 1
 // Since the array of PerNodeHeap will be allocated from the stack, therefore, 
 // we will try to avoid false sharing issue as much as possible. 
 // There are two ways to avoid the performance issues: 
@@ -45,11 +44,6 @@ class PerNodeHeap {
     size_t _scMagicValue; 
     int   _nodeindex;
 
-#if DEBUG 
-    unsigned long _allocMBs;
-    unsigned long _deallocBig;
-    unsigned long _deallocSmall;
-#endif    
     // Currently, size class is from 2^4 to 2^19 (512 KB), with 16 sizes in total.
     PerNodeSizeClass  _smallSizes[SMALL_SIZE_CLASSES];
     
@@ -71,8 +65,7 @@ class PerNodeHeap {
    }
 
    void initialize(int nodeindex, char * start) {
-
-     size_t heapsize = 2 * SIZE_PER_SPAN;
+      size_t heapsize = 2 * SIZE_PER_SPAN;
       // Save the heap related information
       _nodeBegin = start; 
       _nodeEnd = start + heapsize;
@@ -96,6 +89,7 @@ class PerNodeHeap {
 
       // Binding the memory to the specified node.
       char * ptr = (char *)MM::mmapFromNode(alignup(metasize, PAGE_SIZE), nodeindex);
+  
       // Set the starting address of _mbsMapping
       _mbsMapping = (unsigned long *)ptr;
 
@@ -113,22 +107,17 @@ class PerNodeHeap {
       size_t size = SIZE_CLASS_START_SIZE;
       for(i = 0; i < SMALL_SIZE_CLASSES; i++) {
         _smallSizes[i].initialize(size);
-        size *= 2;
+
+        if(size < SIZE_CLASS_TINY_SIZE) {
+          size += 16;
+        }
+        else if(size < SIZE_CLASS_SMALL_SIZE) {
+          size += 32;
+        }
+        else {
+          size *= 2;
+        }
       }
-  }
-
-   
-  int getSizeClass(size_t size) {
-    int sc;
-
-    if(size <= SIZE_CLASS_START_SIZE) {
-      sc = 0;
-    }
-    else {
-      sc = _scMagicValue - __builtin_clz(size - 1);
-    }
- 
-    return sc;
   }
 
   // allocate a big object with the specified size
@@ -139,7 +128,6 @@ class PerNodeHeap {
     if(_bigSize < size) {
       return ptr;
     }
-
 
     // _bigList is not empty (at least with one element), since _bigSize is not 0
     BigObject * object = NULL;
@@ -242,9 +230,6 @@ class PerNodeHeap {
       _bpBig += size;
 
       unlockBigHeap();
-#if DEBUG
-      //_allocMBs += size/SIZE_ONE_MB_BAG;
-#endif
       // We should not consume all memory. If yes, then we should make the heap bigger.
       // Since we don't check normally  to reduce the overhead, we will use the assertion here
       assert(_bpBig < _bpBigEnd);
@@ -281,7 +266,7 @@ class PerNodeHeap {
        // If the node index is the same as the current thread, 
        // Return this object to per-thread's cache
        int index = getNodeIndex(); 
-       int sc = getSizeClass(size);
+       int sc = size2Class(size);
 
        if(index == nodeindex) {
          // Only return an object to perthread's heap if the object is from the same node
@@ -354,8 +339,6 @@ class PerNodeHeap {
   void * removeBigObject(unsigned long index, unsigned long last) {
     // Turn the index into the address
     void * ptr = getBigObject(index);
-
-    //fprintf(stderr, "removeBigObject ptr %p nodeBegin index %d\n", ptr, index);
 
     // Remove this object from the freelist
     listRemoveNode(&_bigList, (dlist *)ptr);
