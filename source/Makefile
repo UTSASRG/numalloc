@@ -1,10 +1,9 @@
 SRCS = real.cpp							\
 			 xthread.cpp          \
-perthreadsizeclass.cpp          \
+			 perthreadsizeclass.cpp          \
 			 libnumalloc.cpp			
 
 INCS = numas.hh           \
-       jumpfreelist.hh     \
         dlist.hh               \
 		numaheap.hh						\
 		pernodeheap.hh				\
@@ -26,8 +25,9 @@ CXX = clang++
 #DNDEBUG
 #CFLAGS = -g -std=c++14 -Wno-unused-result -O2  -DNUMA_NODES=2 -DTRY_TCMALLOC
 #-DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE
-#CFLAGS = -g -std=c++14 -Wno-unused-result -O2  -DNUMA_NODES=2 -DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE
-CFLAGS = -g -std=c++14 -Wno-unused-result -O2  -DNUMA_NODES=2 -DUSE_HUGE_PAGE
+CFLAGS = -g -std=c++14 -Wno-unused-result -O2  -DNUMA_NODES=2 -DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE
+#CFLAGS = -g -std=c++14 -Wno-unused-result -O3  -DNUMA_NODES=2 -DUSE_HUGE_PAGE
+#CFLAGS = -g -std=c++14 -Wno-unused-result -O2  -DNUMA_NODES=2 -DUSE_HUGE_PAGE
 #CFLAGS = -g -std=c++14 -Wno-unused-result -O2  -DNUMA_NODES=2 -DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE
 #CFLAGS = -g -std=c++14 -Wno-unused-result -O2 -DNUMA_NODES=2 -DUSE_HUGE_PAGE
 #CFLAGS = -g -std=c++14 -Wno-unused-result -DNDEBUG -O2 -DNUMA_NODES=2
