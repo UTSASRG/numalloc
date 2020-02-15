@@ -10,6 +10,7 @@
 #include "hashmap.hh"
 #include "hashfuncs.hh"
 #include "perthread.hh"
+#include "spinlock.hh"
 
 /* Basic memory mechanism for main thread.
  
@@ -125,6 +126,9 @@ class MainHeap {
 
       public:
         CallsiteInfo() {
+        }
+
+        void init() {
           _isPrivate = false;
           _allocNum = 1;
         }
@@ -157,12 +161,12 @@ class MainHeap {
 
     // CallsiteMap is used to save the callsite and corresponding information (whether it is
     // private or not).
-    typedef HashMap<callstack, CallsiteInfo, localAllocator> CallsiteMap;
+    typedef HashMap<void *, CallsiteInfo, spinlock, localAllocator> CallsiteMap;
     CallsiteMap _callsiteMap;
 
     class ObjectInfo {
     public:
-      int    _allocSequence;
+      int            _allocSequence;
       CallsiteInfo * _callsiteInfo;
 
       ObjectInfo(int sequence, CallsiteInfo * info) {
@@ -179,9 +183,10 @@ class MainHeap {
       }
     };
     // ObjectsMap will save the mapping between the object address and its callsite
-    typedef HashMap<void *, ObjectInfo, localAllocator> ObjectsHashMap;
+    typedef HashMap<void *, ObjectInfo, spinlock, localAllocator> ObjectsHashMap;
     ObjectsHashMap _objectsMap;
 
+    int   _mhSequence;     // main heap phase sequence number
  public:
 
    void initialize(int nodeindex, void * begin) {
@@ -201,7 +206,9 @@ class MainHeap {
       _bpBigEnd = _bpBig + SIZE_PER_SPAN;  
 
       _nodeindex = nodeindex; 
-     
+      _mainHeapPhase = true;
+      _mhSequence = 0;
+
       // Compute the metadata size for PerNodeHeap
       size_t metasize = _bigObjects.computeImplicitSize(heapsize);
 
@@ -229,9 +236,19 @@ class MainHeap {
       pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
 
       // Call stack map
-      _callsiteMap.initialize(HashFuncs::hashCallStackT, HashFuncs::compareCallStackT);
-      _objectsMap.initialize(HashFuncs::hashAddr, HashFuncs::compareAddr);
+      _callsiteMap.initialize(HashFuncs::hashStackAddr, HashFuncs::compareAddr, SIZE_CALL_SITE_MAP);
+      _objectsMap.initialize(HashFuncs::hashAllocAddr, HashFuncs::compareAddr, SIZE_HASHED_OBJECTS_MAP);
    } 
+
+   void stopPhase() {
+    _mainHeapPhase = false;
+  
+   }
+
+  void updatePhase() {
+    _mainHeapPhase = true;
+    _mhSequence++;
+  }
 
    inline size_t getSize(void * ptr) {
       return _bigObjects.getSize(ptr);
@@ -250,6 +267,7 @@ class MainHeap {
     }
     return ptr;
   }
+
 
   void * allocateFromBigBumppointer(size_t sz) {
       void * ptr = NULL;
@@ -297,15 +315,6 @@ class MainHeap {
      _bigObjects.markPerMBInfo(blockStart, blockSize, size);
    }
 
-   void * allocate(size_t size) {
-     if(isBigObject(size)) {
-       //fprintf(stderr, "Allocate big object with size %lx\n", size);
-       return allocateBigObject(size);
-     }
-     else {
-       return allocateSmallObject(size);
-     }
-   }
 
    inline bool isBigObject(size_t size) {
       return (size >= BIG_OBJECT_SIZE_THRESHOLD) ? true : false;
@@ -329,32 +338,7 @@ class MainHeap {
     return _sizes[sc].allocate();
   }
 
-  void deallocate(void * ptr) {
-     size_t size = getSize(ptr);
-     if(!isBigObject(size)) {
-       int sc = size2Class(size); 
-      
-      if(!_mainHeapPhase) { 
-        pthread_spin_lock(&_lock);
-        // Return to the size class
-        _sizes[sc].deallocate(ptr);
-        pthread_spin_unlock(&_lock);
-      }
-      else {
-        _sizes[sc].deallocate(ptr);
-      }
-     }
-     else {
-      if(!_mainHeapPhase) { 
-        pthread_spin_lock(&_lock);
-        _bigObjects.deallocate(ptr, size);
-        pthread_spin_unlock(&_lock);
-      }
-      else {
-        _bigObjects.deallocate(ptr, size);
-      }
-     }
-   }
- 
+   void * allocate(size_t size);
+  void deallocate(void * ptr);
 };
 #endif

@@ -78,7 +78,7 @@ extern "C" int light_libc_start_main(main_fn_t main_fn, int argc, char** argv, v
   	auto real_libc_start_main = (decltype(__libc_start_main)*)dlsym(RTLD_NEXT, "__libc_start_main");
 
     // only for main thread
-    current->startFrame = (char *)__builtin_frame_address(0);
+//    current->startFrame = (char *)__builtin_frame_address(0);
 
     return real_libc_start_main(main_fn, argc, argv, init, fini, rtld_fini, stack_end);
 }

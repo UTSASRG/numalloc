@@ -20,7 +20,20 @@ public:
     return size_t(__h);
   
   }
+  static size_t hashStackAddr(void * addr, size_t) {
+    return (((intptr_t)addr) & 0x003FFF) >> 2;
+  }
+  
+  static size_t hashAllocAddr(void *addr, size_t) {
+    // 0xF00000 will obtain the MB's information. Basically, 
+    // different size class will have different MB. 
+    // Then we will get the offset inside the same size class. 
+    unsigned long index = (intptr_t)addr & 0xF00000;
+    unsigned long offset = ((intptr_t)addr & 0x0FFFF) >> 4;
+    return ((index >> 8) + offset);
+  }
 
+  
   static size_t hashInt(const int x, size_t) { return x; }
   static size_t hashLong(long x, size_t) { return x; }
   static size_t hashSizeT(size_t x, size_t) { return x; }

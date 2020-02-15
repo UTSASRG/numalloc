@@ -10,7 +10,7 @@
 #include "xdefines.hh"
 #include "hashlist.hh"
 
-#define LOCK_PROTECTION 0
+#define LOCK_PROTECTION 1
 
 #if LOCK_PROTECTION
 template <class KeyType,                    
@@ -133,6 +133,7 @@ public:
     assert(_initialized == true);
     size_t hindex = hashIndex(key, keylen);
     struct HashBucket* first = getHashBucket(hindex);
+    //fprintf(stderr, "find entry key %p hindex %d\n", key, hindex);
     struct Entry* entry = getEntry(first, key, keylen);
     ValueType * ret = NULL;
 
@@ -147,7 +148,13 @@ public:
     assert(_initialized == true);
     size_t hindex = hashIndex(key, keylen);
     struct HashBucket* first = getHashBucket(hindex);
+#if LOCK_PROTECTION
+    first->Lock();
+#endif
     struct Entry* entry = getEntry(first, key, keylen);
+#if LOCK_PROTECTION
+    first->Unlock();
+#endif
 
     return entry;
   }
@@ -180,11 +187,10 @@ public:
       // insert new call stack into map 
       entry = insertEntry(first, key, keylen, newval);
     }
-    else {
-      // return the actual call stack value
-      ret = &entry->value;
+
+    // return the actual call stack value
+    ret = &entry->value;
       //fprintf(stderr, "entry exists. Now return. ret %p\n", ret);
-    } 
     
 #if LOCK_PROTECTION
     first->Unlock();
@@ -202,6 +208,7 @@ public:
     size_t hindex = hashIndex(key, keylen);
     // PRINF("Insert entry:  before inserting\n");
     struct HashBucket* first = getHashBucket(hindex);
+//    fprintf(stderr, "insert key %p index %lx\n", key, hindex);
 
     // PRINF("Insert entry: key %p\n", key);
 #if LOCK_PROTECTION
