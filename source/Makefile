@@ -1,7 +1,8 @@
 SRCS = real.cpp							\
 			 xthread.cpp          \
-			 perthreadsizeclass.cpp          \
+			 perthreadheap.cpp          \
 			 mainheap.cpp \
+			 persizeclass.cpp \
 			 libnumalloc.cpp			
 
 INCS = numas.hh           \
@@ -10,7 +11,7 @@ INCS = numas.hh           \
 		pernodeheap.hh				\
 		pernodesizeclass.hh      \
 		perthreadheap.hh				\
-		perthreadsizeclass.hh				\
+		persizeclass.hh				\
 		mainheap.hh 					\
 		log.hh								\
 		mm.hh									\
