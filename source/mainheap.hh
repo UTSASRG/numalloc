@@ -340,12 +340,13 @@ class MainHeap {
     // If it is small object, allocate from the freelist at first.
     sc = getPerSizeClass(size);
 
+    int numb = 0;
+    void * head = NULL;
     if(sc->hasItems() != true) {
-      void * head = NULL;
       void * tail = NULL;
 
       // Get objects from the bump pointer (with the cache warmup mechanism)
-      int numb = sc->getObjectsFromBumpPointer(&head, &tail);
+      numb = sc->getObjectsFromBumpPointer(&head, &tail);
       if(numb == 0) {
         // Get objects from the bumppointer 
         void * bPtr = allocateOneBag(sc->getBagSize(), sc->getClassSize());
@@ -356,11 +357,20 @@ class MainHeap {
         assert(numb >= 0);
       }
 
-      // Push these objects into the freelist.
-      sc->pushRangeToList(numb, head, tail);
+      if(numb > 1) { 
+        // Push these objects into the freelist.
+        sc->pushRangeToList(numb, head, tail);
+      }
     }
+
     // Get one object from the list.
-    void * ptr = sc->allocateFromFreeList();
+    void * ptr = NULL;
+    if(numb == 1) {
+      ptr = head;
+    }
+    else { 
+      ptr = sc->allocateFromFreeList();
+    }
 
     return ptr;
   }

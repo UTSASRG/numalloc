@@ -80,10 +80,7 @@ public:
 
   void pushRangeToList(int numb, void * head, void * tail) {
     if(numb > 0) {
-      if(head == NULL) {
-        while(1) { ; }
-      }
-      //fprintf(stderr, "push numb %d head %p tail %p\n", numb, head, tail);
+     // fprintf(stderr, "push numb %d head %p tail %p\n", numb, head, tail);
       _list.pushRange(numb, head, tail);
     }
   }

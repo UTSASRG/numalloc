@@ -51,12 +51,13 @@ public:
     sc = getPerSizeClass(size);
 
     // We will allocate from the per-thread size class. 
+    void * head = NULL;
+    int numb = 0;
     if(sc->hasItems() != true) {
-      void * head = NULL;
       void * tail = NULL;
 
       // Get objects from the central list. 
-      int numb = sc->getObjectsFromCentralList(_nodeIndex, &head, &tail);
+      numb = sc->getObjectsFromCentralList(_nodeIndex, &head, &tail);
 
       if(numb == 0) {
         // Get objects from the bump pointer (with the cache warmup mechanism) 
@@ -72,16 +73,24 @@ public:
        //fprintf(stderr, "line %d: numb %ld\n", __LINE__, numb); 
           assert(numb >= 0);
         }
+
+        if(numb > 1) {
+          // Push these objects into the freelist.
+          sc->pushRangeToList(numb, head, tail);
+        }
       }
-
-       //fprintf(stderr, "line %d: numb %ld\n", __LINE__, numb); 
-      // Push these objects into the freelist.
-      sc->pushRangeToList(numb, head, tail);
     }
-      
-    // Get one object from the list.
-    void * ptr = sc->allocateFromFreeList();
+ 
+    void * ptr; 
 
+    if(numb == 1) {
+      ptr = head;
+    }  
+    else {  
+      ptr = sc->allocateFromFreeList();
+    }
+
+    // Get one object from the list.
     assert(ptr != NULL);
 
     return ptr;
