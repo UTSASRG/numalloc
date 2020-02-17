@@ -107,10 +107,12 @@ public:
 #ifdef SPEC_MAINTHREAD_SUPPORT
   void stopMainHeapPhase() {
     _mainHeapPhase = false;
+    _mainHeap.stopPhase();
   } 
 
   void startMainHeapPhase() {
     _mainHeapPhase = true;
+    _mainHeap.updatePhase();
   }
 
 #endif
@@ -118,11 +120,11 @@ public:
   void * allocate(size_t size) {
     void * ptr = NULL; 
 
-    //fprintf(stderr, "size %lx\n", size);
 #ifdef SPEC_MAINTHREAD_SUPPORT
-   // if(_mainHeapPhase){
-    if(_mainHeapPhase && (size > (PAGE_SIZE * NUMA_NODES/2))) {
+    //if(_mainHeapPhase && (size > (PAGE_SIZE * NUMA_NODES/2))) {
+    if(_mainHeapPhase) {
       ptr = _mainHeap.allocate(size);
+    //fprintf(stderr, "size %lx at %p instructionptr %lx\n", size, &size, *((unsigned long *)((intptr_t)&size + MALLOC_SITE_OFFSET)));
       if(ptr) { 
         return ptr;
       }
@@ -145,6 +147,7 @@ public:
       // Always allocate a large object from PerNodeHeap directly 
       ptr = _nodes[index]->allocateBigObject(size);
     }
+    
 
     return ptr;
   } 

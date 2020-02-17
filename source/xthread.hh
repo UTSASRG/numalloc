@@ -37,7 +37,7 @@
 #include "real.hh"
 #include "xdefines.hh"
 #include "numas.hh"
-
+#include "mm.hh"
 
 class xthread {
 #define MAX_ALIVE_THREADS 256

@@ -3,25 +3,26 @@
 
 #include "xdefines.hh"
 #include "persizeclasslist.hh"
-#include "perthreadsizeclass.hh"
+#include "persizeclass.hh"
 
 // PerThreadHeap only tracks freed small objects. 
 class PerThreadHeap {
 private:
-  PerThreadSizeClass _sclass[SMALL_SIZE_CLASSES];
+  unsigned long _nodeIndex;
+  PerSizeClass _sclass[SMALL_SIZE_CLASSES];
 
 public:
   void initialize(int tindex, int nindex) {
-    int i;
+    // Save the node index
+    _nodeIndex = nindex; 
 
     unsigned long classSize = 16;
     unsigned long size = 0; 
-    for(i = 0; i < SMALL_SIZE_CLASSES; i++) {
+    for(int i = 0; i < SMALL_SIZE_CLASSES; i++) {
       // Try to set perthreadsize classes
       unsigned int objects = SIZE_ONE_MB * 4/classSize;
 
-  //   fprintf(stderr, "sc %d classSize %ld\n", i, classSize);
-      _sclass[i].initialize(nindex, classSize, i, objects);
+      _sclass[i].initialize(classSize, i, objects);
 
       if(classSize < SIZE_CLASS_TINY_SIZE) {
         classSize += 16;
@@ -35,38 +36,82 @@ public:
     }
   }
 
-  PerThreadSizeClass * getPerThreadSizeClassFromSize(size_t sz) {
-    int sc = size2Class(sz);
-   //fprintf(stderr, "sz %ld sc %d\n", sz, sc); 
-    return &_sclass[sc];
-  } 
-
-  PerThreadSizeClass * getPerThreadSizeClass(int sc) {
-    return &_sclass[sc];
+  PerSizeClass * getPerSizeClass(size_t size) {
+    int scIndex = size2Class(size);
+    return &_sclass[scIndex];
   }
 
-  void * allocate(size_t sz) {
-    void * ptr = NULL; 
+  void * allocateOneBag(size_t bagSize, size_t classSize);
+  void donateObjectsToNode(int classIndex, unsigned long batch, void * head, void * tail);
 
-  //  fprintf(stderr, "PERHEA allocate sz %d\n", sz);
-    PerThreadSizeClass * ptclass = getPerThreadSizeClassFromSize(sz);
+  void * allocate(size_t size) {
+    PerSizeClass * sc;
 
-    // First, we will allocate from the per-thread size class. 
-    // If succeed, then this allocation will not need lock (best speed).
-    ptr = ptclass->allocate(); 
-    if(ptr == NULL) {
-      fprintf(stderr, "An object with sz %lx can't be allocated in perthreadsizclass\n", sz);
-      assert(0); 
+    // If it is small object, allocate from the freelist at first.
+    sc = getPerSizeClass(size);
+
+    // We will allocate from the per-thread size class. 
+    void * head = NULL;
+    int numb = 0;
+    if(sc->hasItems() != true) {
+      void * tail = NULL;
+
+      // Get objects from the central list. 
+      numb = sc->getObjectsFromCentralList(_nodeIndex, &head, &tail);
+
+      if(numb == 0) {
+        // Get objects from the bump pointer (with the cache warmup mechanism) 
+        numb = sc->getObjectsFromBumpPointer(&head, &tail);
+      
+       //fprintf(stderr, "line %d: numb %ld\n", __LINE__, numb); 
+        // Now we should get a new block and update the bumppointer 
+        if(numb == 0) {
+          void * bPtr = allocateOneBag(sc->getBagSize(), sc->getClassSize());
+
+          // Update bumppointers and get objects
+          numb = sc->updateBumpPointerAndGetObjects(bPtr, &head, &tail);
+       //fprintf(stderr, "line %d: numb %ld\n", __LINE__, numb); 
+          assert(numb >= 0);
+        }
+
+        if(numb > 1) {
+          // Push these objects into the freelist.
+          sc->pushRangeToList(numb, head, tail);
+        }
+      }
     }
+ 
+    void * ptr; 
+
+    if(numb == 1) {
+      ptr = head;
+    }  
+    else {  
+      ptr = sc->allocateFromFreeList();
+    }
+
+    // Get one object from the list.
+    assert(ptr != NULL);
 
     return ptr;
   }
 
-  // Deallocate an object to this thread's freelist with the size class sc  
-  void deallocate(void * ptr, int sc) {
-    PerThreadSizeClass * ptclass = getPerThreadSizeClass(sc);
+  // Deallocate an object to this thread's freelist 
+  void deallocate(void * ptr, int classIndex) {
+    PerSizeClass * sc = getPerSizeClass(classIndex);
 
-    ptclass->deallocate(ptr);
+    sc->deallocate(ptr);
+
+    // Check if there are too many freed objects in the freelist, if yes,
+    // then donateObjects to the pernode freelist if necessary
+    if(sc->checkDonation() == true) {
+      void * head, * tail;
+     
+      int numb = sc->getDonateObjects(&head, &tail);
+
+      donateObjectsToNode(classIndex, numb, head, tail);
+    }
+
     return;
   } 
 };
