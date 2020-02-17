@@ -219,7 +219,7 @@ class MainHeap {
       // Initialize all size classes. 
       unsigned long classSize = 16;
       for(int i = 0; i < SMALL_SIZE_CLASSES; i++) {
-        _sclass[i].initialize(i, classSize, nodeindex, 0);
+        _sclass[i].initialize(classSize, i, 0);
       
         if(classSize < SIZE_CLASS_TINY_SIZE) {
           classSize += 16;
@@ -352,6 +352,7 @@ class MainHeap {
 
         // Update the bumppointer
         numb = sc->updateBumpPointerAndGetObjects(bPtr, &head, &tail);
+        //fprintf(stderr, "allocate one bag with bPtr %p head %p tail %p\n", bPtr, head, tail);
         assert(numb >= 0);
       }
 

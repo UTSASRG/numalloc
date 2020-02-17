@@ -2,6 +2,7 @@
 #define __PER_SIZE_CLASS_HH__
 
 #include <assert.h>
+#include <stdio.h>
 #include "persizeclasslist.hh"
 
 class PerSizeClass {
@@ -29,7 +30,7 @@ private:
   PerSizeClassList _list; 
 
 public: 
-  void initialize(int nodeindex, int size, int sc, int batch) {
+  void initialize(int size, int sc, int batch) {
     _size = size;
     _sc = sc;
     _batch = batch;
@@ -38,7 +39,7 @@ public:
     if(size <= SIZE_CLASS_SMALL_SIZE) {
       // We will warmup the objects beforehand
       _miniBagSize = (SIZE_MINI_BAG/size) * size;
-      _miniBagObjects = _miniBagSize/size - 1;
+      _miniBagObjects = _miniBagSize/size;
       _bagUsableSize = (_bagSize/size) * size;
     } 
 
@@ -56,7 +57,7 @@ public:
     _allocs = 0;
 
     _bumpPointer = NULL;
-    _bumpPointerEnd = _bumpPointer; 
+    _bumpPointerEnd = NULL;
   }
 
   size_t getBagSize(void) {
@@ -79,6 +80,10 @@ public:
 
   void pushRangeToList(int numb, void * head, void * tail) {
     if(numb > 0) {
+      if(head == NULL) {
+        while(1) { ; }
+      }
+      //fprintf(stderr, "push numb %d head %p tail %p\n", numb, head, tail);
       _list.pushRange(numb, head, tail);
     }
   }

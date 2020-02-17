@@ -4,7 +4,7 @@
 
 // Get the freed objects from the pernode freelist when necessary
 int PerSizeClass::getObjectsFromCentralList(int nodeIndex, void ** head, void ** tail) {
-  int numb;
+  int numb = 0;
 
   if(_allocs >= _allocsBeforeCheck) {
     _allocs = 0;
@@ -41,6 +41,7 @@ int PerSizeClass::getObjectsFromBumpPointer(void ** head, void ** tail) {
   if(_bumpPointer < _bumpPointerEnd) {
     if(_size <= SIZE_CLASS_SMALL_SIZE) {
       numb = _miniBagObjects;
+      char * iptr = _bumpPointer; 
 
       if(_bumpPointerEnd - _bumpPointer < 2*PAGE_SIZE) {
         numb = (_bumpPointerEnd-_bumpPointer)/_size;
@@ -51,17 +52,18 @@ int PerSizeClass::getObjectsFromBumpPointer(void ** head, void ** tail) {
       }
 
       // Split the block into pieces and connect them together
-      char * iptr = _bumpPointer; 
       *head = iptr;
-      tail = (void **)iptr;
+      void ** iter = (void **)iptr;
       unsigned int count = 0;
       while (count < numb) {
         iptr += _size;
-        *tail = iptr;
-        tail = reinterpret_cast<void**>(iptr);
+        *iter = iptr;
+        iter = reinterpret_cast<void**>(iptr);
         count++;
       }
-      *tail = (void **)(iptr-_size);
+      *tail = iptr-_size;
+
+      //fprintf(stderr, "*head (at %p) %p *tail (at %p) %p\n", head, *head, tail, *tail);
     }
     else {
       numb = 1; 
@@ -73,13 +75,19 @@ int PerSizeClass::getObjectsFromBumpPointer(void ** head, void ** tail) {
     }
   }
 
+#if 0
+  if((numb != 0) && (*head == NULL)) {
+    fprintf(stderr, "numb %d head %p tail %p\n", numb, *head, *tail);
+    while(1) { ; }
+  }
+#endif
   return numb;
 }
 
 int PerSizeClass::updateBumpPointerAndGetObjects(void * bptr, void ** head, void ** tail) {
   _bumpPointer = (char *)bptr;
   if(_size < SIZE_CLASS_SMALL_SIZE) {
-    //  fprintf(stderr, "_size %d, _bagUsableSize %d\n", _size, _bagUsableSize);
+     //fprintf(stderr, "_size %d, _bagUsableSize %d\n", _size, _bagUsableSize);
     _bumpPointerEnd = _bumpPointer + _bagUsableSize;
   }
   else {

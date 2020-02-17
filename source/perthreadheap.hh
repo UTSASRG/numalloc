@@ -22,7 +22,7 @@ public:
       // Try to set perthreadsize classes
       unsigned int objects = SIZE_ONE_MB * 4/classSize;
 
-      _sclass[i].initialize(nindex, classSize, i, objects);
+      _sclass[i].initialize(classSize, i, objects);
 
       if(classSize < SIZE_CLASS_TINY_SIZE) {
         classSize += 16;
@@ -61,17 +61,20 @@ public:
       if(numb == 0) {
         // Get objects from the bump pointer (with the cache warmup mechanism) 
         numb = sc->getObjectsFromBumpPointer(&head, &tail);
-       
+      
+       //fprintf(stderr, "line %d: numb %ld\n", __LINE__, numb); 
         // Now we should get a new block and update the bumppointer 
         if(numb == 0) {
           void * bPtr = allocateOneBag(sc->getBagSize(), sc->getClassSize());
 
           // Update bumppointers and get objects
           numb = sc->updateBumpPointerAndGetObjects(bPtr, &head, &tail);
+       //fprintf(stderr, "line %d: numb %ld\n", __LINE__, numb); 
           assert(numb >= 0);
         }
       }
 
+       //fprintf(stderr, "line %d: numb %ld\n", __LINE__, numb); 
       // Push these objects into the freelist.
       sc->pushRangeToList(numb, head, tail);
     }
