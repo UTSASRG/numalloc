@@ -40,6 +40,7 @@ int PerSizeClass::getObjectsFromBumpPointer(void ** head, void ** tail) {
 
   if(_bumpPointer < _bumpPointerEnd) {
     if(_size <= SIZE_CLASS_SMALL_SIZE) {
+    //if(_size == 48) {
       numb = _miniBagObjects;
       char * iptr = _bumpPointer; 
 

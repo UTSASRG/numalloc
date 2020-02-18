@@ -29,7 +29,8 @@ CXX = clang++
 #-DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE
 #CFLAGS = -g -std=c++14 -Wno-unused-result -O0 -fno-omit-frame-pointer  -DNUMA_NODES=2 -DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE
 #CFLAGS = -g -std=c++14 -Wno-unused-result -O2 -DNUMA_NODES=2 -DUSE_HUGE_PAGE
-CFLAGS = -g -std=c++14 -Wno-unused-result -O2 -DNUMA_NODES=2 -DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE
+CFLAGS = -std=c++14 -Wno-unused-result -O2 -DNUMA_NODES=2 -DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE
+#CFLAGS = -g -std=c++14 -Wno-unused-result -O2 -DNUMA_NODES=2 -DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE
 #CFLAGS = -g -std=c++14 -Wno-unused-result -O3  -DNUMA_NODES=2 -DUSE_HUGE_PAGE
 #CFLAGS = -g -std=c++14 -Wno-unused-result -O2  -DNUMA_NODES=2 -DUSE_HUGE_PAGE
 #CFLAGS = -g -std=c++14 -Wno-unused-result -O2  -DNUMA_NODES=2 -DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE

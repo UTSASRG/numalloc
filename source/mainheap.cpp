@@ -26,6 +26,8 @@ void * MainHeap::allocate(size_t size) {
   //fprintf(stderr, "size %ld (at %p) instruction %lx, hashvalue %ld ptrhash %ld\n", size, &size, *((unsigned long *)(((unsigned long)&size) + MALLOC_SITE_OFFSET)), HashFuncs::hashStackAddr((void *)address, 0), HashFuncs::hashAllocAddr(ptr, 0));
   //fprintf(stderr, "insidemainheap (%p) instruction address %lx, hashaddress at %lx hashvalue %ld ptrhash %ld\n", &size, *((unsigned long *)(((unsigned long)&size) + MALLOC_SITE_OFFSET)) , address, HashFuncs::hashStackAddr((void *)address, 0), HashFuncs::hashAllocAddr(ptr, 0));
 
+//  fprintf(stderr, "mainheap allocate size %lx ptr %p\n", size, ptr);
+
   // Now insert this object to the map, so that we could confirm its privateness
   ObjectInfo objInfo(_mhSequence, oinfo);
   _objectsMap.insert((void *)ptr, 0, objInfo);
