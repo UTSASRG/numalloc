@@ -267,7 +267,8 @@ class PerNodeHeap {
        // Return this object to per-thread's cache
        int index = getNodeIndex(); 
        int sc = size2Class(size);
-
+      
+       //fprintf(stderr, "sc %d size %lx ptr %p\n", sc, size, ptr);
        if(index == nodeindex) {
          // Only return an object to perthread's heap if the object is from the same node
          current->ptheap->deallocate(ptr, sc);

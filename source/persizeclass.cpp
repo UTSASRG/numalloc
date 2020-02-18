@@ -63,7 +63,8 @@ int PerSizeClass::getObjectsFromBumpPointer(void ** head, void ** tail) {
       }
       *tail = iptr-_size;
 
-      //fprintf(stderr, "*head (at %p) %p *tail (at %p) %p\n", head, *head, tail, *tail);
+     // if(_size == 16)
+      //fprintf(stderr, "size %d: *head (at %p) %p *tail (at %p) %p\n", _size, head, *head, tail, *tail);
     }
     else {
       numb = 1; 

@@ -40,6 +40,10 @@ public:
     int scIndex = size2Class(size);
     return &_sclass[scIndex];
   }
+  
+  PerSizeClass * getPerSizeClassByIndex(int scIndex) {
+    return &_sclass[scIndex];
+  }
 
   void * allocateOneBag(size_t bagSize, size_t classSize);
   void donateObjectsToNode(int classIndex, unsigned long batch, void * head, void * tail);
@@ -67,6 +71,8 @@ public:
         // Now we should get a new block and update the bumppointer 
         if(numb == 0) {
           void * bPtr = allocateOneBag(sc->getBagSize(), sc->getClassSize());
+    
+        //  fprintf(stderr, "SC %p - class:%ld get one bag with starting at %p \n", sc, sc->getClassSize(), bPtr);
 
           // Update bumppointers and get objects
           numb = sc->updateBumpPointerAndGetObjects(bPtr, &head, &tail);
@@ -90,6 +96,8 @@ public:
       ptr = sc->allocateFromFreeList();
     }
 
+    //if(sc->getClassSize() == 16) 
+    //fprintf(stderr, "allocate 16 with ptr %p sc %p\n", ptr, sc);
     // Get one object from the list.
     assert(ptr != NULL);
 
@@ -98,7 +106,7 @@ public:
 
   // Deallocate an object to this thread's freelist 
   void deallocate(void * ptr, int classIndex) {
-    PerSizeClass * sc = getPerSizeClass(classIndex);
+    PerSizeClass * sc = getPerSizeClassByIndex(classIndex);
 
     sc->deallocate(ptr);
 
