@@ -262,7 +262,7 @@ class MainHeap {
     ptr = _bigObjects.allocate(size);
     if(ptr == NULL) {
       // Now allocate from the bump pointer
-      allocateFromBigBumppointer(size);
+      ptr = allocateFromBigBumppointer(size);
     }
     return ptr;
   }
