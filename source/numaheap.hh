@@ -146,6 +146,7 @@ public:
 
       // Always allocate a large object from PerNodeHeap directly 
       ptr = _nodes[index]->allocateBigObject(size);
+     // fprintf(stderr, "allocate big size %lx ptr %p\n", size, ptr);
     }
     
 

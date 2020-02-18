@@ -97,7 +97,7 @@ public:
     }
 
     //if(sc->getClassSize() == 16) 
-    //fprintf(stderr, "allocate 16 with ptr %p sc %p\n", ptr, sc);
+    //fprintf(stderr, "allocate size %lx with ptr %p\n", size, ptr);
     // Get one object from the list.
     assert(ptr != NULL);
 
