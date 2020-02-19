@@ -12,17 +12,15 @@ int main() {
   for(i = 0; i < 2; i++) {
     ptr = (int *)malloc(14);
     if(i == 0) {
-      firstPtr == ptr;
+      firstPtr = ptr;
     }
     else {
       if(ptr == firstPtr) {
-       fprintf(stderr, "WARNING: Please adjust MALLOC_SITE_OFFSET of xdefines.h to one of \\
-           0x48, 0x50, 0x58, 0x60. Until this warning dissappears\n");
+       fprintf(stderr, "WARNING: Please adjust MALLOC_SITE_OFFSET of xdefines.h to one of 0x48, 0x50, 0x58, 0x60. Until this warning dissappears\n");
        }
+      fprintf(stderr, "ptr %p firstPtr %p\n", ptr, firstPtr);
     }
-    for(int j = 0; j < 2; j++) {
-      ptr2 = (int *)malloc(16);
-    }
+    ptr2 = (int *)malloc(16);
     fprintf(stderr, "size %d ptr %p ptr2 %p\n", size, ptr, ptr2);
     free(ptr);
   }
