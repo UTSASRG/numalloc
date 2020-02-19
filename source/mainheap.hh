@@ -37,70 +37,6 @@
 */
 
 class MainHeap {
-#if 0
-  class MainThreadSizeClass {
-  private:
-    unsigned int _csize;
-    unsigned int _sc;
-    unsigned int _pages;
-    unsigned int _nodeIndex;
-    char        * _bumpPointer;
-    char        * _bumpPointerEnd;
-    PerSizeClassList _list;
-
-  public:
-    
-    void initialize(unsigned int sc, unsigned int classsize, unsigned int nodeindex) {
-      _sc = sc;
-      _csize = classsize;
-      _nodeIndex = nodeindex;
-      _pages = classsize >> PAGE_SIZE_SHIFT;
-      _bumpPointer = NULL;
-      _bumpPointerEnd = NULL;
-      _list.initialize();
-    }
-
-    bool hasObject() {
-      return ((_list.length() > 0) || (_bumpPointer < _bumpPointerEnd));
-    }
-
-    // The current object will be pushed with a new block of memory
-    void updateBumpPointer(char * start, size_t size) {
-      _bumpPointer = start;
-      _bumpPointerEnd = start + size;
-    }
-
-    unsigned int getClassSize() {
-      return _csize;
-    }
-
-    void * allocate(void) {
-      void * ptr = NULL; 
-
-      // Allocate from the freelist first.
-      if(_list.hasItems()) { 
-        ptr = _list.pop(); 
-      }
-      else { 
-        // Allocate from the bump pointer right now. 
-        ptr = _bumpPointer;
-        _bumpPointer += _csize;
-
-        if(_csize > (PAGE_SIZE * NUMA_NODES/2)) {
-          // Notify the OS to allocate physical memory in the block-wise way
-          MM::bindMemoryBlockwise((char *)ptr, _pages, _nodeIndex);
-        }
-      }
-
-      return ptr;
-    }
-
-    void deallocate(void * ptr) {
-      _list.push(ptr);
-    }
-  }; 
-    
-#endif
   private:
     char * _begin;
     char * _end;
@@ -342,6 +278,7 @@ class MainHeap {
 
     int numb = 0;
     void * head = NULL;
+    size_t classSize = sc->getClassSize();
     if(sc->hasItems() != true) {
       void * tail = NULL;
 
@@ -349,7 +286,7 @@ class MainHeap {
       numb = sc->getObjectsFromBumpPointer(&head, &tail);
       if(numb == 0) {
         // Get objects from the bumppointer 
-        void * bPtr = allocateOneBag(sc->getBagSize(), sc->getClassSize());
+        void * bPtr = allocateOneBag(sc->getBagSize(), classSize);
 
         // Update the bumppointer
         numb = sc->updateBumpPointerAndGetObjects(bPtr, &head, &tail);
@@ -367,6 +304,13 @@ class MainHeap {
     void * ptr = NULL;
     if(numb == 1) {
       ptr = head;
+      // Check size. If possible, we will bind the memory in the block-wise. 
+      if(classSize > (PAGE_SIZE * NUMA_NODES/2)) {
+        size_t pages = classSize >> PAGE_SIZE_SHIFT;
+
+        // Notify the OS to allocate physical memory in the block-wise way
+        MM::bindMemoryBlockwise((char *)ptr, pages, _nodeIndex);
+      }
     }
     else { 
       ptr = sc->allocateFromFreeList();
