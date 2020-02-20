@@ -49,7 +49,7 @@ int PerSizeClass::getObjectsFromBumpPointer(void ** head, void ** tail) {
         _bumpPointer = _bumpPointerEnd;
       }
       else {
-        _bumpPointer += _miniBagSize * _size;
+        _bumpPointer += _miniBagSize;
       }
 
       // Split the block into pieces and connect them together
