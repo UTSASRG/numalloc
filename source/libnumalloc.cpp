@@ -276,7 +276,7 @@ void * xxrealloc(void * ptr, size_t sz) {
     size_t oldSize = NumaHeap::getInstance().getSize(ptr);
 
 		void * newObject = xxmalloc(sz);
-		memcpy(newObject, ptr, oldSize);
+        memcpy(newObject, ptr, oldSize < sz ? oldSize : sz);
 		xxfree(ptr);
 		return newObject;
 }
