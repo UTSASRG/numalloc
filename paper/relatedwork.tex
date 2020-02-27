@@ -20,7 +20,7 @@ Ogasawara focuses on finding the preferred node location for JAVA objects during
 
 ~\cite{Majo:2015:LPC:2688500.2688509} proposes to set task-to-thread affinity, and pin threads to specific cores to achieve a better performance. It is not a memory management policy, and mainly talks about the detail implementation of task binding over different levels of the TBB library. 
 
-NumaGiC reduces the remote accesses in garbage collection phases with a mostly-distributed design that each GC thread will mostly collect memory references locally, and utilize a work-stealing mode only when no local references are available~\cite{NumaGiC}.  
+NumaGiC reduces remote accesses in garbage collection phases with a mostly-distributed design that each GC thread will mostly collect memory references locally, and utilize a work-stealing mode only when no local references are available~\cite{NumaGiC}.  
 
 
 ~\cite{diener2015automatic} proposes to combine the task management and memory management to achieve the better performance. For task mapping, it proposes to place tasks that shared the data onto the cores that share the cache, in order to reduce the cache misses and the communication overhead. For memory management, it utilizes the page faults to analyze the memory access behavior, and then migrate pages between nodes to improve the performance. Basically, this is still a proactive approach, which cannot achieve the optimal performance promised by the hardware. Also, it requires the changes of the underlying OS, and will impose some overhead of understanding the communicating tasks and memory access behavior via analyzing page faults.  
@@ -54,7 +54,7 @@ Memory system performance in a numa multicore multiprocessor
 
 ~\cite{jemalloc} introduces a round-robin fashion for arena allocation, and all locks and buffers will be local to the associated arena. Similarly, \NM{} also takes the similar approach. 
 
-Scalloc utilizes the same-sized spans in order to encourage memory reuses~\cite{Scalloc}, which is also the same for \NM{}. Salloc has another two contributions, a global backend developed by concurrent data structures, and a constant-time front which returns the spans to the backend. 
+Scalloc utilizes the same-sized spans in order to encourage memory reuses~\cite{Scalloc}, which is also the same for \NM{}. Salloc has another two contributions, a global backend developed by concurrent data structures, and a constant-time front end that returns the spans to the backend. 
 
 Bolosky et. al. propose a simple mechanism to improve the performance by replicating read-only pages to multiple processors, moving pages to the processor that written them, and placing pages to the global memory if they are written by multiple processes ~\cite{Bolosky:1989:SBE:74850.74854}. bl
 

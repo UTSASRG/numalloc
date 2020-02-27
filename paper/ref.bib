@@ -16,6 +16,76 @@
  keywords = {concurrency, monitoring, race, threading},
 } 
 
+@inproceedings{Blagodurov:2011:CNC:2002181.2002182,
+ author = {Blagodurov, Sergey and Zhuravlev, Sergey and Dashti, Mohammad and Fedorova, Alexandra},
+ title = {A Case for NUMA-aware Contention Management on Multicore Systems},
+ booktitle = {Proceedings of the 2011 USENIX Conference on USENIX Annual Technical Conference},
+ series = {USENIXATC'11},
+ year = {2011},
+ location = {Portland, OR},
+ pages = {1--1},
+ numpages = {1},
+ url = {http://dl.acm.org/citation.cfm?id=2002181.2002182},
+ acmid = {2002182},
+ publisher = {USENIX Association},
+ address = {Berkeley, CA, USA},
+} 
+
+@inproceedings{diener2015locality,
+  title={Locality vs. Balance: Exploring data mapping policies on NUMA systems},
+  author={Diener, Matthias and Cruz, Eduardo HM and Navaux, Philippe OA},
+  booktitle={2015 23rd Euromicro International Conference on Parallel, Distributed, and Network-Based Processing},
+  pages={9--16},
+  year={2015},
+  organization={IEEE}
+}
+
+@article{lameter2013numa,
+  title={Numa (non-uniform memory access): An overview},
+  author={Lameter, Christoph},
+  journal={Queue},
+  volume={11},
+  number={7},
+  pages={40--51},
+  year={2013},
+  publisher={ACM New York, NY, USA}
+}
+
+
+@inproceedings{Dashti:2013:TMH:2451116.2451157,
+ author = {Dashti, Mohammad and Fedorova, Alexandra and Funston, Justin and Gaud, Fabien and Lachaize, Renaud and Lepers, Baptiste and Quema, Vivien and Roth, Mark},
+ title = {Traffic Management: A Holistic Approach to Memory Placement on NUMA Systems},
+ booktitle = {Proceedings of the Eighteenth International Conference on Architectural Support for Programming Languages and Operating Systems},
+ series = {ASPLOS '13},
+ year = {2013},
+ isbn = {978-1-4503-1870-9},
+ location = {Houston, Texas, USA},
+ pages = {381--394},
+ numpages = {14},
+ url = {http://doi.acm.org/10.1145/2451116.2451157},
+ doi = {10.1145/2451116.2451157},
+ acmid = {2451157},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {multicore, numa, operating systems, scheduling},
+} 
+
+@inproceedings{Lepers:2015:TMP:2813767.2813788,
+ author = {Lepers, Baptiste and Qu{\'e}ma, Vivien and Fedorova, Alexandra},
+ title = {Thread and Memory Placement on NUMA Systems: Asymmetry Matters},
+ booktitle = {Proceedings of the 2015 USENIX Conference on Usenix Annual Technical Conference},
+ series = {USENIX ATC '15},
+ year = {2015},
+ isbn = {978-1-931971-225},
+ location = {Santa Clara, CA},
+ pages = {277--289},
+ numpages = {13},
+ url = {http://dl.acm.org/citation.cfm?id=2813767.2813788},
+ acmid = {2813788},
+ publisher = {USENIX Association},
+ address = {Berkeley, CA, USA},
+} 
+
 @inproceedings{wagle2015numa,
   title={NUMA-aware memory management with in-memory databases},
   author={Wagle, Mehul and Booss, Daniel and Schreter, Ivan and Egenolf, Daniel},
@@ -149,34 +219,24 @@ url="http://dx.doi.org/10.1007/978-3-642-35606-3_24"
  address = {New York, NY, USA},
 } 
 
-
-
-@article{Majo:2017:LPC:3057718.3040222,
- author = {Majo, Zoltan and Gross, Thomas R.},
- title = {A Library for Portable and Composable Data Locality Optimizations for NUMA Systems},
- journal = {ACM Trans. Parallel Comput.},
- issue_date = {March 2017},
- volume = {3},
- number = {4},
- month = mar,
- year = {2017},
- issn = {2329-4949},
- pages = {20:1--20:32},
- articleno = {20},
- numpages = {32},
- url = {http://doi.acm.org/10.1145/3040222},
- doi = {10.1145/3040222},
- acmid = {3040222},
- publisher = {ACM},
- address = {New York, NY, USA},
- keywords = {NUMA, data placement, scheduling},
-} 
+@article{memarzia2019toward,
+  title={Toward Efficient In-memory Data Analytics on NUMA Systems},
+  author={Memarzia, Puya and Ray, Suprio and Bhavsar, Virendra C},
+  journal={arXiv preprint arXiv:1908.01860},
+  year={2019}
+}
 
 
 @misc{dlmalloc,
   author = {Doug Lea},
   title = {The {GNU} {C} Library},
   howpublished = "\url{http://www.gnu.org/software/libc/libc.html}",
+}
+
+@article{diener2015automatic,
+  title={Automatic task and data mapping in shared memory architectures},
+  author={Diener, Matthias},
+  year={2015}
 }
 
 @inproceedings{Boyd-Wickizer:2010:ALS:1924943.1924944,
@@ -1108,22 +1168,74 @@ month={April},}
  keywords = {data placement, memory topology, numa, static analysis},
 } 
 
+@article{Majo:2017:LPC:3057718.3040222,
+ author = {Majo, Zoltan and Gross, Thomas R.},
+ title = {A Library for Portable and Composable Data Locality Optimizations for NUMA Systems},
+ journal = {ACM Trans. Parallel Comput.},
+ issue_date = {March 2017},
+ volume = {3},
+ number = {4},
+ month = mar,
+ year = {2017},
+ issn = {2329-4949},
+ pages = {20:1--20:32},
+ articleno = {20},
+ numpages = {32},
+ url = {http://doi.acm.org/10.1145/3040222},
+ doi = {10.1145/3040222},
+ acmid = {3040222},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {NUMA, data placement, scheduling},
+} 
+
+
+@inproceedings{Lin:2016:MTP:2872362.2872401,
+ author = {Lin, Felix Xiaozhu and Liu, Xu},
+ title = {Memif: Towards Programming Heterogeneous Memory Asynchronously},
+ booktitle = {Proceedings of the Twenty-First International Conference on Architectural Support for Programming Languages and Operating Systems},
+ series = {ASPLOS '16},
+ year = {2016},
+ isbn = {978-1-4503-4091-5},
+ location = {Atlanta, Georgia, USA},
+ pages = {369--383},
+ numpages = {15},
+ url = {http://doi.acm.org/10.1145/2872362.2872401},
+ doi = {10.1145/2872362.2872401},
+ acmid = {2872401},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {data-intensive computing, heterogeneous memory, operating systems},
+} 
+
 @misc{hugepages,
   author = {Mel Gorman},
   title = {Huge pages},
   howpublished = "\url{https://lwn.net/Articles/374424/}"
 }
 
-@misc{NumaGiC,
-  author = {L. Gidra, G. Thomas, J. Sopena, M. Shapiro, and N. Nguyen.},
-  title = {Numagic: a garbage collector for big data on big numa machines},
-  howpublished = "\url{http://www-public.tem-tsp.eu/~thomas_g/research/biblio/2015/gidra15asplos-numagic.pdf}"
-} 
+@misc{AutoNUMA,
+ author = {Jonathan Corbet}, 
+ title = {AutoNUMA: the other approach to NUMA scheduling}, 
+ howpublished = "\url{https://lwn.net/Articles/488709/}"
+}
 
-@misc{NumaGiC,
-  author = {L. Gidra, G. Thomas, J. Sopena, M. Shapiro, and N. Nguyen.},
-  title = {Numagic: a garbage collector for big data on big numa machines},
-  howpublished = "\url{http://www-public.tem-tsp.eu/~thomas_g/research/biblio/2015/gidra15asplos-numagic.pdf}"
+@inproceedings{NumaGiC,
+ author = {Gidra, Lokesh and Thomas, Ga\"{e}l and Sopena, Julien and Shapiro, Marc and Nguyen, Nhan},
+ title = {NumaGiC: A Garbage Collector for Big Data on Big NUMA Machines},
+ booktitle = {Proceedings of the Twentieth International Conference on Architectural Support for Programming Languages and Operating Systems},
+ series = {ASPLOS '15},
+ year = {2015},
+ isbn = {978-1-4503-2835-7},
+ location = {Istanbul, Turkey},
+ pages = {661--673},
+ numpages = {13},
+ url = {http://doi.acm.org/10.1145/2694344.2694361},
+ doi = {10.1145/2694344.2694361},
+ acmid = {2694361},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {NUMA, garbage collection, multicore},
 } 
 
 @misc{NewGreenThreads,
@@ -3823,23 +3935,7 @@ language={English}
  keywords = {CC-NUMA, TPC-C, dynamic page placement, migration, multiprocessor, replication},
 } 
 
-@inproceedings{Majo:2015:LPC:2688500.2688509,
- author = {Majo, Zoltan and Gross, Thomas R.},
- title = {A Library for Portable and Composable Data Locality Optimizations for NUMA Systems},
- booktitle = {Proceedings of the 20th ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming},
- series = {PPoPP 2015},
- year = {2015},
- isbn = {978-1-4503-3205-7},
- location = {San Francisco, CA, USA},
- pages = {227--238},
- numpages = {12},
- url = {http://doi.acm.org/10.1145/2688500.2688509},
- doi = {10.1145/2688500.2688509},
- acmid = {2688509},
- publisher = {ACM},
- address = {New York, NY, USA},
- keywords = {NUMA, data placement, scheduling},
-} 
+
 
 @article{Dashti:2013:TMH:2490301.2451157,
  author = {Dashti, Mohammad and Fedorova, Alexandra and Funston, Justin and Gaud, Fabien and Lachaize, Renaud and Lepers, Baptiste and Quema, Vivien and Roth, Mark},
@@ -3933,21 +4029,3 @@ language={English}
  keywords = {data placement, memory topology, numa, static analysis},
 } 
 
-
-@inproceedings{Majo:2015:LPC:2688500.2688509,
- author = {Majo, Zoltan and Gross, Thomas R.},
- title = {A Library for Portable and Composable Data Locality Optimizations for NUMA Systems},
- booktitle = {Proceedings of the 20th ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming},
- series = {PPoPP 2015},
- year = {2015},
- isbn = {978-1-4503-3205-7},
- location = {San Francisco, CA, USA},
- pages = {227--238},
- numpages = {12},
- url = {http://doi.acm.org/10.1145/2688500.2688509},
- doi = {10.1145/2688500.2688509},
- acmid = {2688509},
- publisher = {ACM},
- address = {New York, NY, USA},
- keywords = {NUMA, data placement, scheduling},
-} 

@@ -1,49 +1,49 @@
-\section{Overview}
+\section{Background}
 \label{sec:overview}
 
-\subsection{Background of NUMA Architecture}
+This section introduces some background that is necessary for \NM{}. It starts with the description of the NUMA architecture and some potential performance issues. Then it further discusses existing OS support for the NUMA architecture.  
 
-What type of issues for NUMA performance? 
-There are three challenge: remote accesses, interconnect congestion, node imbalance. 
+\subsection{NUMA Architecture}
 
-What is the overhead of remote accesses? Around twice of performance difference. 
+\label{sec:numa}
 
-What is the interconnect congestion? 
+Traditional computers are using the Uniform Memory Access (UMA) model that all processors are sharing a single memory controller uniformly, where any core can access the memory with the same latency. However, UMA architecture cannot accommodate the hardware trend with the increasing number of cores, since they may compete for the same memory controller.
 
-\subsection{NUMA Support inside OS}
+The Non-Uniform Memory Access (NUMA) architecture is proposed to solve the scalability issue, due to its decentralized nature. Instead of making all cores waiting for the same memory controller, NUMA architecture typically has multiple memory nodes, where each node has its own memory controller. Due to multiple memory controllers, the contention for the memory controller could be largely reduced and therefore the scalability could be improved correspondingly. However, the NUMA architecture  also have multiple sources of performance degradations~\cite{Blagodurov:2011:CNC:2002181.2002182}: \textit{Cache Contention}, \textit{Node Imbalance}, \textit{Interconnect Congestion}, and \textit{Remote Accesses}. Based on the study~\cite{Blagodurov:2011:CNC:2002181.2002182}, node imbalance and interconnect congestion may have a larger performance impact than cache contention and remote accesses. 
 
-Operating System provides some NUMA support inside. The most common approach is to allocate the memory from the local node. However, this approach cannot guarantee to be optimal due to multiple reasons. First, it won't work for producer-consumer model, where the memory will be utilized by threads that are not in the same node. This is actually very common, especially for the main thread. Second, it does not work when cores on different processors have to be used, if the application utilizes more physical memory of one node, or if threads are migrated later. Third, it requires the user-level memory manager support. Otherwise, an deallocated object can be allocated to threads running on the other node, causing many remote accesses. 
+\paragraph{Cache Contention:} the NUMA architecture is prone to cache contention issue, where multiple tasks may compete for the shared cache. 
+ 
+\paragraph{Node Imbalance:} When some memory controllers have much more memory accesses than others, it may cause the node imbalance issue. Therefore, some tasks may wait more time for the memory access, thwarting the whole progress of a multithreaded application.  
 
-Besides this, Operating System typically provides another memory policy where the memory will be allocated in an interleaved way. Also, OS provides different system calls that allow users to specific the memory policy, move memory, and schedule the threads. However, it is not designed for a specific applications, but providing interface that allows programmers to customize for their specific application.   
+\paragraph{Interconnect Congestion:} Interconnect congestion occurs if some tasks are placed in remote nodes that may use the inter-node interconnection to access its memory. 
 
-
-\subsection{Basic Idea of \NA{}}
-First, we will try to avoid the remote accesses, and therefore interconnect congestion. Also, during the design, we will try to 
-
-\begin{figure*}[h]
-\begin{center}
-\includegraphics[width=0.8\textwidth]{figure/heaplayout}
-%\includegraphics{figure/overview2}
-\end{center}
-\vspace{-0.1in}
-\caption{Overview of \NA{}.
-\label{fig:overview}}
-\vspace{-0.1in}
-\end{figure*}
-
-\paragraph{Topology Aware Task Assignment:} Due to the importance of task scheduling to the memory locality, \NA{} should handle the task scheduling at first. \NA{} will recognize the core-to-processor relationship, and then proposes a toplogy-aware task scheduling, which is similar to TBB-NUMA.~\cite{Majo:2015:LPC:2688500.2688509}. A thread will be pinned to a processor during the thread creation, sine per-processor pinning will create less constraints for the OS-scheduler. That is, the OS scheduler will have a better chance for the load-balance. Also, threads are assigned to processors using a round-robin way, which ensures that each processor will have a similar number of threads. This also helps to achieve the node balance for the threads. 
-
-\paragraph{Main Thread's Handling:} Based on our observation of main thread, the main thread typically prepares the data for all of its children threads. That is, it is very likely that most objects allocated from the main thread will be shared by most threads. Therefore, it will cause the load imbalance issue, if all objects from the main thread are allocated from the node that the main thread is running on. Also, it could also introduce significant number of remote accesses, since not all threads could run on the same node.  
-
-\paragraph{Children Threads:} For normal threads, it is better to allocate the memory from the local node, in order to reduce remote accesses. But existing allocators have an issue to handle remote frees that the deallocation thread is not the same as the allocation thread~\cite{Aigner:2015:FML:2814270.2814294}. They tend to place freed objects into the current thread, such as TCMalloc~\cite{tcmalloc} or jemalloc~\cite{jemalloc}, no matter where these objects are allocated from.  However, this could cause remote accesses.  
-In order to solve this issue, \NM{} proposes an information-computable design, as shown in Figure~\ref{fig:overview}. Basically, \NM{} utilizes the fact of 64-bit address space, where machines have extremely large amount of virtual address. Basically, \NM{} requests 32 TB virtual address at one time, and then divides it to multiple spans based on the number of nodes. For each span, \NM{} binds the memory to a specific node through \texttt{mbind} system call. Therefore, \NM{} is able to recognize the physical location by the address. During the deallocation, \NM{} will actually return a remote object to its owner, and only return the objects from the current node to the current thread's PerThreadHeap. 
+\paragraph{Remote Accesses:} In NUMA architecture, local nodes can be accessed with less latency than remote accesses. Therefore, it is important to reduce remote accesses to improve the performance.
 
 
-\paragraph{Automatic Huge Page Support:} The default huge page support is not good for the performance~\cite{}. It also may have some harmful impact on the performance. However, if the huge page is utilized very well, the application's performance can be improved dramatically. The underlying reason is that it will have TLB misses, since one TLB entry will cover a larger range of memory, such as 2MB instead of 4KB. Based on a simple test, using the TLB could improve a simple test case more than 10\%, without any other changes. To taking advantage of this benefit, each PerNodeHeap is further divided into two parts, where small objects will be allocated from the beginning and will be allocated using small pages, while big objects will be allocated from the end of the heap using huge page (2MB). We believe that this mechanism balances the performance and memory consumption.   
+Overall, the NUMA architecture has multiple potential performance issues. These performance issues cannot be solved by the hardware automatically. Software support is required to control the placement of tasks and physical pages in order to achieve the optimal performance for multithreaded applications.  
 
-\paragraph{Reutilization of Big Objects:} Existing allocators will handle big objects different with small objects, which will be allocated from the OS directly. When these objects are freed, they will be returned to the OS directly by invoking \texttt{munmap} or \texttt{madvise}. This mechanism was designed to reduce memory consumption. However, this mechanism will invoke a lot of unnecessary overhead. Taking an object with the size of 1 MB as the example, this object includes 256 pages (4KB). Therefore, the overhead includes returning 256 pages to the OS (by modifying the page table entries of 256 pages), and then 256 page faults when this is returned. More importantly, cache lines of these 256 pages should be reloaded from the memory after allocating these physical pages. \NM{} aims to reduce such overhead based on a simple assumption: if the application is requesting memory, then big objects should not be returned to the OS to avoid such overhead. In fact, \NM{} proposes to utilize these big objects for small objects. Due to this design, \NM{} actually utilizes 1MB as the basic unit, and then allocates 1MB for small objects on demand. 
+\subsection{NUMA Support Inside OS}
 
-\paragraph{Node-local Metadata:} \NM{} designs the metadata meticulously, which will be always allocated in the same node. Such metadata includes the PerMBInfo, freelists for different size classes, and freelists for big objects. PerThreadHeap's metadata will be also allocated in the local node as well, which has been assigned to a specific node during thread creation. 
+Currently, the Operating System already provides some support for the NUMA architecture, especially on task scheduling, or physical memory allocation. 
 
+For the task scheduling support, the OS provides  system calls that allow users to place a task to a specific node. One example of such system calls is \texttt{pthread\_attr\_setaffinity\_np} that   sets the CPU affinity mask attribute  for a thread. Therefore, users may employ these system calls to assign tasks on a specific memory node or even a specific core. However, the OS will require programmers to specify the assignment explicitly. 
+
+For memory allocation, the OS provides multiple methods to support NUMA related memory management. First, the OS, such as Linux, supports the first-touch or interleaved policy~\cite{lameter2013numa, diener2015locality}. By default, the OS will allocate a physical page from the same node as a task that first accesses the corresponding virtual page, called as first-touch policy. First-touch policy maximizes local accesses over remote accesses, but it  cannot eliminate remote accesses for shared objects. Interleaved policy helps to achieve an even load on interconnection and memory controller, avoiding the load imbalance issue described above. However, users may require to invoke a specific system call to change the allocation policy to be the interleaved policy.  Second, the OS also provides some system calls that allow users to specify the physical memory node explicitly, via system calls like \texttt{mbind}. On top of these system calls, \texttt{libnuma} provides stable APIs for controlling the scheduling and memory allocation policies, and \texttt{numactl} allows a process to control the scheduling or memory placement policy inside the user space. 
+
+Overall, existing OS or runtime systems already provide some interfaces that allow users to control the scheduling and memory policy for NUMA architecture inside the user space. However, they all require programmers to specify the policy explicitly, which cannot automatically achieve the promised performance by hardware.     
+
+
+%First, it won't work for producer-consumer model, where the memory will be utilized by threads that are not in the same node. This is actually very common, especially for the main thread. Second, it does not work when cores on different processors have to be used, if the application utilizes more physical memory of one node, or if threads are migrated later. Third, it requires the user-level memory manager support. Otherwise, an deallocated object can be allocated to threads running on the other node, causing many remote accesses. 
+
+
+
+Besides this, Operating System typically provides another memory policy where the memory will be allocated in an interleaved way. Also, OS provides different system calls that allow users to specific the memory policy, move memory, and schedule the threads. However, it is not designed for a specific applications, but providing interface that allows programmers to customize for their specific application. 
+
+libnuma and numactl provides some support that allows .
+
+It also allows users to   
+
+
+Overall, most of such support cannot benefit the performance of programs automatically, which will require programmer effort to tell OS.   
 
  
