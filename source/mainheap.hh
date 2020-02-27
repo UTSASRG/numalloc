@@ -314,6 +314,7 @@ class MainHeap {
     }
     else { 
       ptr = sc->allocateFromFreeList();
+     // fprintf(stderr, "allocate small object with ptr %p\n", ptr);
     }
 
     return ptr;

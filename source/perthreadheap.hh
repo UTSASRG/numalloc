@@ -110,6 +110,7 @@ public:
 
     sc->deallocate(ptr);
 
+    //fprintf(stderr, "ptr %p classIndex %d\n", ptr, classIndex);
     // Check if there are too many freed objects in the freelist, if yes,
     // then donateObjects to the pernode freelist if necessary
     if(sc->checkDonation() == true) {

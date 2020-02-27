@@ -236,7 +236,7 @@ void heapinitialize() {
 #if GET_TIME
      unsigned long long start = rdtscp(); 
 #endif
-      //fprintf(stderr, "malloc size %ld ptr %p\n", size, ptr);
+     //fprintf(stderr, "free ptr %p\n", ptr);
      // Perform the free operation
      NumaHeap::getInstance().deallocate(ptr); 
 #if GET_TIME

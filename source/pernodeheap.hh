@@ -268,12 +268,12 @@ class PerNodeHeap {
        int index = getNodeIndex(); 
        int sc = size2Class(size);
       
-       //fprintf(stderr, "sc %d size %lx ptr %p\n", sc, size, ptr);
        if(index == nodeindex) {
          // Only return an object to perthread's heap if the object is from the same node
          current->ptheap->deallocate(ptr, sc);
        }
        else {
+      // fprintf(stderr, "return object to node %d. size %lx ptr %p\n", nodeindex, size, &size);
         // Return this object to the current node's freelist for different size classes
         // Based on NumaHeap, this address belongs to the current node.
         _smallSizes[sc].deallocate(ptr);
