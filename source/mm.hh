@@ -56,7 +56,6 @@ public:
       fprintf(stderr, "Binding failure for address ptr %p, with error %s\n", ptr, strerror(errno));
       exit(-1);
     }
-    
     return; 
   }
 

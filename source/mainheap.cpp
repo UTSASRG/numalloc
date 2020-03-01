@@ -3,8 +3,9 @@
 void * MainHeap::allocate(size_t size) {
   void * ptr = NULL;
   unsigned long address = (unsigned long)&size;
-  //fprintf(stderr, "size is at %p address %lx\n", &size, address);
+  //fprintf(stderr, "user address %lx\n", *((unsigned long *)(address + MALLOC_SITE_OFFSET)));
   address += *((unsigned long *)(address + MALLOC_SITE_OFFSET));
+  //fprintf(stderr, "size is at %p address %lx\n", &size, address);
   CallsiteInfo info;
   info.init(); 
 

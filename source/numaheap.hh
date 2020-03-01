@@ -146,9 +146,9 @@ public:
 
       // Always allocate a large object from PerNodeHeap directly 
       ptr = _nodes[index]->allocateBigObject(size);
-     // fprintf(stderr, "allocate big size %lx ptr %p\n", size, ptr);
     }
     
+     //fprintf(stderr, "allocate size %lx ptr %p\n", size, ptr);
 
     return ptr;
   } 
@@ -168,6 +168,7 @@ public:
   }
 
   void deallocate(void * ptr) {
+ //   fprintf(stderr, "deallocate ptr %p\n", ptr);
 #ifdef SPEC_MAINTHREAD_SUPPORT
     if(((uintptr_t)ptr >= _mainHeapBegin) && ((uintptr_t)ptr < _heapBegin)) {
       return _mainHeap.deallocate(ptr);

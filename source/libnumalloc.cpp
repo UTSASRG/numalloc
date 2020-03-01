@@ -217,7 +217,7 @@ void heapinitialize() {
       break;
   
     }
-//     fprintf(stderr, "xxmalloc size %ld ptr %p thread-id %d\n", size, ptr);
+    //fprintf(stderr, "xxmalloc size %ld ptr %p\n", size, ptr);
 //     void *tem = (void *) ((long) ptr + size);
 //     fprintf(stderr, "xxmalloc ptr check %p %ld %c\n", ptr, size , (char *) tem);
     return ptr;
@@ -227,7 +227,7 @@ void heapinitialize() {
 		if(ptr == NULL) {
       return;
 		}
-//     fprintf(stderr, "xxfree ptr %p thread-id %d\n", ptr, current->index);
+   //fprintf(stderr, "xxfree ptr %p\n", ptr);
    if(heapInitStatus == E_HEAP_INIT_WORKING) { 
      Real::free(ptr);
    }
@@ -327,6 +327,7 @@ int pthread_create(pthread_t * tid, const pthread_attr_t * attr,
 	if(heapInitStatus != E_HEAP_INIT_DONE) {
 			heapinitialize();
 	}
+
   return xthread::getInstance().thread_create(tid, attr, start_routine, arg);
 }
 int pthread_join(pthread_t tid, void** retval) {
