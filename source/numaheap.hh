@@ -83,7 +83,7 @@ public:
     // Initialize the memory for the main thread
     // The main thread's memory is always located in the beginning of the heap
     // For it, we will maintain the memory location for each page, so that the memory can be re-utilized.
-    //initMainThreadMemory(_heapBegin); 
+    initMainThreadMemory(_heapBegin); 
 
     // Allocate memory from PerNode    
     // Initialize for each PerNodeHeap right now. 
@@ -94,10 +94,10 @@ public:
       _nodes[i]->initialize(i, pnheapPointer); 
 
       // Binding the memory to the specific node
-      //unsigned long mask = 1 << i;
-      //if(mbind(pnheapPointer, SIZE_PER_NODE, MPOL_PREFERRED, &mask, 32, 0) == -1) {
-      //  fprintf(stderr, "Binding failure for address ptr %p, with error %s\n", pnheapPointer, strerror(errno));
-      //}
+      unsigned long mask = 1 << i;
+      if(mbind(pnheapPointer, SIZE_PER_NODE, MPOL_PREFERRED, &mask, 32, 0) == -1) {
+        fprintf(stderr, "Binding failure for address ptr %p, with error %s\n", pnheapPointer, strerror(errno));
+      }
 
       pnheapPointer += SIZE_PER_NODE;
     }
