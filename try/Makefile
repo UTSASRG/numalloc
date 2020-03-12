@@ -1,7 +1,6 @@
 SRCS = real.cpp							\
 			 xthread.cpp          \
 			 perthreadheap.cpp          \
-			 interheap.cpp \
 			 persizeclass.cpp \
 			 libnumalloc.cpp			
 

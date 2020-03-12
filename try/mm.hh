@@ -53,7 +53,7 @@ public:
     unsigned long mask = 1 << nodeindex;
     // Binding the memory to a specific node before the actual access. 
     if(mbind(ptr, size, MPOL_BIND, &mask, NUMA_NODES+1, 0) == -1) {
-      fprintf(stderr, "Binding failure for address ptr %p, with error %s\n", ptr, strerror(errno));
+      fprintf(stderr, "Binding failure for address ptr %p size %lx, with error %s\n", ptr, size, strerror(errno));
       exit(-1);
     }
     

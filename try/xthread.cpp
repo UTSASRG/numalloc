@@ -52,9 +52,9 @@ int xthread::thread_create(pthread_t * thread, const pthread_attr_t * attr, thre
 	children->startRoutine = fn;
 
   // If there are two threads right now, we will stop the main heap phase.
-#ifdef SPEC_MAINTHREAD_SUPPORT
+#ifdef INTERHEAP_SUPPORT
   if(_alives == 2) {
-    NumaHeap::getInstance().stopMainHeapPhase();
+    NumaHeap::getInstance().stopSerialPhase();
   }
 #endif
 
@@ -86,9 +86,9 @@ int xthread::thread_join(pthread_t thread, void ** retval) {
 	  unlock();
 	}
   
-#ifdef SPEC_MAINTHREAD_SUPPORT
+#ifdef INTERHEAP_SUPPORT
   if(_alives == 1) {
-    NumaHeap::getInstance().startMainHeapPhase();
+    NumaHeap::getInstance().startSerialPhase();
   }
 #endif
 	return ret;

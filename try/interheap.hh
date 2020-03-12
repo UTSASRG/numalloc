@@ -1,5 +1,5 @@
-#ifndef __MAIN_HEAP_HH__
-#define __MAIN_HEAP_HH__
+#ifndef __INTER_HEAP_HH__
+#define __INTER_HEAP_HH__
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -48,79 +48,14 @@ class InterHeap {
     char * _bpSmallEnd;
     char * _bpBig;
     char * _bpBigEnd;
-    pthread_spinlock_t _lock;
+    pthread_spinlock_t _bigLock;
 
     // Currently, size class is from 2^4 to 2^19 (512 KB), with 16 sizes in total.
     PerSizeClass _sclass[SMALL_SIZE_CLASSES];
+    pthread_spinlock_t _smallLock[SMALL_SIZE_CLASSES];
 
     // _bigObjects will also maintain the PerMBINfo
     PerNodeBigObjects _bigObjects;
-
-    class CallsiteInfo {
-      bool _isPrivate; // Is known to be private or not.
-      int  _allocNum;  // How many allocations in this callsite?
-
-      public:
-        CallsiteInfo() {
-        }
-
-        void init() {
-          _isPrivate = false;
-          _allocNum = 1;
-        }
-
-        inline bool isPrivateCallsite() {
-          return _isPrivate;
-        }
-
-        inline void updateAlloc() {
-          _allocNum++;
-        }
-
-        inline void setPrivateCallsite() {
-          _isPrivate = true;
-        }
-    };
-
-    // We should get a big chunk at first and do our allocation. 
-    // Typically, there is no need to do the deallocation in the main thread.
-    class localAllocator {
-      public:
-      static void * allocate(size_t size) {
-        return Real::malloc(size);
-      }
-
-      static void free(void *ptr) {
-        return Real::free(ptr);
-      }
-    };
-
-    // CallsiteMap is used to save the callsite and corresponding information (whether it is
-    // private or not).
-    typedef HashMap<void *, CallsiteInfo, spinlock, localAllocator> CallsiteMap;
-    CallsiteMap _callsiteMap;
-
-    class ObjectInfo {
-    public:
-      int            _allocSequence;
-      CallsiteInfo * _callsiteInfo;
-
-      ObjectInfo(int sequence, CallsiteInfo * info) {
-        _allocSequence = sequence;
-        _callsiteInfo = info;
-      }
-
-      int getSequence() {
-        return _allocSequence;
-      }
-
-      CallsiteInfo * getCallsiteInfo() {
-        return _callsiteInfo;
-      }
-    };
-    // ObjectsMap will save the mapping between the object address and its callsite
-    typedef HashMap<void *, ObjectInfo, spinlock, localAllocator> ObjectsHashMap;
-    ObjectsHashMap _objectsMap;
 
     int   _mhSequence;     // main heap phase sequence number
  public:
@@ -166,14 +101,12 @@ class InterHeap {
         else {
           classSize *= 2;
        }
+        pthread_spin_init(&_smallLock[i], PTHREAD_PROCESS_PRIVATE);
       }
 
       // Initialize the lock
-      pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
+      pthread_spin_init(&_bigLock, PTHREAD_PROCESS_PRIVATE);
 
-      // Call stack map
-      _callsiteMap.initialize(HashFuncs::hashStackAddr, HashFuncs::compareAddr, SIZE_CALL_SITE_MAP);
-      _objectsMap.initialize(HashFuncs::hashAllocAddr, HashFuncs::compareAddr, SIZE_HASHED_OBJECTS_MAP);
    } 
 
    void stopPhase() {
@@ -279,6 +212,9 @@ class InterHeap {
     int numb = 0;
     void * head = NULL;
     size_t classSize = sc->getClassSize();
+    int scindex = size2Class(size);
+
+    lockSmall(scindex);
     if(sc->hasItems() != true) {
       void * tail = NULL;
 
@@ -314,13 +250,77 @@ class InterHeap {
     }
     else { 
       ptr = sc->allocateFromFreeList();
-     // fprintf(stderr, "allocate small object with ptr %p\n", ptr);
     }
+    unlockSmall(scindex);
 
+    //if(size > 32 && size < 64)
+    //fprintf(stderr, "allocate an object ptr %p size %ld\n", ptr, size);
     return ptr;
   }
 
-  void * allocate(size_t size);
-  void deallocate(void * ptr);
+void * allocate(size_t size) {
+    void * ptr = NULL;
+
+  if(isBigObject(size)) {
+    //fprintf(stderr, "Allocate big object with size %lx\n", size);
+    lockBig();
+    ptr = allocateBigObject(size);
+    unlockBig();
+  }
+  else {
+    ptr = allocateSmallObject(size);
+  }
+
+  return ptr;
+}
+
+void deallocate(void * ptr) {
+  size_t size = getSize(ptr);
+
+  if(!isBigObject(size)) {
+//    if(size > 32 && size < 64)
+//    fprintf(stderr, "deallocation ptr %p size %ld\n", ptr, size);
+    int sc = size2Class(size); 
+    
+    //if(!_mainHeapPhase) { 
+      //pthread_spin_lock(&_lock);
+      // Return to the size class
+      lockSmall(sc);
+      _sclass[sc].deallocate(ptr);
+      unlockSmall(sc);
+      //pthread_spin_unlock(&_lock);
+   // }
+   // else {
+   //   _sclass[sc].deallocate(ptr);
+   // }
+  }
+  else {
+  //  if(!_mainHeapPhase) {
+      lockBig(); 
+      _bigObjects.deallocate(ptr, size);
+      unlockBig(); 
+      //pthread_spin_unlock(&_lock);
+   // }
+   // else {
+   //   _bigObjects.deallocate(ptr, size);
+   // }
+  }
+}
+
+  void lockSmall(int sc) {
+    pthread_spin_lock(&_smallLock[sc]);
+  }
+
+  void unlockSmall(int sc) {
+    pthread_spin_unlock(&_smallLock[sc]);
+  }
+
+  void lockBig() {
+    pthread_spin_lock(&_bigLock);
+  }
+
+  void unlockBig() {
+    pthread_spin_unlock(&_bigLock);
+  }
 };
 #endif

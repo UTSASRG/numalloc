@@ -220,6 +220,29 @@ public:
 #endif
   }
 
+  ValueType * insertAndReturn(const KeyType& key, size_t keylen, ValueType value) {
+    if(_initialized != true) {
+      fprintf(stderr, "process %d: initialized at  %p hashmap is not true\n", getpid(), &_initialized);
+    }
+
+    assert(_initialized == true);
+    size_t hindex = hashIndex(key, keylen);
+    // PRINF("Insert entry:  before inserting\n");
+    struct HashBucket* first = getHashBucket(hindex);
+    struct Entry* entry;
+
+    // PRINF("Insert entry: key %p\n", key);
+#if LOCK_PROTECTION
+    first->Lock();
+    entry = insertEntry(first, key, keylen, value);
+    first->Unlock();
+#else
+    entry = insertEntry(first, key, keylen, value);
+#endif
+    
+    return &entry->value;
+  }
+
   // Insert a hash table entry if it is not existing.
   // If the entry is already existing, return true
   bool insertIfAbsent(const KeyType& key, size_t keylen, ValueType value) {
