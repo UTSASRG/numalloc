@@ -213,7 +213,7 @@ class xthread {
    }
 
 		unlock();
-    fprintf(stderr, "allocate THREAD %d\n", index);
+  //  fprintf(stderr, "allocate THREAD %d\n", index);
     return index;
   }
 
