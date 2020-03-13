@@ -101,7 +101,7 @@ class xthread {
         for (int cpu = 0; cpu < totalCpus; cpu++) {
 //          fprintf(stderr, "Node %d: setcpu %d\n", i, cpu);
           if(numa_bitmask_isbitset(bitmask, cpu)) {
-            fprintf(stderr, "Node %d: setcpu %d\n", i, cpu);
+      //      fprintf(stderr, "Node %d: setcpu %d\n", i, cpu);
             CPU_SET_S(cpu, size, cpusetp);
           }
         }
