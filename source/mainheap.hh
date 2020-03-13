@@ -305,7 +305,7 @@ class MainHeap {
     if(numb == 1) {
       ptr = head;
       // Check size. If possible, we will bind the memory in the block-wise. 
-      if(classSize > (PAGE_SIZE * NUMA_NODES/2)) {
+      if(classSize > (PAGE_SIZE * 4 * NUMA_NODES)) {
         size_t pages = classSize >> PAGE_SIZE_SHIFT;
 
         // Notify the OS to allocate physical memory in the block-wise way

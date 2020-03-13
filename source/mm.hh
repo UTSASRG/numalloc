@@ -53,7 +53,7 @@ public:
     unsigned long mask = 1 << nodeindex;
     // Binding the memory to a specific node before the actual access. 
     if(mbind(ptr, size, MPOL_BIND, &mask, NUMA_NODES+1, 0) == -1) {
-      fprintf(stderr, "Binding failure for address ptr %p, with error %s\n", ptr, strerror(errno));
+      fprintf(stderr, "Binding failure for address ptr %p size %ld, with error %s\n", ptr, size, strerror(errno));
       exit(-1);
     }
     return; 
@@ -69,7 +69,7 @@ public:
 
     // Set the memory to be interleaved, and the nodemax has to be set to 1 more than the NUMA_NODES
     if(mbind(ptr, sz, MPOL_INTERLEAVE, &mask, NUMA_NODES+1, 0) == -1) {
-      fprintf(stderr, "Binding failure for address ptr %p, with error %s\n", ptr, strerror(errno));
+      fprintf(stderr, "Binding failure for address ptr %p size %ld, with error %s\n", ptr, sz, strerror(errno));
       exit(-1);
     }
 

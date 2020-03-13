@@ -78,18 +78,36 @@ class xthread {
 
       size = CPU_ALLOC_SIZE(num_cpus);
 
+      fprintf(stderr, "size is %d with %d cpus. sizeof cpu_set_t %p\n", size, num_cpus, sizeof(* cpusetp));
       int num_cpus_per_node = num_cpus/NUMA_NODES;
       // Making sure that the configuration is the same as the results of lscpu
       // Initialize the CPU set!!
+ #if 0
       for (int i = 0; i < NUMA_NODES; i++) {
         struct logic_cpu cpus = Numa::get_logic_cpu(i);
             CPU_ZERO_S(size, cpusetp);
             for (int j = 0; j < cpus.size; j++) {
-//                fprintf(stderr, "Node %d: setcpu %d\n", i, cpus.cpus[j]);
+                fprintf(stderr, "Node %d: setcpu %d\n", i, cpus.cpus[j]);
                 CPU_SET_S(cpus.cpus[j], size, cpusetp);
             }
             pthread_attr_setaffinity_np(&_tattrs[i], size, cpusetp);
       }
+ #else
+      int cpu_now = 0;
+      // Making sure that the configuration is the same as the results of lscpu
+      // Initialize the CPU set!!
+      for(int i = 0; i < NUMA_NODES; i++) {
+        fprintf(stderr, "i%d cpu_now %d num_cpus_pernode %d\n", i, cpu_now, num_cpus_per_node);
+        CPU_ZERO_S(size, cpusetp);
+        for (int cpu = cpu_now; cpu < cpu_now + num_cpus_per_node; cpu++) {
+//          fprintf(stderr, "Node %d: setcpu %d\n", i, cpu);
+          CPU_SET_S(cpu, size, cpusetp);
+        }
+        pthread_attr_setaffinity_np(&_tattrs[i], size, cpusetp);
+        cpu_now += num_cpus_per_node;
+      }
+
+ #endif
       
       // Initialize all threads's structure at once 
       thread_t * thread;
@@ -113,7 +131,7 @@ class xthread {
             _nodeIndex = 0;
           }
         }
-      //  fprintf(stderr, "initialize i %d _nodeIndex %d\n", i, _nodeIndex);
+//fprintf(stderr, "initialize i %d _nodeIndex %d\n", i, _nodeIndex);
       }
 
 		  // Now we will intialize the initial thread
