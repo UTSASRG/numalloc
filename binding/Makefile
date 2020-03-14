@@ -9,7 +9,7 @@ DEPS = $(SRCS) $(INCS)
 CXX = clang++ 
 
 
-CFLAGS = -std=c++14 -Wno-unused-result -O2 -DNUMA_NODES=8
+CFLAGS = -std=c++14 -Wno-unused-result -g -O2 -DNUMA_NODES=2
 
 INCLUDE_DIRS = -I.
 LIBS     := dl pthread

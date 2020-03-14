@@ -28,9 +28,11 @@
 #include "real.hh"
 #include "xthread.hh"
 
+thread_local thread_t * current;
 
 __attribute__((constructor)) void initializer() {
 	xthread::getInstance().initialize();
+  Real::initializer();
 }
 
 // Intercept thread creation

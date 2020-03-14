@@ -95,9 +95,8 @@ class xthread {
 
         CPU_ZERO_S(size, cpusetp);
         for (int cpu = 0; cpu < totalCpus; cpu++) {
-//          fprintf(stderr, "Node %d: setcpu %d\n", i, cpu);
           if(numa_bitmask_isbitset(bitmask, cpu)) {
-      //      fprintf(stderr, "Node %d: setcpu %d\n", i, cpu);
+     //       fprintf(stderr, "Node %d: setcpu %d\n", i, cpu);
             CPU_SET_S(cpu, size, cpusetp);
           }
         }
@@ -140,7 +139,9 @@ class xthread {
 		int tindex = allocThreadIndex();
    	assert(tindex == 0);
 
-		// Adding the thread's pthreadt.
+    current = getThread(tindex);
+
+    // Adding the thread's pthreadt.
 		current->thread = pthread_self();
 
     // Binding the current thread to the current node.    
@@ -198,7 +199,7 @@ class xthread {
    }
 
 		unlock();
-    fprintf(stderr, "allocate THREAD %d\n", index);
+    //fprintf(stderr, "allocate THREAD %d\n", index);
     return index;
   }
 
