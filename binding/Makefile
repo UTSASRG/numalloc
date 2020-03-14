@@ -19,7 +19,7 @@ TARGETS = libbind.so
 all: $(TARGETS)
 
 libbind.so: $(DEPS)
-	$(CXX) $(CFLAGS) $(INCLUDE_DIRS) -shared -fPIC $(SRCS) -o libnumalloc.so -ldl -lpthread -lrt -lnuma
+	$(CXX) $(CFLAGS) $(INCLUDE_DIRS) -shared -fPIC $(SRCS) -o libbind.so -ldl -lpthread -lrt -lnuma
 
 clean:
 	rm -f $(TARGETS)
