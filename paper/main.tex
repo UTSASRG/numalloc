@@ -1,5 +1,4 @@
-\documentclass[sigconf]{acmart}
-
+\documentclass[acmsmall,review,anonymous]{acmart}\settopmatter{printfolios=true,printccs=false,printacmref=false}
 
 \usepackage{times}
 \usepackage{datetime}
@@ -62,14 +61,16 @@
 \begin{document}
 
 \title{NUMALLOC: Adaptive NUMA Memory Allocator}
+\author{Anonymous}
+
+\input{abstract}
 
 \maketitle
 
-\author{Anonymous}
 
 \date{}
 
-
+\keywords{Non-Uniform Memory Access, Memory Allocator, NUMA Allocator}  %% \keywords are mandatory in final camera-ready submission
 
 \input{intro}
 \input{overview}
@@ -77,8 +78,8 @@
 \input{evaluation}
 \input{relatedwork}
 {
-\bibliographystyle{plain}
-\bibliography{ref,tongping}
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{ref,emery,tongping}
 }
 
 \end{document}

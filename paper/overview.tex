@@ -7,43 +7,38 @@ This section introduces some background that is necessary for \NM{}. It starts w
 
 \label{sec:numa}
 
-Traditional computers are using the Uniform Memory Access (UMA) model that all processors are sharing a single memory controller uniformly, where any core can access the memory with the same latency. However, UMA architecture cannot accommodate the hardware trend with the increasing number of cores, since they may compete for the same memory controller.
+Traditional computers are using the Uniform Memory Access (UMA) model that all CPU cores are sharing a single memory controller, where any core can access the memory with the same latency (uniformly). However, the UMA architecture cannot accommodate the hardware trend with the increasing number of cores, since all of them may compete for the same memory controller. Therefore, the performance bottleneck is the memory controller in many-core machines, since a task cannot proceed without getting its necessary data from the memory. 
 
-The Non-Uniform Memory Access (NUMA) architecture is proposed to solve the scalability issue, due to its decentralized nature. Instead of making all cores waiting for the same memory controller, NUMA architecture typically has multiple memory nodes, where each node has its own memory controller. Due to multiple memory controllers, the contention for the memory controller could be largely reduced and therefore the scalability could be improved correspondingly. However, the NUMA architecture  also have multiple sources of performance degradations~\cite{Blagodurov:2011:CNC:2002181.2002182}: \textit{Cache Contention}, \textit{Node Imbalance}, \textit{Interconnect Congestion}, and \textit{Remote Accesses}. Based on the study~\cite{Blagodurov:2011:CNC:2002181.2002182}, node imbalance and interconnect congestion may have a larger performance impact than cache contention and remote accesses. 
+The Non-Uniform Memory Access (NUMA) architecture is proposed to solve the scalability issue, due to its decentralized nature. Instead of making all cores waiting for the same memory controller, the NUMA architecture typically is installed with multiple memory controllers, where a group of CPU cores have its own memory controller (called as a node). Due to multiple memory controllers, the contention for the memory controller could be largely reduced and therefore the scalability could be improved correspondingly. However, the NUMA architecture also has multiple sources of performance degradations~\cite{Blagodurov:2011:CNC:2002181.2002182}, including \textit{Cache Contention}, \textit{Node Imbalance}, \textit{Interconnect Congestion}, and \textit{Remote Accesses}. Based on the study~\cite{Blagodurov:2011:CNC:2002181.2002182}, node imbalance and interconnect congestion may have a larger performance impact than cache contention and remote accesses. 
 
 \paragraph{Cache Contention:} the NUMA architecture is prone to cache contention issue, where multiple tasks may compete for the shared cache. 
  
 \paragraph{Node Imbalance:} When some memory controllers have much more memory accesses than others, it may cause the node imbalance issue. Therefore, some tasks may wait more time for the memory access, thwarting the whole progress of a multithreaded application.  
 
-\paragraph{Interconnect Congestion:} Interconnect congestion occurs if some tasks are placed in remote nodes that may use the inter-node interconnection to access its memory. 
+\paragraph{Interconnect Congestion:} Interconnect congestion occurs if some tasks are placed in remote nodes that may use the inter-node interconnection to access their memory. 
 
-\paragraph{Remote Accesses:} In NUMA architecture, local nodes can be accessed with less latency than remote accesses. Therefore, it is important to reduce remote accesses to improve the performance.
+\paragraph{Remote Accesses:} In NUMA architecture, local nodes can be accessed with less latency than remote accesses. Therefore, it is important to reduce remote accesses to improve the performance.\\
 
 
-Overall, the NUMA architecture has multiple potential performance issues. These performance issues cannot be solved by the hardware automatically. Software support is required to control the placement of tasks and physical pages in order to achieve the optimal performance for multithreaded applications.  
+Overall, the NUMA architecture has multiple potential performance issues. However, these performance issues cannot be solved by the hardware automatically. Software support is required to control the placement of tasks, physical pages, and objects in order to achieve the optimal performance for multithreaded applications.  
 
 \subsection{NUMA Support Inside OS}
 
 Currently, the Operating System already provides some support for the NUMA architecture, especially on task scheduling, or physical memory allocation. 
 
-For the task scheduling support, the OS provides  system calls that allow users to place a task to a specific node. One example of such system calls is \texttt{pthread\_attr\_setaffinity\_np} that   sets the CPU affinity mask attribute  for a thread. Therefore, users may employ these system calls to assign tasks on a specific memory node or even a specific core. However, the OS will require programmers to specify the assignment explicitly. 
+For the task scheduling support, the OS provides  system calls that allow users to place a task to a specific node. One example of such system calls is \texttt{pthread\_attr\_setaffinity\_np} that   sets the CPU affinity mask attribute  for a thread. Therefore, users may employ these system calls to assign tasks on a specific memory node or even a specific core. However, programmers should specify the task assignment explicitly. 
 
-For memory allocation, the OS provides multiple methods to support NUMA related memory management. First, the OS, such as Linux, supports the first-touch or interleaved policy~\cite{lameter2013numa, diener2015locality}. By default, the OS will allocate a physical page from the same node as a task that first accesses the corresponding virtual page, called as first-touch policy. First-touch policy maximizes local accesses over remote accesses, but it  cannot eliminate remote accesses for shared objects. Interleaved policy helps to achieve an even load on interconnection and memory controller, avoiding the load imbalance issue described above. However, users may require to invoke a specific system call to change the allocation policy to be the interleaved policy.  Second, the OS also provides some system calls that allow users to specify the physical memory node explicitly, via system calls like \texttt{mbind}. On top of these system calls, \texttt{libnuma} provides stable APIs for controlling the scheduling and memory allocation policies, and \texttt{numactl} allows a process to control the scheduling or memory placement policy inside the user space. 
+For memory allocation, the OS provides multiple methods to support NUMA related memory management. First, the OS, such as Linux, supports the first-touch or interleaved policy~\cite{lameter2013numa, diener2015locality}. By default, the OS will allocate a physical page from the same node as a task that first accesses the corresponding virtual page, also called  first-touch policy. First-touch policy maximizes local accesses over remote accesses, but it cannot eliminate remote accesses for shared objects. Interleaved policy helps to achieve a balanced workload  on interconnection and memory controller, avoiding the load imbalance issue described above. However, users may require to invoke a specific system call to change the allocation policy to be the interleaved policy. Second, the OS also provides some system calls that allow users to specify the physical memory node explicitly, via system calls like \texttt{mbind}. On top of these system calls, \texttt{libnuma} provides stable APIs for controlling the scheduling and memory allocation policies, and \texttt{numactl} allows a process to control the scheduling or memory placement policy inside the user space. 
 
-Overall, existing OS or runtime systems already provide some interfaces that allow users to control the scheduling and memory policy for NUMA architecture inside the user space. However, they all require programmers to specify the policy explicitly, which cannot automatically achieve the promised performance by hardware.     
-
+Overall, existing OS or runtime systems already provide some interfaces that allow users to control the scheduling and memory policy for NUMA architecture inside the user space. However, they all require programmers to specify the policy explicitly, which cannot achieve the promised performance by hardware automatically. \NM{} relies on these existing system calls to support NUMA-aware memory allocations, but will achieve a better performance without changing explicit specification. 
 
 %First, it won't work for producer-consumer model, where the memory will be utilized by threads that are not in the same node. This is actually very common, especially for the main thread. Second, it does not work when cores on different processors have to be used, if the application utilizes more physical memory of one node, or if threads are migrated later. Third, it requires the user-level memory manager support. Otherwise, an deallocated object can be allocated to threads running on the other node, causing many remote accesses. 
 
 
 
-Besides this, Operating System typically provides another memory policy where the memory will be allocated in an interleaved way. Also, OS provides different system calls that allow users to specific the memory policy, move memory, and schedule the threads. However, it is not designed for a specific applications, but providing interface that allows programmers to customize for their specific application. 
-
-libnuma and numactl provides some support that allows .
-
-It also allows users to   
+%Besides this, Operating System typically provides another memory policy where the memory will be allocated in an interleaved way. Also, OS provides different system calls that allow users to specific the memory policy, move memory, and schedule the threads. However, it is not designed for a specific applications, but providing interface that allows programmers to customize for their specific application. 
 
 
-Overall, most of such support cannot benefit the performance of programs automatically, which will require programmer effort to tell OS.   
+%Overall, most of such support cannot benefit the performance of programs automatically, which will require programmer effort to tell OS.   
 
  
