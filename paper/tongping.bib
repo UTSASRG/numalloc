@@ -1,23 +1,82 @@
 @inproceedings{Sampler, 
 author = {Sam Silvestro and 
-Hongyu Liu and Jinpeng Zhou and Corey Crosser and Tongping Liu},
-  title = {SAMPLER: A Sampling-based Approach to Detect Memory Errors in Production Software},
-  booktitle = {the submission of ``The 38th annual ACM SIGPLAN conference on Programming Language Design and Implementation (PLDI'17)''},
+Hongyu Liu and Tong Zhang and Changhee Jung and Dongyoon Lee and Tongping Liu},
+  title = {PMU-based Sampling to Detect Memory Errors Latent in Production Software},
+  booktitle = {``The 51st Annual IEEE/ACM International Symposium on Microarchitecture  (Micro'18)''},
 }
 
-@manual{timeutility,
- title = {time - time a simple command or give resource usage},
- author = "{Linux Comunity}",
- howpublished = "\url{http://man7.org/linux/man-pages/man1/time.1.html}",
+@inproceedings{Guarder, 
+author = {Sam Silvestro and 
+Hongyu Liu and Tianyi Liu and Zhiqiang Lin and Tongping Liu},
+  title = {Guarder: An Efficient Heap Allocator with Strongest and Tunable Security},
+  booktitle = {Proceedings of The 27th USENIX Security Symposium  ({Security'18})},
+}
+
+@misc{umassdiversity,
+  author = {UMass}, 
+  title = {Diversity Matters: Data}
+  howpublished = {\url{https://www.umass.edu/diversity/data-policies}},  
+}
+
+@misc{Debugregisters,
+ title = {x86 debug register},
+ author = "{Wikipedia}",
+ howpublished = "\url{https://en.wikipedia.org/wiki/X86_debug_register}",
+ year = {2018},
+}
+
+
+@inproceedings{CSOD,
+ author = {Liu, Hongyu and Silvestro, Sam and Wang, Xiaoyin and Duan, Lide and Liu, Tongping},
+ title = {CSOD: Context-sensitive Overflow Detection},
+ booktitle = {Proceedings of the 2019 IEEE/ACM International Symposium on Code Generation and Optimization},
+ series = {CGO 2019},
+ year = {2019},
+ isbn = {978-1-7281-1436-1},
+ location = {Washington, DC, USA},
+ pages = {50--60},
+ numpages = {11},
+ url = {http://dl.acm.org/citation.cfm?id=3314872.3314881},
+ acmid = {3314881},
+ publisher = {IEEE Press},
+ address = {Piscataway, NJ, USA},
+ keywords = {Memory Safety, Memory Vulnerabilities, Overflow Detection},
+} 
+
+@inproceedings{Pin,
+ author = {Luk, Chi-Keung and Cohn, Robert and Muth, Robert and Patil, Harish and Klauser, Artur and Lowney, Geoff and Wallace, Steven and Reddi, Vijay Janapa and Hazelwood, Kim},
+ title = {Pin: Building Customized Program Analysis Tools with Dynamic Instrumentation},
+ booktitle = {Proceedings of the 2005 ACM SIGPLAN Conference on Programming Language Design and Implementation},
+ series = {PLDI '05},
+ year = {2005},
+ isbn = {1-59593-056-6},
+ location = {Chicago, IL, USA},
+ pages = {190--200},
+ numpages = {11},
+ url = {http://doi.acm.org/10.1145/1065010.1065034},
+ doi = {10.1145/1065010.1065034},
+ acmid = {1065034},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {dynamic compilation, instrumentation, program analysis tools},
+} 
+
+@inproceedings{Coz,
+ author = {Curtsinger, Charlie and Berger, Emery D.},
+ title = {Coz: Finding Code That Counts with Causal Profiling},
+ booktitle = {Proceedings of the 25th Symposium on Operating Systems Principles},
+ series = {SOSP '15},
  year = {2015},
-}
-
-@INPROCEEDINGS{Bugbench,
-    author = {Shan Lu and Zhenmin Li and Feng Qin and Lin Tan and Pin Zhou and Yuanyuan Zhou},
-    title = {Bugbench: Benchmarks for evaluating bug detection tools},
-    booktitle = {In Workshop on the Evaluation of Software Defect Detection Tools},
-    year = {2005}
-}
+ isbn = {978-1-4503-3834-9},
+ location = {Monterey, California},
+ pages = {184--197},
+ numpages = {14},
+ url = {http://doi.acm.org/10.1145/2815400.2815409},
+ doi = {10.1145/2815400.2815409},
+ acmid = {2815409},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+} 
 
 @inproceedings{Lattner:2004:LCF:977395.977673,
  author = {Lattner, Chris and Adve, Vikram},
@@ -34,26 +93,121 @@ Hongyu Liu and Jinpeng Zhou and Corey Crosser and Tongping Liu},
  address = {Washington, DC, USA},
 } 
 
-@inproceedings{UnDead, 
-author = {Jinpeng Zhou and Sam Silvestro and 
-Hongyu Liu and Yan Cai and Tongping Liu},
-  title = {UnDead: A Featherweight Deadlock Detection and Prevention System for Production Software},
-  booktitle = {the submission of ``the 39th International Conference on Software Engineering (ICSE'17)''},
+@misc{waddington2014coupled,
+  title={Coupled lock allocation and lookup for shared data synchronization in symmetric multithreading environments},
+  author={Waddington, Daniel and Tongping, LIU and Tian, Chen},
+  year={2014},
+  month=oct # "~21",
+  note={US Patent 8,868,849}
 }
 
 
+@INPROCEEDINGS{Foreseer,
+author={J. Zou and J. Shi and T. Liu and Z. Cao and C. Wang},
+booktitle={2015 IEEE 35th International Conference on Distributed Computing Systems},
+title={Foreseer: Workload-Aware Data Storage for MapReduce},
+year={2015},
+pages={746-747},
+doi={10.1109/ICDCS.2015.89},
+ISSN={1063-6927},
+month={June},}
 
-@inproceedings{IdealReplay,
-  author = {Hongyu Liu and Jinpeng Zhou and Charlie Curtsinger and Bobby Powers and Tongping Liu},
+
+@inproceedings{UnDead,
+  author    = {Jinpeng Zhou and
+               Sam Silvestro and
+               Hongyu Liu and
+               Yan Cai and
+               Tongping Liu},
+  title     = {{UNDEAD:} detecting and preventing deadlocks in production software},
+  booktitle = {Proceedings of the 32nd {IEEE/ACM} International Conference on Automated
+               Software Engineering, {ASE} 2017, Urbana, IL, USA, October 30 - November
+               03, 2017},
+  pages     = {729--740},
+  year      = {2017},
+  crossref  = {DBLP:conf/kbse/2017},
+  url       = {http://dl.acm.org/citation.cfm?id=3155654},
+  timestamp = {Mon, 30 Oct 2017 17:14:19 +0100},
+  biburl    = {http://dblp.org/rec/bib/conf/kbse/ZhouSLCL17},
+  bibsource = {dblp computer science bibliography, http://dblp.org}
+}
+
+@misc{codejam,
+title ={Youth Code Jam | Learn To Code in San Antonio},
+year={2016},
+howpublished={\url{www.youthcodejam.org/}},
+}
+
+@misc{owasp,
+title ={OWASP San Antonio},
+year={2018},
+howpublished={\url{https://www.owasp.org/index.php/San_Antonio}},
+}
+
+
+@inproceedings{USMM, 
+author = {Silvestro, Sam and Yuen, Timothy T. and Crosser, Corey and Zhu, Dakai and Korkmaz, Turgay and Liu, Tongping},
+ title = {A User Space-based Project for Practicing Core Memory Management Concepts},
+ booktitle = {Proceedings of the 49th ACM Technical Symposium on Computer Science Education},
+ series = {SIGCSE '18},
+ year = {2018},
+ isbn = {978-1-4503-5103-4},
+ location = {Baltimore, Maryland, USA},
+ pages = {98--103},
+ numpages = {6},
+ url = {http://doi.acm.org/10.1145/3159450.3159581},
+ doi = {10.1145/3159450.3159581},
+ acmid = {3159581},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {education, memory management, operating systems, user space project},
+}
+
+
+@techreport{iReplayer,
+  author = {Hongyu Liu and Sam Silvestro and Tongping Liu},
   title = {IdealReplay: Identical and Efficient Record-and-Replay},
-  booktitle = {the submission of ``the 39th International Conference on Software Engineering (ICSE'17)''},
+  booktitle = {``The 39th annual ACM SIGPLAN conference on Programming Language Design and Implementation  (PLDI'18)''},
 }
 
-@inproceedings{SyncPerf, 
-  author = {Mejbah ul Alam and Tongping Liu and Guangming Zeng and Abdullah Muzahid}, 
-  title = {Syncperf: Categorizing, Detecting, and Diagnosing Synchronization Performance Bugs}, 
-  booktitle = {the submission of ``the 22rd International Conference on Architectural Support for Programming Languages and Operating Systems (ASPLOS'17)''},
+@inproceedings{FreeGuard,
+  author    = {Sam Silvestro and
+               Hongyu Liu and
+               Corey Crosser and
+               Zhiqiang Lin and
+               Tongping Liu},
+  title     = {FreeGuard: {A} Faster Secure Heap Allocator},
+  booktitle = {Proceedings of the 2017 {ACM} {SIGSAC} Conference on Computer and
+               Communications Security, {CCS} 2017, Dallas, TX, USA, October 30 -
+               November 03, 2017},
+  pages     = {2389--2403},
+  year      = {2017},
+  crossref  = {DBLP:conf/ccs/2017},
+  url       = {http://doi.acm.org/10.1145/3133956.3133957},
+  doi       = {10.1145/3133956.3133957},
+  timestamp = {Sat, 28 Oct 2017 18:38:40 +0200},
+  biburl    = {http://dblp.org/rec/bib/conf/ccs/SilvestroLCLL17},
+  bibsource = {dblp computer science bibliography, http://dblp.org}
 }
+
+
+@inproceedings{SyncPerf,
+ author = {Alam, Mohammad Mejbah ul and Liu, Tongping and Zeng, Guangming and Muzahid, Abdullah},
+ title = {SyncPerf: Categorizing, Detecting, and Diagnosing Synchronization Performance Bugs},
+ booktitle = {Proceedings of the Twelfth European Conference on Computer Systems},
+ series = {EuroSys '17},
+ year = {2017},
+ isbn = {978-1-4503-4938-3},
+ location = {Belgrade, Serbia},
+ pages = {298--313},
+ numpages = {16},
+ url = {http://doi.acm.org/10.1145/3064176.3064186},
+ doi = {10.1145/3064176.3064186},
+ acmid = {3064186},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+} 
+
 
 @inproceedings{DoubleTake,
  author = {Liu, Tongping and Curtsinger, Charlie and Berger, Emery D.},
@@ -98,23 +252,6 @@ Hongyu Liu and Yan Cai and Tongping Liu},
  booktitle = {Proceedings of 19th ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming},
  series = {PPOPP'14},
  year = {2014},
- publisher = {ACM},
- address = {New York, NY, USA},
-} 
-
-@inproceedings{HeapLayers,
- author = {Berger, Emery D. and Zorn, Benjamin G. and McKinley, Kathryn S.},
- title = {Composing High-performance Memory Allocators},
- booktitle = {Proceedings of the ACM SIGPLAN 2001 Conference on Programming Language Design and Implementation},
- series = {PLDI '01},
- year = {2001},
- isbn = {1-58113-414-2},
- location = {Snowbird, Utah, USA},
- pages = {114--124},
- numpages = {11},
- url = {http://doi.acm.org/10.1145/378795.378821},
- doi = {10.1145/378795.378821},
- acmid = {378821},
  publisher = {ACM},
  address = {New York, NY, USA},
 } 
@@ -187,396 +324,95 @@ Hongyu Liu and Yan Cai and Tongping Liu},
  address = {Berkeley, CA, USA},
 } 
 
-# Emery's publications
-@inproceedings{CheckCell,
-  author    = {Daniel W. Barowy and
-               Dimitar Gochev and
-               Emery D. Berger},
-  title     = {CheckCell: data debugging for spreadsheets},
-  booktitle = {Proceedings of the 2014 {ACM} International Conference on Object Oriented
-               Programming Systems Languages {\&} Applications, {OOPSLA} 2014,
-               part of {SPLASH} 2014, Portland, OR, USA, October 20-24, 2014},
-  pages     = {507--523},
-  year      = {2014},
-  crossref  = {DBLP:conf/oopsla/2014},
-  url       = {http://doi.acm.org/10.1145/2660193.2660207},
-  doi       = {10.1145/2660193.2660207},
-  timestamp = {Thu, 16 Oct 2014 09:16:18 +0200},
-  biburl    = {http://dblp.uni-trier.de/rec/bib/conf/oopsla/BarowyGB14},
-  bibsource = {dblp computer science bibliography, http://dblp.org}
+
+@misc{FreeGuardCode,
+  author = {Sam Silvestro, Hongyu Liu, Tongping Liu},
+  title = {FreeGuard: A Faster Secure Heap Allocator},
+  howpublished = "\url{https://github.com/UTSASRG/FreeGuard}",
+  year = {2017}, 
 }
 
-@inproceedings{SurveyMan,
-  author    = {Emma Tosch and
-               Emery D. Berger},
-  title     = {SurveyMan: programming and automatically debugging surveys},
-  booktitle = {Proceedings of the 2014 {ACM} International Conference on Object Oriented
-               Programming Systems Languages {\&} Applications, {OOPSLA} 2014,
-               part of {SPLASH} 2014, Portland, OR, USA, October 20-24, 2014},
-  pages     = {197--211},
-  year      = {2014},
-  crossref  = {DBLP:conf/oopsla/2014},
-  url       = {http://doi.acm.org/10.1145/2660193.2660206},
-  doi       = {10.1145/2660193.2660206},
-  timestamp = {Thu, 16 Oct 2014 09:16:19 +0200},
-  biburl    = {http://dblp.uni-trier.de/rec/bib/conf/oopsla/ToschB14},
-  bibsource = {dblp computer science bibliography, http://dblp.org}
+@misc{UnDeadCode,
+  author = {Jinpeng Zhou, Tongping Liu},
+  title = {UnDead: Detecting and Tolerating Deadlocks in Production Software},
+  howpublished = "\url{https://github.com/UTSASRG/UnDead}",
+  year = {2017}, 
 }
 
-
-@inproceedings{Doppio,
-  author = {John Vilk and Emery D. Berger},
-  title = {{\sc Doppio}: Breaking the Browser Language Barrier},
-  booktitle = {Proceedings of the 2014 ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI 2014)},
-  location = {Edinburgh, Scotland, UK},
-  publisher = {ACM},
-  address = {New York, NY, USA}
+@misc{SyncPerfCode,
+  author = {Mohammad Mejbah ul Alam, Tongping Liu, Guangming Zeng},
+  title = {SyncPerf: Categorizing, Detecting, and Diagnosing Synchronization Performance Bugs},
+  howpublished = "\url{https://github.com/UTSASRG/SyncPerf}",
+  year = {2017}, 
 }
 
+@misc{DoubleTakeCode,
+  author = {Tongping Liu, Charlie Curtsinger, Emery D. Berger},
+  title = {DoubleTake: Fast and Precise Error Detection via Evidence-Based Dynamic Analysis},
+  howpublished = "\url{https://github.com/UTSASRG/DoubleTake}",
+  year = {2016}, 
+}
+
+@misc{CheetahCode,
+  author = {Tongping Liu, Xu Liu},
+  title = {Cheetah: Detecting False Sharing Efficiently and Effectively},
+  howpublished = "\url{https://github.com/UTSASRG/Cheetah}",
+  year = {2016}, 
+}
+
+@misc{PredatorCode,
+  author = {Tongping Liu},
+  title = {Predator: Predictive False Sharing Detection },
+  howpublished = "\url{https://github.com/UTSASRG/Predator}",
+  year = {2014}, 
+}
+
+@misc{DthreadsCode,
+  author = {Tongping Liu, Charlie Curtsinger, Emery D. Berger},
+  title = {Dthreads: Efficient Deterministic Multithreading},
+  howpublished = "\url{https://github.com/UTSASRG/Dthreads}",
+  year = {2011}, 
+}
+
+@misc{SheriffCode,
+  author = {Tongping Liu},
+  title = {Sheriff: Precise Detection and Automatic Mitigation of False Sharing},
+  howpublished = "\url{https://github.com/UTSASRG/Sheriff}",
+  year = {2011}, 
+}
 
 @inproceedings{Stabilizer,
- author = {Charlie Curtsinger and Emery D. Berger},
- title = {{\sc Stabilizer}: Statistically Sound Performance Evaluation},
- booktitle = {Proceedings of the seventeenth international conference on Architectural Support for Programming Languages and Operating Systems},
- series = {ASPLOS '13},
- year = {2013},
- location = {Houston, Texas, USA},
- numpages = {12},
- acmid = {2151002},
- publisher = {ACM},
- address = {New York, NY, USA},
-} 
-
-@inproceeding{AutoMan,
- author = {Barowy, Daniel W. and Curtsinger, Charlie and Berger, Emery D. and McGregor, Andrew},
- title = {{\sc AutoMan}: a platform for integrating human-based and digital computation},
- booktitle = {Proceedings of the ACM international conference on Object oriented programming systems languages and applications (OOPSLA 2012)},
- year = {2012},
- isbn = {978-1-4503-1561-6},
- location = {Tucson, Arizona, USA},
- pages = {639--654},
- numpages = {16},
- url = {http://doi.acm.org/10.1145/2384616.2384663},
- doi = {10.1145/2384616.2384663},
- acmid = {2384663},
- publisher = {ACM},
- address = {New York, NY, USA},
- keywords = {crowdsourcing, programming languages, quality control},
-} 
-
-@inproceedings{DieHarder,
- author = {Novark, Gene and Berger, Emery D.},
- title = {{DieHarder}: securing the heap},
- booktitle = {Proceedings of the 17th ACM conference on Computer and communications security},
- series = {CCS '10},
- year = {2010},
- isbn = {978-1-4503-0245-6},
- location = {Chicago, Illinois, USA},
- pages = {573--584},
- numpages = {12},
- url = {http://doi.acm.org/10.1145/1866307.1866371},
- doi = {http://doi.acm.org/10.1145/1866307.1866371},
- acmid = {1866371},
- publisher = {ACM},
- address = {New York, NY, USA},
- keywords = {buffer overflow, dangling pointer, dynamic memory allocation, memory errors},
-} 
-
-
-@inproceedings{Hound,
- author = {Gene Novark and Emery D. Berger and Benjamin G. Zorn},
- title = {Efficiently and precisely locating memory leaks and bloat},
- booktitle = {Proceedings of the 2009 ACM SIGPLAN conference on Programming language design and implementation (PLDI 2009)},
- year = {2009},
- isbn = {978-1-60558-392-1},
- pages = {397--407},
- location = {Dublin, Ireland},
- doi = {http://doi.acm.org/10.1145/1542476.1542521},
- publisher = {ACM},
- address = {New York, NY, USA},
- }
-
-
-@article{ExterminatorAcm,
- author = {Gene Novark and Emery D. Berger and Benjamin G. Zorn},
- title = {Exterminator: Automatically correcting memory errors with high probability},
- journal = {Communications of the ACM},
- volume = {51},
- number = {12},
- year = {2008},
- issn = {0001-0782},
- pages = {87--95},
- doi = {http://doi.acm.org/10.1145/1409360.1409382},
- publisher = {ACM},
- address = {New York, NY, USA},
- }
-
-
-@inproceedings{Archipelago,
- author = {Vitaliy B. Lvin and Gene Novark and Emery D. Berger and Benjamin G. Zorn},
- title = {Archipelago: trading address space for reliability and security},
- booktitle = {ASPLOS XIII: Proceedings of the 13th international conference on Architectural support for programming languages and operating systems},
- month = mar,
- year = 2008,
- isbn = {978-1-59593-958-6},
- pages = {115--124},
- location = {Seattle, WA, USA},
- doi = {http://doi.acm.org/10.1145/1346281.1346296},
- publisher = {ACM},
- address = {New York, NY, USA},
- }
-
-
-@inproceedings{Exterminator,
- author = {Gene Novark and Emery D. Berger and Benjamin G. Zorn},
- title = {Exterminator: automatically correcting memory errors with high probability},
- booktitle = {Proceedings of the 2007 ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI 2007)},
- year = {2007},
- isbn = {978-1-59593-633-2},
- pages = {1--11},
- location = {San Diego, California, USA},
- doi = {http://doi.acm.org/10.1145/1250734.1250736},
- publisher = {ACM Press},
- address = {New York, NY, USA},
- }
-
-@inproceedings{DieHard,
- author = {Berger, Emery D. and Zorn, Benjamin G.},
- title = {DieHard: Probabilistic Memory Safety for Unsafe Languages},
- booktitle = {Proceedings of the 27th ACM SIGPLAN Conference on Programming Language Design and Implementation},
- series = {PLDI '06},
- year = {2006},
- isbn = {1-59593-320-4},
- location = {Ottawa, Ontario, Canada},
- pages = {158--168},
- numpages = {11},
- url = {http://doi.acm.org/10.1145/1133981.1134000},
- doi = {10.1145/1133981.1134000},
- acmid = {1134000},
- publisher = {ACM},
- address = {New York, NY, USA},
- keywords = {DieHard, dynamic memory allocation, probabilistic memory safety, randomization, replication},
-} 
-
-
-@misc{HoardCode,
-  author = "Emery D. Berger",
-  title = "The {Hoard} Memory Allocator",
-  note = "Available at \url{http://www.hoard.org}"
-}
-
-@inproceedings{Hoard,
-  author = {Emery D. Berger and Kathryn S. McKinley and Robert D. Blumofe and Paul R. Wilson},
-  title = {Hoard: A Scalable Memory Allocator for Multithreaded Applications},
-  month = nov,
-  year = 2000,
-  pages = "117--128",
-  booktitle =  "Proceedings of the International Conference on Architectural Support for Programming Languages and Operating Systems (ASPLOS-IX)",
-  address = "Cambridge, MA",
-  url = "citeseer.ist.psu.edu/berger00hoard.html"
-}
-
-@inproceedings{HeapLayer,
-  author = "Emery D. Berger and Benjamin G. Zorn and Kathryn S. McKinley",
-  title =  "Composing High-Performance Memory Allocators",
-  booktitle = "Proceedings of the 2001 ACM SIGPLAN Conference on Programming Language Design and Implementation (PLDI 2001)",
-  year = "2001",
-  month = jun,
-  day = "20--22",
-  address = "Snowbird, Utah",
+  title={STABILIZER: statistically sound performance evaluation},
+  author={Curtsinger, Charlie and Berger, Emery D},
+  booktitle={ACM SIGPLAN Notices},
+  volume={48},
+  number={4},
+  pages={219--228},
+  year={2013},
+  organization={ACM}
 }
 
 
-@inproceedings{Composer,
- author = {Emery D. Berger and Benjamin G. Zorn and Kathryn S. McKinley},
- title = {Reconsidering custom memory allocation},
- booktitle = {OOPSLA '02: Proceedings of the 17th ACM SIGPLAN conference on Object-oriented programming, systems, languages, and applications},
- year = {2002},
- isbn = {1-58113-471-1},
- pages = {1--12},
- location = {Seattle, Washington, USA},
- doi = {http://doi.acm.org/10.1145/582419.582421},
- publisher = {ACM Press},
- address = {New York, NY, USA},
- }
+@patent{FreeGuardPatent,
+  author = {Tongping Liu, Sam Silvestro, Hongyu Liu},
+  title = {FreeGuard: },
+  number = {62/577,636},
+  year = {2017}, 
+}
 
-@inproceedings{1094836,
- author = {Matthew Hertz and Emery D. Berger},
- title = {Quantifying the performance of garbage collection vs. explicit memory management},
- booktitle = {OOPSLA '05: Proceedings of the 20th annual ACM SIGPLAN conference on Object oriented programming, systems, languages, and applications},
- year = {2005},
- isbn = {1-59593-031-0},
- pages = {313--326},
- location = {San Diego, CA, USA},
- doi = {http://doi.acm.org/10.1145/1094811.1094836},
- publisher = {ACM Press},
- address = {New York, NY, USA},
- }
-
-@inproceedings{1111594,
- author = {Yi Feng and Emery D. Berger},
- title = {A locality-improving dynamic memory allocator},
- booktitle = {MSP '05: Proceedings of the 2005 workshop on Memory system performance},
- year = {2005},
- isbn = {1-59593-147-3},
- pages = {68--77},
- location = {Chicago, Illinois},
- doi = {http://doi.acm.org/10.1145/1111583.1111594},
- publisher = {ACM Press},
- address = {New York, NY, USA},
- }
-
-@inproceedings{1029881,
- author = {Ting Yang and Matthew Hertz and Emery D. Berger and Scott F. Kaplan and J. Eliot B. Moss},
- title = {Automatic heap sizing: taking real memory into account},
- booktitle = {ISMM '04: Proceedings of the 4th international symposium on Memory management},
- year = {2004},
- isbn = {1-58113-945-4},
- pages = {61--72},
- location = {Vancouver, BC, Canada},
- doi = {http://doi.acm.org/10.1145/1029873.1029881},
- publisher = {ACM Press},
- address = {New York, NY, USA},
- }
-
-
-
-@inproceedings{yang04,
-  author = "Ting Yang and Matthew Hertz and Emery D. Berger and Scott F. Kaplan and J. Eliot B. Moss",
-  title = "Automatic Heap Sizing: Taking Real Memory into Account",
-  booktitle = "Proceedings of the 2004 {ACM} {SIGPLAN} International Symposium on Memory Management (ISMM)",
-  month = nov,
- year = {2004},
- isbn = {1-58113-945-4},
- pages = {61--72},
- location = {Vancouver, BC, Canada},
- doi = {http://doi.acm.org/10.1145/1029873.1029881},
- publisher = {ACM Press},
+@patent{SyncPerfPatent,
+  author = {Tongping Liu, Mohammad Mejbah ul Alam and Abdullah Muzahid},
+  title = {Low-Overhead Detection Techniques for Synchronization Problems in Parallel and Concurrent Software},
+  number = {62/658,784},
+  year = {2018}, 
 }
 
 
-@inproceedings{1028984,
- author = {Narendran Sachindran and J. Eliot B. Moss and Emery D. Berger},
- title = {{MC}$^{2}$: High-performance garbage collection for memory-constrained environments},
- booktitle = {Proceedings of the 19th Annual ACM SIGPLAN Conference on Object-Oriented Programming, Systems, Languages, and Applications (OOPSLA) 2004},
- year = {2004},
- isbn = {1-58113-831-9},
- pages = {81--98},
- location = {Vancouver, BC, Canada},
- doi = {http://doi.acm.org/10.1145/1028976.1028984},
- publisher = {ACM Press},
+@patent{UnDeadPatent,
+  author = {Tongping Liu, Jinpeng Zhou, Sam Silvestro, Hongyu Liu},
+  title = {Defeating Deadlocks in Production Software},
+  number = {62/571,436},
+  year = {2017}, 
 }
 
-@inproceedings{hert05,
-  title = "Garbage Collection without Paging",
-  author = "Matthew Hertz and Yi Feng and Emery D. Berger",
-  booktitle = "Proceedings of the 2005 {ACM} {SIGPLAN} Conference on Programming Language Design and Implementation (PLDI 2005)",
-  month = jun,
-  year = 2005,
-  pages = "143--153",
-  location = {Chicago, IL},
-  publisher = {ACM},
-}
-
-@inproceedings{feng05,
-  author =       "Yi Feng and Emery D. Berger",
-  title =        "A Locality-Improving Dynamic Memory Allocator",
-  booktitle =    "Proceedings of the {ACM SIGPLAN} 2005 Workshop on Memory System Performance (MSP)",
-  year = 	 2005,
-  month =        jun,
-  address =      "Chicago, IL",
-}
-
-@inproceedings{hert05a,
-  booktitle =	"Proceedings of the 20th annual {ACM} {SIGPLAN} Conference on Object-Oriented Programming Systems, Languages, and Applications (OOPSLA 2005)",
-  year = 	 2005,
-  address =	"San Diego, CA",
-  month = 	 Oct,
-  title =  {Quantifying the Performance of Garbage Collection vs. Explicit Memory Management},
-  author = {Matthew Hertz and Emery D. Berger}
-}
-
-@inproceedings{TFS2007,
-	Address = {San Jose, CA},
-	Author = {James Cipar and Mark D. Corner and Emery D. Berger},
-	Booktitle = {Proceedings of USENIX Conference on File and Storage Technologies (FAST)},
-	Date-Added = {2007-07-30 10:03:23 -0400},
-	Date-Modified = {2007-07-30 10:03:23 -0400},
-	Keywords = {Operating Systems;Award Paper},
-	Month = {February},
-	Pages = {215-229},
-	Slides_Url = {http://prisms.cs.umass.edu/mcorner/papers/TFS.ppt},
-	Techreport_Url = {http://prisms.cs.umass.edu/mcorner/papers/tfs-tr-06-05.pdf},
-	Title = {{TFS: A Transparent File System for Contributory Storage (Best Paper Award)}},
-	Url = {http://prisms.cs.umass.edu/mcorner/papers/fast_2007_tfs.pdf},
- location = {San Jose, CA},
- publisher = {USENIX Association},
- address = {Berkeley, CA, USA},
-	Year = {2007}}
-
-@article{1288787,
- author = {James Cipar and Mark D. Corner and Emery D. Berger},
- title = {Contributing storage using the transparent file system},
- journal = {Trans. Storage},
- volume = {3},
- number = {3},
- year = {2007},
- issn = {1553-3077},
- pages = {12},
- doi = {http://doi.acm.org/10.1145/1288783.1288787},
- publisher = {ACM},
- address = {New York, NY, USA},
- }
-
-@inproceedings{transparent2006usenix,
-  author = {James Cipar and Mark D. Corner and Emery D. Berger},
-  title = {Transparent Contribution of Memory},
-  booktitle = {Proceedings of the 2006 USENIX Annual Technical Conference},
-  month = jun,
-  year = {2006},
-  location = {Boston, Massachusetts},
-  pages = {109--114},
-}
-
-@inproceedings{1267316,
- author = {Ting Yang and Emery D. Berger and Scott F. Kaplan and  J. Eliot B. Moss},
- title = {{CRAMM}: virtual memory support for garbage-collected applications},
- booktitle = {Proceedings of the 7th USENIX Symposium on Operating Systems Design and Implementation (OSDI '06)},
- year = {2006},
- pages = {103--116},
- location = {Seattle, WA},
- publisher = {USENIX Association},
- address = {Berkeley, CA, USA},
- }
-
-@techreport{HeapShield,
-  author = {Emery D. Berger},
-  title = {{H}eap{S}hield: Library-Based Heap Overflow Protection for Free},
-  month = may,
-  year = 2006,
-  number = {UMCS TR-2006-28},
-  institution = {Department of Computer Science, University of Massachusetts Amherst},
-}
-
-@inproceedings{PARSEC,
-  author = {Christian Bienia and Sanjeev Kumar and Jaswinder Pal Singh and Kai Li},
-  title = {The PARSEC Benchmark Suite: Characterization and Architectural Implications},
-  booktitle = {Proceedings of the 17th International Conference on Parallel Architectures and Compilation Techniques},
-  year      = {2008},
-  month     = {October}
-}
-
-@inproceedings{PARSEC2,
-  author = {Christian Bienia and Kai Li},
-  title = {PARSEC 2.0: A New Benchmark Suite for Chip-Multiprocessors},
-  booktitle = {Proceedings of the 5th Annual Workshop on Modeling, Benchmarking and Simulation},
-  year = {2009},
-  month = {June}
-}
-
-@misc{codejam,
-title ={Youth Code Jam | Learn To Code in San Antonio},
-year={2016},
-howpublished={\url{www.youthcodejam.org/}},
-}
 
