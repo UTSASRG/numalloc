@@ -44,7 +44,7 @@ public:
         unsigned long mask = bm->maskp[mask_index];
 
         for (int i = 0, cpu_num = 0; i < result.size; cpu_num++) {
-            fprintf(stderr, "mask %d, i %d\n", mask, i);
+            fprintf(stderr, "mask %ld, i %d\n", mask, i);
             if (mask == 0) {
                 mask_index++;
                 mask = bm->maskp[mask_index];

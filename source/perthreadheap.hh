@@ -45,7 +45,8 @@ public:
     return &_sclass[scIndex];
   }
 
-  void * allocateOneBag(size_t bagSize, size_t classSize);
+  void * allocateOneBag(PerSizeClass * sc);
+
   void donateObjectsToNode(int classIndex, unsigned long batch, void * head, void * tail);
 
   void * allocate(size_t size) {
@@ -70,7 +71,7 @@ public:
        //fprintf(stderr, "line %d: numb %ld\n", __LINE__, numb); 
         // Now we should get a new block and update the bumppointer 
         if(numb == 0) {
-          void * bPtr = allocateOneBag(sc->getBagSize(), sc->getClassSize());
+          void * bPtr = allocateOneBag(sc);
     
         //  fprintf(stderr, "SC %p - class:%ld get one bag with starting at %p \n", sc, sc->getClassSize(), bPtr);
 

@@ -151,8 +151,8 @@ public:
     return _nodes[nindex]->allocateBatch(sc, num, head, tail);
   }
 
-  void * allocateOneBagFromNode(int nindex, size_t size, size_t bagSize) {
-    return _nodes[nindex]->allocateOneBag(size, bagSize);
+  void * allocateOneBagFromNode(int nindex, size_t size, size_t bagSize, bool allocBig) {
+    return _nodes[nindex]->allocateOneBag(size, bagSize, allocBig);
   }
   
   // Contribure some objects to the node's freelist

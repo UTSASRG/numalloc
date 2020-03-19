@@ -27,6 +27,7 @@ private:
   unsigned int _allocs;
   unsigned int _allocsCheckMin;
   unsigned int _allocsCheckMax;
+  unsigned long _bags;
   PerSizeClassList _list; 
 
 public: 
@@ -35,6 +36,7 @@ public:
     _sc = sc;
     _batch = batch;
     _bagSize = SIZE_ONE_MB;;
+    _bags = 0;
 
     if(size <= SIZE_CLASS_SMALL_SIZE) {
       // We will warmup the objects beforehand
@@ -93,6 +95,14 @@ public:
 
   bool checkDonation(void) {
     return _list.length() > _watermark;
+  }
+
+  void updateBags(void) {
+    _bags++;
+  }
+
+  bool allocFromBigObjects(void) {
+    return _bags > 0 ? true : false;
   }
 
   int getDonateObjects(void ** head, void ** tail) {
