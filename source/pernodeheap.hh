@@ -199,8 +199,8 @@ class PerNodeHeap {
     if(allocBig) {
       ptr = bigObjectListAllocate(bagSize, size);
     }
-    if(ptr != NULL)
-      fprintf(stderr, "get one bag with size %lx from big object with ptr %p\n", size, ptr);
+    //if(ptr != NULL)
+    //  fprintf(stderr, "get one bag with size %lx from big object with ptr %p\n", size, ptr);
     // If there is no freed bigObjects, getting one MB from the bump pointer
     if(ptr == NULL) {
       lockSmallHeap();
