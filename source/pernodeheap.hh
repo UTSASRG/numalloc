@@ -197,7 +197,8 @@ class PerNodeHeap {
 
     // Check the freed bigObjects at first, since they may be still hot in cache.
     ptr = bigObjectListAllocate(bagSize, size);
-      //fprintf(stderr, "get object from BIG OBJECT ptr %p\n", ptr);
+    if(ptr != NULL)
+      fprintf(stderr, "get one bag from big objects ptr %p\n", ptr);
     // If there is no freed bigObjects, getting one MB from the bump pointer
     if(ptr == NULL) {
       lockSmallHeap();
