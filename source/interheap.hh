@@ -1,5 +1,5 @@
-#ifndef __MAIN_HEAP_HH__
-#define __MAIN_HEAP_HH__
+#ifndef __INTER_HEAP_HH__
+#define __INTER_HEAP_HH__
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -36,13 +36,13 @@
    support this for some openmp program
 */
 
-class MainHeap {
+class InterHeap {
   private:
     char * _begin;
     char * _end;
    
     unsigned int  _nodeIndex;
-    bool    _mainHeapPhase; 
+    bool    _sequentialPhase; 
 
     char * _bpSmall;
     char * _bpSmallEnd;
@@ -56,29 +56,29 @@ class MainHeap {
     // _bigObjects will also maintain the PerMBINfo
     PerNodeBigObjects _bigObjects;
 
-    class CallsiteInfo {
-      bool _isPrivate; // Is known to be private or not.
-      int  _allocNum;  // How many allocations in this callsite?
+    typedef enum {
+        E_CS_STATUS_INIT_SHARED = 0, // initial
+        E_CS_STATUS_CHECKED_PRIVATE, // 2
+        E_CS_STATUS_CHECKED_SHARED, // 3
+    }eCallsiteStatus;
 
+    class CallsiteInfo {
+      eCallsiteStatus _status;
+      
       public:
         CallsiteInfo() {
         }
 
         void init() {
-          _isPrivate = false;
-          _allocNum = 1;
+          _status = E_CS_STATUS_INIT_SHARED;
         }
 
         inline bool isPrivateCallsite() {
-          return _isPrivate;
-        }
-
-        inline void updateAlloc() {
-          _allocNum++;
+          return _status == E_CS_STATUS_CHECKED_PRIVATE;
         }
 
         inline void setPrivateCallsite() {
-          _isPrivate = true;
+          _status = E_CS_STATUS_CHECKED_PRIVATE;
         }
     };
 
@@ -142,7 +142,7 @@ class MainHeap {
       _bpBigEnd = _bpBig + SIZE_PER_SPAN;  
 
       _nodeIndex = nodeindex; 
-      _mainHeapPhase = true;
+      _sequentialPhase = true;
       _mhSequence = 0;
 
       // Compute the metadata size for PerNodeHeap
@@ -177,11 +177,11 @@ class MainHeap {
    } 
 
    void stopPhase() {
-    _mainHeapPhase = false;
+    _sequentialPhase = false;
    }
 
   void updatePhase() {
-    _mainHeapPhase = true;
+    _sequentialPhase = true;
     _mhSequence++;
   }
 

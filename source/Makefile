@@ -1,7 +1,7 @@
 SRCS = real.cpp							\
 			 xthread.cpp          \
 			 perthreadheap.cpp          \
-			 mainheap.cpp \
+			 interheap.cpp \
 			 persizeclass.cpp \
 			 libnumalloc.cpp			
 
@@ -12,7 +12,7 @@ INCS = numas.hh           \
 		pernodesizeclass.hh      \
 		perthreadheap.hh				\
 		persizeclass.hh				\
-		mainheap.hh 					\
+		interheap.hh 					\
 		log.hh								\
 		mm.hh									\
 		real.hh								\
@@ -25,19 +25,8 @@ CXX = clang++
 
 
 #DNDEBUG
-#CFLAGS = -g -std=c++14 -Wno-unused-result -O2  -DNUMA_NODES=2 -DTRY_TCMALLOC
-#-DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE
-#CFLAGS = -g -std=c++14 -Wno-unused-result -O0 -fno-omit-frame-pointer  -DNUMA_NODES=2 -DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE
 #CFLAGS = -g -std=c++14 -Wno-unused-result -O2 -DNUMA_NODES=2 -DUSE_HUGE_PAGE
-CFLAGS = -std=c++14 -Wno-unused-result -O2 -DNUMA_NODES=2 -DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE
-#CFLAGS = -g -std=c++14 -Wno-unused-result -O2 -DNUMA_NODES=2 -DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE
-#CFLAGS = -g -std=c++14 -Wno-unused-result -O3  -DNUMA_NODES=2 -DUSE_HUGE_PAGE
-#CFLAGS = -g -std=c++14 -Wno-unused-result -O2  -DNUMA_NODES=2 -DUSE_HUGE_PAGE
-#CFLAGS = -g -std=c++14 -Wno-unused-result -O2  -DNUMA_NODES=2 -DSPEC_MAINTHREAD_SUPPORT -DUSE_HUGE_PAGE
-#CFLAGS = -g -std=c++14 -Wno-unused-result -O2 -DNUMA_NODES=2 -DUSE_HUGE_PAGE
-#CFLAGS = -g -std=c++14 -Wno-unused-result -DNDEBUG -O2 -DNUMA_NODES=2
-#CFLAGS = -g -Wno-unused-result -DNDEBUG -O2 -DNUMA_NODES=2
-#CFLAGS = -g -Wno-unused-result -DNDEBUG -O3 --std=c++11 -DNEW_BIG_HEAP -DNUMA_NODES=2
+CFLAGS = -g -std=c++14 -Wno-unused-result -O2 -DNUMA_NODES=2 -DINTERHEAP_SUPPORT -DUSE_HUGE_PAGE
 
 INCLUDE_DIRS = -I.
 LIBS     := dl pthread

@@ -225,6 +225,7 @@ class xthread {
 
     xthread::getInstance().initializeCurrentThread(current);
 
+    fprintf(stderr, "staring thread %d\n", current->index);
     return current->startRoutine(current->startArg);
   }
 
