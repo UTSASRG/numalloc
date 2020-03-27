@@ -1,5 +1,5 @@
-#ifndef __PER_NODE_SIZE_CLASS_HH__
-#define __PER_NODE_SIZE_CLASS_HH__
+#ifndef __PER_NODE_SIZE_CLASS_LIST_HH__
+#define __PER_NODE_SIZE_CLASS_LIST_HH__
 
 #include <pthread.h>
 #include "mm.hh"
@@ -7,7 +7,7 @@
 
 // For small objects, each size class will maintain
 // one bumppointer and one freelist
-class PerNodeSizeClass {
+class PerNodeSizeClassList {
   private: 
     pthread_spinlock_t _lock; 
     PerSizeClassList   _list;

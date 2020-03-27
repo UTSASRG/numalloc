@@ -54,11 +54,7 @@ public:
     _items += numb;
   }
 
-  bool hasItems(void) {
-    return _items > 0 ? true : false;
-  }
-
-  int length(void) {
+  int items(void) {
     return _items;
   }
 };

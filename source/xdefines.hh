@@ -102,6 +102,7 @@ inline size_t aligndown(size_t addr, size_t alignto) { return (addr & ~(alignto 
 #define MAX_SEARCH_CALLSTACK_DEPTH 5
 //#define MAX_CALLSTACK_SKIP_BOTTOM = 0 };
 #define MAX_CALLSTACK_DEPTH 5
+#define BATCH_NUMB_SMALL_OBJECTS 16
 
 // Since there are 64TB continuous memory space, let's support up to 
 // 16 node machines. That is, each node will have 4TB memory, and the first 
@@ -148,6 +149,7 @@ struct callstack {
 
 #define SIZE_PER_NODE_SHIFT 42
 #define SIZE_ONE_MB 0x100000
+#define SIZE_ONE_BAG SIZE_ONE_MB
 #define SIZE_ONE_MB_MASK 0xFFFF
 #define SIZE_ONE_MB_SHIFT 20
 #define SIZE_HUGE_PAGE      0x200000

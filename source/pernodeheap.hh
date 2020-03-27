@@ -6,7 +6,8 @@
 #include<pthread.h>
 #include "xdefines.hh"
 #include "mm.hh"
-#include "pernodesizeclass.hh"
+#include "pernodesizeclasslist.hh"
+#include "pernodesizeclassbag.hh"
 #include "perthread.hh"
 
 // Since the array of PerNodeHeap will be allocated from the stack, therefore, 
@@ -45,7 +46,8 @@ class PerNodeHeap {
     int   _nodeindex;
 
     // Currently, size class is from 2^4 to 2^19 (512 KB), with 16 sizes in total.
-    PerNodeSizeClass  _smallSizes[SMALL_SIZE_CLASSES];
+    PerNodeSizeClassBag   _smallBags[SMALL_SIZE_CLASSES];
+    PerNodeSizeClassList  _smallLists[SMALL_SIZE_CLASSES];
     
     // Larger than 1MB will be located in the MB list
     dlistHead _bigList; // the doubly linklist 
@@ -102,11 +104,13 @@ class PerNodeHeap {
       _bigWatermark = BIG_OBJECTS_WATERMARK;
       _bigTimestamp = 0;
       
-      // Initialize the _smallSizes 
+      // Initialize the _smallLists 
       int i = 0;
       size_t size = SIZE_CLASS_START_SIZE;
       for(i = 0; i < SMALL_SIZE_CLASSES; i++) {
-        _smallSizes[i].initialize(size);
+        _smallBags[i].initialize(nodeindex, size);
+
+        _smallLists[i].initialize(size);
 
         if(size < SIZE_CLASS_TINY_SIZE) {
           size += 16;
@@ -149,13 +153,12 @@ class PerNodeHeap {
       entry = entry->next;
     }
 
-    // We will allocate only if the object has been found
+    // Allocate only if the object has been found
     if(isFound) {
       if(object->size > size) {
-        //fprintf(stderr, "in bigObjectListAllocate. biglist %p object %p with size %lx request-size %lx\n", &_bigList, object, object->size, size);
         object->size -= size;
 
-        // Remove this object from the list, since it may be inserted into a different place (due to the changed size)
+        // Remove it from the list, since it may be inserted into a different place (due to the changed size)
         listRemoveNode(&_bigList, &object->list);
 
         // Now insert the first part back to the freelist
@@ -165,8 +168,7 @@ class PerNodeHeap {
         ptr = (char *)object + object->size;
       }
       else {
-        //fprintf(stderr, "in bigObjectListAllocate. delete object %p size %lx\n", object, size);
-        // Remove the object from the freed list
+        // Remove the object from the freed list (with the exact size)
         listRemoveNode(&_bigList, &object->list);
         ptr = (void *)object;
       }
@@ -183,25 +185,35 @@ class PerNodeHeap {
     return ptr;
   }
 
-  int allocateBatch(int sc, unsigned long num, void ** head, void ** tail) {
-    return _smallSizes[sc].allocateBatch(num, head, tail);   
+  int allocateObjects(unsigned int sc, unsigned int batch, void ** head, void ** tail) {
+    // Get freed objects in the freelist at first.
+    // If successful, we will just return the numb. 
+    int numb = _smallLists[sc].allocateBatch(batch, head, tail);
+
+    if(numb == 0) {
+      // If we can't get objects from the freelist, allocate from the bag (never-allocated ones)
+      _smallBags[sc].allocate(batch, head, tail);
+    } 
+
+    return numb;
   }
 
-  void deallocateBatch(int sc, unsigned long num, void *head, void *tail) {
-    _smallSizes[sc].deallocateBatch(num, head, tail);   
+  void deallocateObjects(int sc, unsigned long num, void *head, void *tail) {
+    _smallLists[sc].deallocateBatch(num, head, tail);   
   }
 
-  // Allocate one MB from the current node, and will use it for small objects with size _size
-  void * allocateOneBag(size_t size, size_t bagSize, bool allocBig) {
+  // Allocate one bag for small objects with the specified classSize.
+  // If allocBig is set, we will try to allocate from one of freed big objects (with huge pages)
+  // Currently, only the corresponding size class that has allocated one bag before can use big objects 
+  void * allocateOneBag(size_t classSize, size_t bagSize, bool allocBig) {
     void * ptr = NULL;
 
     // Check the freed bigObjects at first, since they may be still hot in cache.
     if(allocBig) {
-      ptr = bigObjectListAllocate(bagSize, size);
+      ptr = bigObjectListAllocate(bagSize, classSize);
     }
-    //if(ptr != NULL)
     //  fprintf(stderr, "get one bag with size %lx from big object with ptr %p\n", size, ptr);
-    // If there is no freed bigObjects, getting one MB from the bump pointer
+    // If there is no freed bigObjects, getting one bag from the bump pointer
     if(ptr == NULL) {
       lockSmallHeap();
       // Allocate one bag from the bump pointer
@@ -211,7 +223,7 @@ class PerNodeHeap {
       unlockSmallHeap();
 
       // Set the size for the bag, which don't increase the pageHeapSize.
-      setUseMbsMapping(ptr, bagSize, size);
+      setUseMbsMapping(ptr, bagSize, classSize);
     }
     return ptr;
   }
@@ -279,7 +291,7 @@ class PerNodeHeap {
       // fprintf(stderr, "return object to node %d. size %lx ptr %p\n", nodeindex, size, &size);
         // Return this object to the current node's freelist for different size classes
         // Based on NumaHeap, this address belongs to the current node.
-        _smallSizes[sc].deallocate(ptr);
+        _smallLists[sc].deallocate(ptr);
        }
      }
      else {
@@ -436,6 +448,7 @@ class PerNodeHeap {
     // Update the size information right now
     _bigSize += mysize;
 
+    // TODO: return some objects back to the OS if necessary
     unlockBigHeap();
   }
 

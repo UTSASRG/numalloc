@@ -1,23 +1,11 @@
-#include "xdefines.hh"
 #include "perthreadheap.hh"
-#include "persizeclass.hh"
 #include "numaheap.hh"
 
-void * PerThreadHeap::allocateOneBag(PerSizeClass * sc) {
-  void * ptr = NULL; 
-  bool allocBig = false; 
-  
-  allocBig = sc->allocFromBigObjects();
-
-  ptr = NumaHeap::getInstance().allocateOneBagFromNode(_nodeIndex, sc->getClassSize(), sc->getBagSize(), allocBig);
-  if(ptr) { 
-    sc->updateBags();
-  }
-
-  return ptr;
+int PerThreadHeap::getObjectsFromNode(unsigned int classIndex, unsigned int batch, void ** head, void ** tail) {
+  return NumaHeap::getInstance().getObjectsFromNode(_nodeIndex, classIndex, batch, head, tail);
 }
 
 void PerThreadHeap::donateObjectsToNode(int classIndex, unsigned long batch, void * head, void * tail) {
   // Donate objects to the node's freelist
-  NumaHeap::getInstance().donateBatchToNodeFreelist(_nodeIndex, classIndex, batch, head, tail);
+  NumaHeap::getInstance().donateObjectsToNode(_nodeIndex, classIndex, batch, head, tail);
 }

@@ -65,11 +65,11 @@ void InterHeap::deallocate(void * ptr) {
     if(!_sequentialPhase) { 
       pthread_spin_lock(&_lock);
       // Return to the size class
-      _sclass[sc].deallocate(ptr);
+      _smallClasses[sc].deallocate(ptr);
       pthread_spin_unlock(&_lock);
     }
     else {
-      _sclass[sc].deallocate(ptr);
+      _smallClasses[sc].deallocate(ptr);
     }
   }
   else {

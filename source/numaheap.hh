@@ -32,7 +32,6 @@
 #include "pernodeheap.hh"
 #include "perthread.hh"
 #include "real.hh"
-#include "persizeclasslist.hh"
 #ifdef INTERHEAP_SUPPORT
 #include "interheap.hh"
 #endif
@@ -100,12 +99,12 @@ public:
 #ifdef INTERHEAP_SUPPORT
   void stopSerialPhase() {
     _sequentialPhase = false;
-    _interHeap.stopPhase();
+    _interHeap.stopSerialPhase();
   } 
 
   void startSerialPhase() {
     _sequentialPhase = true;
-    _interHeap.updatePhase();
+    _interHeap.startSerialPhase();
   }
 
 #endif
@@ -117,15 +116,13 @@ public:
     //if(_sequentialPhase && (size > (PAGE_SIZE * NUMA_NODES/2))) {
     if(_sequentialPhase) {
       ptr = _interHeap.allocate(size);
-    //fprintf(stderr, "size %lx at %p instructionptr %lx\n", size, &size, *((unsigned long *)((intptr_t)&size + MALLOC_SITE_OFFSET)));
       if(ptr) { 
         return ptr;
       }
     }
-    // Now the corresponding address is failed. 
+    // If we can't allocate, the object should be allocated in the local PerNodeHeap. 
 #endif
 
-   //fprintf(stderr, "allocate size at %p\n", &size); 
     // Check the size information. 
     if(size <= BIG_OBJECT_SIZE_THRESHOLD) {
      // fprintf(stderr, "allocate from numaheap size %lx\n", size);
@@ -145,19 +142,19 @@ public:
 
     return ptr;
   } 
+  
+  void * allocateOneBagFromNode(int nindex, size_t classSize, size_t bagSize, bool allocBig) {
+    return _nodes[nindex]->allocateOneBag(classSize, bagSize, allocBig);
+  }
 
   // Allocate the specified number of freed objects from the specified node(nindex)'s size class (sc).
-  int moveBatchFromNodeFreelist(int nindex, int sc, unsigned long num, void ** head, void ** tail) {
-    return _nodes[nindex]->allocateBatch(sc, num, head, tail);
+  int getObjectsFromNode(unsigned int nindex, unsigned int classIndex, unsigned int batch, void ** head, void ** tail) {
+    return _nodes[nindex]->allocateObjects(classIndex, batch, head, tail);
   }
 
-  void * allocateOneBagFromNode(int nindex, size_t size, size_t bagSize, bool allocBig) {
-    return _nodes[nindex]->allocateOneBag(size, bagSize, allocBig);
-  }
-  
   // Contribure some objects to the node's freelist
-  void donateBatchToNodeFreelist(int nindex, int sc, unsigned long num, void * head, void *tail) {
-    _nodes[nindex]->deallocateBatch(sc, num, head, tail);
+  void donateObjectsToNode(int nindex, int sc, unsigned long num, void * head, void *tail) {
+    _nodes[nindex]->deallocateObjects(sc, num, head, tail);
   }
 
   void deallocate(void * ptr) {

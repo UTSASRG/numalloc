@@ -2,16 +2,16 @@ SRCS = real.cpp							\
 			 xthread.cpp          \
 			 perthreadheap.cpp          \
 			 interheap.cpp \
-			 persizeclass.cpp \
+			 pernodesizeclassbag.cpp \
 			 libnumalloc.cpp			
 
-INCS = numas.hh           \
-        dlist.hh               \
+INCS = dlist.hh               \
 		numaheap.hh						\
 		pernodeheap.hh				\
-		pernodesizeclass.hh      \
 		perthreadheap.hh				\
-		persizeclass.hh				\
+		perthreadsizeclasslist.hh				\
+		pernodesizeclasslist.hh				\
+		pernodesizeclassbag.hh				\
 		interheap.hh 					\
 		log.hh								\
 		mm.hh									\
@@ -25,8 +25,8 @@ CXX = clang++
 
 
 #DNDEBUG
-#CFLAGS = -g -std=c++14 -Wno-unused-result -O2 -DNUMA_NODES=2 -DUSE_HUGE_PAGE
-CFLAGS = -g -std=c++14 -Wno-unused-result -O2 -DNUMA_NODES=2 -DINTERHEAP_SUPPORT -DUSE_HUGE_PAGE
+#CFLAGS = -g -O2 -std=c++14 -Wno-unused-result -DNUMA_NODES=2 -DUSE_HUGE_PAGE
+CFLAGS = -g -O0 -std=c++14 -Wno-unused-result -DNUMA_NODES=2 -DINTERHEAP_SUPPORT -DUSE_HUGE_PAGE
 
 INCLUDE_DIRS = -I.
 LIBS     := dl pthread
