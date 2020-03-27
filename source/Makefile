@@ -26,7 +26,7 @@ CXX = clang++
 
 #DNDEBUG
 #CFLAGS = -g -O2 -std=c++14 -Wno-unused-result -DNUMA_NODES=2 -DUSE_HUGE_PAGE
-CFLAGS = -g -O0 -std=c++14 -Wno-unused-result -DNUMA_NODES=2 -DINTERHEAP_SUPPORT -DUSE_HUGE_PAGE
+CFLAGS = -g -O2 -std=c++14 -Wno-unused-result -DNUMA_NODES=2 -DINTERHEAP_SUPPORT -DUSE_HUGE_PAGE
 
 INCLUDE_DIRS = -I.
 LIBS     := dl pthread
