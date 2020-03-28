@@ -78,7 +78,7 @@ inline size_t aligndown(size_t addr, size_t alignto) { return (addr & ~(alignto 
 #define OUTFD 2
 #endif
 
-#define PER_NODE_MAX_BIG_OBJECTS 1024
+#define PER_NODE_MAX_BIG_OBJECTS 2048
 
 // 512K will be the threshold for small objects
 // If an object is larger than this, it will be treated as large objects. 
