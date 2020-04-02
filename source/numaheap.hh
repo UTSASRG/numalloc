@@ -32,9 +32,8 @@
 #include "pernodeheap.hh"
 #include "perthread.hh"
 #include "real.hh"
-#include "persizeclasslist.hh"
-#ifdef SPEC_MAINTHREAD_SUPPORT
-#include "mainheap.hh"
+#ifdef INTERHEAP_SUPPORT
+#include "interheap.hh"
 #endif
 
 /* How to deal with the heap allocation. If one thread continuously allocates 
@@ -68,10 +67,10 @@ public:
     //unsigned long heapSize = (NUMA_NODES + 1) * SIZE_PER_NODE;
     unsigned long heapSize = NUMA_NODES * SIZE_PER_NODE;
     _heapBegin = 0x100000000000; 
-#ifdef SPEC_MAINTHREAD_SUPPORT
+#ifdef INTERHEAP_SUPPORT
     _mainHeapBegin = _heapBegin - 2*SIZE_PER_NODE;
-    _mainHeap.initialize(getRealNodeIndex(), (void *)_mainHeapBegin);
-    _mainHeapPhase = true;  
+    _interHeap.initialize(getRealNodeIndex(), (void *)_mainHeapBegin);
+    _sequentialPhase = true;  
 #endif
 
   // fprintf(stderr, "_heapBegin is %lx\n", _heapBegin);
@@ -97,15 +96,15 @@ public:
  
   }
 
-#ifdef SPEC_MAINTHREAD_SUPPORT
-  void stopMainHeapPhase() {
-    _mainHeapPhase = false;
-    _mainHeap.stopPhase();
+#ifdef INTERHEAP_SUPPORT
+  void stopSerialPhase() {
+    _sequentialPhase = false;
+    _interHeap.stopSerialPhase();
   } 
 
-  void startMainHeapPhase() {
-    _mainHeapPhase = true;
-    _mainHeap.updatePhase();
+  void startSerialPhase() {
+    _sequentialPhase = true;
+    _interHeap.startSerialPhase();
   }
 
 #endif
@@ -113,19 +112,17 @@ public:
   void * allocate(size_t size) {
     void * ptr = NULL; 
 
-#ifdef SPEC_MAINTHREAD_SUPPORT
-    //if(_mainHeapPhase && (size > (PAGE_SIZE * NUMA_NODES/2))) {
-    if(_mainHeapPhase) {
-      ptr = _mainHeap.allocate(size);
-    //fprintf(stderr, "size %lx at %p instructionptr %lx\n", size, &size, *((unsigned long *)((intptr_t)&size + MALLOC_SITE_OFFSET)));
+#ifdef INTERHEAP_SUPPORT
+    //if(_sequentialPhase && (size > (PAGE_SIZE * NUMA_NODES/2))) {
+    if(_sequentialPhase) {
+      ptr = _interHeap.allocate(size);
       if(ptr) { 
         return ptr;
       }
     }
-    // Now the corresponding address is failed. 
+    // If we can't allocate, the object should be allocated in the local PerNodeHeap. 
 #endif
 
-   //fprintf(stderr, "allocate size at %p\n", &size); 
     // Check the size information. 
     if(size <= BIG_OBJECT_SIZE_THRESHOLD) {
      // fprintf(stderr, "allocate from numaheap size %lx\n", size);
@@ -145,26 +142,26 @@ public:
 
     return ptr;
   } 
+  
+  void * allocateOneBagFromNode(int nindex, size_t classSize, size_t bagSize, bool allocBig) {
+    return _nodes[nindex]->allocateOneBag(classSize, bagSize, allocBig);
+  }
 
   // Allocate the specified number of freed objects from the specified node(nindex)'s size class (sc).
-  int moveBatchFromNodeFreelist(int nindex, int sc, unsigned long num, void ** head, void ** tail) {
-    return _nodes[nindex]->allocateBatch(sc, num, head, tail);
+  int getObjectsFromNode(unsigned int nindex, unsigned int classIndex, unsigned int batch, void ** head, void ** tail) {
+    return _nodes[nindex]->allocateObjects(classIndex, batch, head, tail);
   }
 
-  void * allocateOneBagFromNode(int nindex, size_t size, size_t bagSize) {
-    return _nodes[nindex]->allocateOneBag(size, bagSize);
-  }
-  
   // Contribure some objects to the node's freelist
-  void donateBatchToNodeFreelist(int nindex, int sc, unsigned long num, void * head, void *tail) {
-    _nodes[nindex]->deallocateBatch(sc, num, head, tail);
+  void donateObjectsToNode(int nindex, int sc, unsigned long num, void * head, void *tail) {
+    _nodes[nindex]->deallocateObjects(sc, num, head, tail);
   }
 
   void deallocate(void * ptr) {
  //   fprintf(stderr, "deallocate ptr %p\n", ptr);
-#ifdef SPEC_MAINTHREAD_SUPPORT
+#ifdef INTERHEAP_SUPPORT
     if(((uintptr_t)ptr >= _mainHeapBegin) && ((uintptr_t)ptr < _heapBegin)) {
-      return _mainHeap.deallocate(ptr);
+      return _interHeap.deallocate(ptr);
     }
 #endif
     if((uintptr_t)ptr < _heapBegin || (uintptr_t)ptr > _heapEnd) {
@@ -183,9 +180,9 @@ public:
   }
 
   size_t getSize(void *ptr) {
-#ifdef SPEC_MAINTHREAD_SUPPORT
+#ifdef INTERHEAP_SUPPORT
     if(((uintptr_t)ptr >= _mainHeapBegin) && ((uintptr_t)ptr < _heapBegin)) {
-      return _mainHeap.getSize(ptr);      
+      return _interHeap.getSize(ptr);      
     }
 #endif
     // Check the address range of this ptr
@@ -199,10 +196,10 @@ public:
 
 private:
   size_t _heapBegin;
-#ifdef SPEC_MAINTHREAD_SUPPORT
+#ifdef INTERHEAP_SUPPORT
   size_t _mainHeapBegin;
-  MainHeap _mainHeap;
-  bool   _mainHeapPhase;
+  InterHeap _interHeap;
+  bool   _sequentialPhase;
 #endif
   size_t _heapEnd; 
   PerNodeHeap * _nodes[NUMA_NODES];

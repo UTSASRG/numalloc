@@ -1,5 +1,5 @@
-#ifndef __MAIN_HEAP_HH__
-#define __MAIN_HEAP_HH__
+#ifndef __INTER_HEAP_HH__
+#define __INTER_HEAP_HH__
 
 #include<stdio.h>
 #include<stdlib.h>
@@ -36,13 +36,56 @@
    support this for some openmp program
 */
 
-class MainHeap {
+
+class InterHeap {
+
+  // This bag is different from PerNodeSizeClassBag
+  // There is no need to use lock, and allocation will be just from one heap.
+  class PerSizeClassBag {
+    private:
+    size_t _classSize; 
+    char * _bp;
+    char * _bpEnd;
+
+    public: 
+    void initialize(void) {
+      _bp = NULL;
+      _bpEnd = NULL;
+    }
+
+    bool allocate(size_t batchSize, void ** head, void ** tail) {
+      bool success = false; 
+
+      if(_bp < _bpEnd) {
+        *head = _bp;
+
+        if(_bp + 2*batchSize < _bpEnd) {
+          // Update the _bp pointer, but not _bpEnd
+          _bp += batchSize;
+          *tail = _bp;
+        }
+        else {
+          *tail = _bpEnd;
+          _bp = _bpEnd;
+        }
+        success = true;
+      }
+
+      return success;
+    }
+
+    void pushRange(void * head, void * tail) {
+      _bp = (char *)head;
+      _bpEnd = (char *)tail;
+    }
+  };
+
   private:
     char * _begin;
     char * _end;
    
     unsigned int  _nodeIndex;
-    bool    _mainHeapPhase; 
+    bool    _sequentialPhase; 
 
     char * _bpSmall;
     char * _bpSmallEnd;
@@ -51,34 +94,35 @@ class MainHeap {
     pthread_spinlock_t _lock;
 
     // Currently, size class is from 2^4 to 2^19 (512 KB), with 16 sizes in total.
-    PerSizeClass _sclass[SMALL_SIZE_CLASSES];
+    PerThreadSizeClassList _smallClasses[SMALL_SIZE_CLASSES];
+    PerSizeClassBag   _smallBags[SMALL_SIZE_CLASSES];
 
     // _bigObjects will also maintain the PerMBINfo
     PerNodeBigObjects _bigObjects;
 
-    class CallsiteInfo {
-      bool _isPrivate; // Is known to be private or not.
-      int  _allocNum;  // How many allocations in this callsite?
+    typedef enum {
+        E_CS_STATUS_INIT_SHARED = 0, // initial
+        E_CS_STATUS_CHECKED_PRIVATE, // 2
+        E_CS_STATUS_CHECKED_SHARED, // 3
+    }eCallsiteStatus;
 
+    class CallsiteInfo {
+      eCallsiteStatus _status;
+      
       public:
         CallsiteInfo() {
         }
 
         void init() {
-          _isPrivate = false;
-          _allocNum = 1;
+          _status = E_CS_STATUS_INIT_SHARED;
         }
 
         inline bool isPrivateCallsite() {
-          return _isPrivate;
-        }
-
-        inline void updateAlloc() {
-          _allocNum++;
+          return _status == E_CS_STATUS_CHECKED_PRIVATE;
         }
 
         inline void setPrivateCallsite() {
-          _isPrivate = true;
+          _status = E_CS_STATUS_CHECKED_PRIVATE;
         }
     };
 
@@ -142,7 +186,7 @@ class MainHeap {
       _bpBigEnd = _bpBig + SIZE_PER_SPAN;  
 
       _nodeIndex = nodeindex; 
-      _mainHeapPhase = true;
+      _sequentialPhase = true;
       _mhSequence = 0;
 
       // Compute the metadata size for PerNodeHeap
@@ -155,8 +199,9 @@ class MainHeap {
       // Initialize all size classes. 
       unsigned long classSize = 16;
       for(int i = 0; i < SMALL_SIZE_CLASSES; i++) {
-        _sclass[i].initialize(classSize, i, 0);
-      
+        _smallBags[i].initialize();
+        _smallClasses[i].initialize(classSize, i);
+
         if(classSize < SIZE_CLASS_TINY_SIZE) {
           classSize += 16;
         }
@@ -176,12 +221,12 @@ class MainHeap {
       _objectsMap.initialize(HashFuncs::hashAllocAddr, HashFuncs::compareAddr, SIZE_HASHED_OBJECTS_MAP);
    } 
 
-   void stopPhase() {
-    _mainHeapPhase = false;
+   void stopSerialPhase() {
+    _sequentialPhase = false;
    }
 
-  void updatePhase() {
-    _mainHeapPhase = true;
+  void startSerialPhase() {
+    _sequentialPhase = true;
     _mhSequence++;
   }
 
@@ -254,66 +299,60 @@ class MainHeap {
      return (size >= BIG_OBJECT_SIZE_THRESHOLD) ? true : false;
   }
 
-  inline void * allocateOneBag(size_t bagSize, size_t classSize) {
+  inline void * allocateOneBag(size_t classSize) {
     // There is no need to use the lock, since there is just one thread currently.
     void * ptr = _bpSmall;
-    _bpSmall += bagSize;
+    _bpSmall += SIZE_ONE_BAG;
 
     // Update the PerMBInfo to mark the size class.
-    markPerMBInfo(ptr, bagSize, classSize);
+    markPerMBInfo(ptr, SIZE_ONE_BAG, classSize);
 
     return ptr;
   }
 
-  PerSizeClass * getPerSizeClass(size_t size) {
+  PerThreadSizeClassList * getPerThreadSizeClassList(size_t size) {
     int scIndex = size2Class(size);
-    return &_sclass[scIndex];
+    return &_smallClasses[scIndex];
   }
 
   void * allocateSmallObject(size_t size) {
-    PerSizeClass * sc;
+    PerThreadSizeClassList * sc;
+    void * ptr; 
 
     // If it is small object, allocate from the freelist at first.
-    sc = getPerSizeClass(size);
+    sc = getPerThreadSizeClassList(size);
 
     int numb = 0;
-    void * head = NULL;
     size_t classSize = sc->getClassSize();
     if(sc->hasItems() != true) {
+      unsigned int classIndex = sc->getClassIndex(); 
+
+      // Get objects from the corresponding bag.
+      void * head = NULL;
       void * tail = NULL;
+      size_t batchSize = sc->getBatchSize();
+      bool success = _smallBags[classIndex].allocate(batchSize, &head, &tail);
 
-      // Get objects from the bump pointer (with the cache warmup mechanism)
-      numb = sc->getObjectsFromBumpPointer(&head, &tail);
-      if(numb == 0) {
-        // Get objects from the bumppointer 
-        void * bPtr = allocateOneBag(sc->getBagSize(), classSize);
+      // If success, then the memory will be at least larger than batchSize.
+      if(!success) {
+        // No more space left in the bag, then obtain a new block.
+        char * bpPointer = (char *)allocateOneBag(classSize);
 
-        // Update the bumppointer
-        numb = sc->updateBumpPointerAndGetObjects(bPtr, &head, &tail);
-        //fprintf(stderr, "allocate one bag with bPtr %p head %p tail %p\n", bPtr, head, tail);
-        assert(numb >= 0);
+        head = bpPointer;
+        tail = bpPointer + batchSize; 
+       
+        // Push the remaining memory back to the bag.
+        _smallBags[classIndex].pushRange(tail, bpPointer + SIZE_ONE_BAG);
       }
 
-      if(numb > 1) { 
-        // Push these objects into the freelist.
-        sc->pushRangeToList(numb, head, tail);
-      }
-    }
+      //fprintf(stderr, "now push the remaining to freelist. start %p end %p\n", (void *)((unsigned long)head + classSize), tail);
+      // Now the remaining range to the freelist, except the first one
+      sc->pushRange((void *)((unsigned long)head + classSize), tail);
 
-    // Get one object from the list.
-    void * ptr = NULL;
-    if(numb == 1) {
-      ptr = head;
-      // Check size. If possible, we will bind the memory in the block-wise. 
-      if(classSize > (PAGE_SIZE * 4 * NUMA_NODES)) {
-        size_t pages = classSize >> PAGE_SIZE_SHIFT;
-
-        // Notify the OS to allocate physical memory in the block-wise way
-        MM::bindMemoryBlockwise((char *)ptr, pages, _nodeIndex);
-      }
+      ptr = head; 
     }
     else { 
-      ptr = sc->allocateFromFreeList();
+      ptr = sc->allocate();
      // fprintf(stderr, "allocate small object with ptr %p\n", ptr);
     }
 

@@ -1,6 +1,6 @@
-#include "mainheap.hh"
+#include "interheap.hh"
 
-void * MainHeap::allocate(size_t size) {
+void * InterHeap::allocate(size_t size) {
   void * ptr = NULL;
   unsigned long address = (unsigned long)&size;
   //fprintf(stderr, "user address %lx\n", *((unsigned long *)(address + MALLOC_SITE_OFFSET)));
@@ -35,10 +35,10 @@ void * MainHeap::allocate(size_t size) {
   return ptr;
 }
 
-void MainHeap::deallocate(void * ptr) {
+void InterHeap::deallocate(void * ptr) {
   size_t size = getSize(ptr);
 
-  if(_mainHeapPhase) {
+  if(_sequentialPhase) {
     ObjectInfo * info = _objectsMap.find((void *)ptr, 0);
     if(info) {
       if(info->getSequence() == _mhSequence) {
@@ -62,18 +62,18 @@ void MainHeap::deallocate(void * ptr) {
   if(!isBigObject(size)) {
     int sc = size2Class(size); 
     
-    if(!_mainHeapPhase) { 
+    if(!_sequentialPhase) { 
       pthread_spin_lock(&_lock);
       // Return to the size class
-      _sclass[sc].deallocate(ptr);
+      _smallClasses[sc].deallocate(ptr);
       pthread_spin_unlock(&_lock);
     }
     else {
-      _sclass[sc].deallocate(ptr);
+      _smallClasses[sc].deallocate(ptr);
     }
   }
   else {
-    if(!_mainHeapPhase) { 
+    if(!_sequentialPhase) { 
       pthread_spin_lock(&_lock);
       _bigObjects.deallocate(ptr, size);
       pthread_spin_unlock(&_lock);

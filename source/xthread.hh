@@ -36,7 +36,6 @@
 #include "perthread.hh"
 #include "real.hh"
 #include "xdefines.hh"
-#include "numas.hh"
 #include "mm.hh"
 
 class xthread {
@@ -225,6 +224,7 @@ class xthread {
 
     xthread::getInstance().initializeCurrentThread(current);
 
+    //fprintf(stderr, "staring thread %d\n", current->index);
     return current->startRoutine(current->startArg);
   }
 

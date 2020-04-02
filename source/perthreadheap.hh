@@ -2,27 +2,25 @@
 #define __PER_THREAD_HEAP_HH__
 
 #include "xdefines.hh"
-#include "persizeclasslist.hh"
-#include "persizeclass.hh"
+#include "perthreadsizeclasslist.hh"
 
 // PerThreadHeap only tracks freed small objects. 
 class PerThreadHeap {
 private:
   unsigned long _nodeIndex;
-  PerSizeClass _sclass[SMALL_SIZE_CLASSES];
+  unsigned long _threadIndex;
+  PerThreadSizeClassList _sclass[SMALL_SIZE_CLASSES];
 
 public:
   void initialize(int tindex, int nindex) {
     // Save the node index
     _nodeIndex = nindex; 
+    _threadIndex = tindex;
 
-    unsigned long classSize = 16;
-    unsigned long size = 0; 
+    unsigned long classSize = SIZE_CLASS_START_SIZE;
     for(int i = 0; i < SMALL_SIZE_CLASSES; i++) {
-      // Try to set perthreadsize classes
-      unsigned int objects = SIZE_ONE_MB * 4/classSize;
 
-      _sclass[i].initialize(classSize, i, objects);
+      _sclass[i].initialize(classSize, i);
 
       if(classSize < SIZE_CLASS_TINY_SIZE) {
         classSize += 16;
@@ -36,84 +34,70 @@ public:
     }
   }
 
-  PerSizeClass * getPerSizeClass(size_t size) {
-    int scIndex = size2Class(size);
-    return &_sclass[scIndex];
+  PerThreadSizeClassList * getPerThreadSizeClassList(size_t size) {
+    int classIndex = size2Class(size);
+    return &_sclass[classIndex];
   }
   
-  PerSizeClass * getPerSizeClassByIndex(int scIndex) {
-    return &_sclass[scIndex];
+  PerThreadSizeClassList * getPerThreadSizeClassListByIndex(int classIndex) {
+    return &_sclass[classIndex];
   }
 
-  void * allocateOneBag(size_t bagSize, size_t classSize);
-  void donateObjectsToNode(int classIndex, unsigned long batch, void * head, void * tail);
-
   void * allocate(size_t size) {
-    PerSizeClass * sc;
+    void * ptr = NULL;
+    PerThreadSizeClassList * sc;
 
-    // If it is small object, allocate from the freelist at first.
-    sc = getPerSizeClass(size);
+    // Allocate from the freelist at first.
+    sc = getPerThreadSizeClassList(size);
 
     // We will allocate from the per-thread size class. 
     void * head = NULL;
     int numb = 0;
     if(sc->hasItems() != true) {
       void * tail = NULL;
-
-      // Get objects from the central list. 
-      numb = sc->getObjectsFromCentralList(_nodeIndex, &head, &tail);
+      unsigned int batch = sc->getBatch(); 
+      
+      // Get objects from Node. 
+      numb = getObjectsFromNode(sc->getClassIndex(), batch, &head, &tail);
 
       if(numb == 0) {
-        // Get objects from the bump pointer (with the cache warmup mechanism) 
-        numb = sc->getObjectsFromBumpPointer(&head, &tail);
-      
-       //fprintf(stderr, "line %d: numb %ld\n", __LINE__, numb); 
-        // Now we should get a new block and update the bumppointer 
-        if(numb == 0) {
-          void * bPtr = allocateOneBag(sc->getBagSize(), sc->getClassSize());
-    
-        //  fprintf(stderr, "SC %p - class:%ld get one bag with starting at %p \n", sc, sc->getClassSize(), bPtr);
 
-          // Update bumppointers and get objects
-          numb = sc->updateBumpPointerAndGetObjects(bPtr, &head, &tail);
-       //fprintf(stderr, "line %d: numb %ld\n", __LINE__, numb); 
-          assert(numb >= 0);
-        }
-
+        // We don't have freed objects in PerNode's freelist. Instead, 
+        // all objects will be returned by a range of memory.
+        // Therefore, we need to add all objects in the specified range into the freelist. 
+        unsigned int classSize = sc->getClassSize();
+       
+        // Only push the remaining objects in the continuous range to the freelist
+        sc->pushRange((void *)((unsigned long)head + classSize), tail);
+      }
+      else {
         if(numb > 1) {
-          // Push these objects into the freelist.
-          sc->pushRangeToList(numb, head, tail);
+          // Push the remaining objects in the list (pointed by head and tail) into the freelist.
+          sc->pushRangeList(numb-1, *((void **)head), tail);
         }
       }
+      ptr = head; 
+    }
+    else {
+      //if(sc->getClassSize() == 2048)
+      //fprintf(stderr, "if items call allocate size %d class %d\n", size, sc->getClassSize());
+      ptr = sc->allocate();
+      //if(sc->getClassSize() == 2048)
+      //fprintf(stderr, "if items call allocate size %d ptr %p\n", size, ptr);
     }
  
-    void * ptr; 
-
-    if(numb == 1) {
-      ptr = head;
-    }  
-    else {  
-      ptr = sc->allocateFromFreeList();
-    }
-
-    //if(sc->getClassSize() == 16) 
-    //fprintf(stderr, "allocate size %lx with ptr %p\n", size, ptr);
-    // Get one object from the list.
-    assert(ptr != NULL);
-
     return ptr;
   }
 
   // Deallocate an object to this thread's freelist 
   void deallocate(void * ptr, int classIndex) {
-    PerSizeClass * sc = getPerSizeClassByIndex(classIndex);
+    PerThreadSizeClassList * sc = getPerThreadSizeClassListByIndex(classIndex);
 
     sc->deallocate(ptr);
 
-    //fprintf(stderr, "ptr %p classIndex %d\n", ptr, classIndex);
     // Check if there are too many freed objects in the freelist, if yes,
     // then donateObjects to the pernode freelist if necessary
-    if(sc->checkDonation() == true) {
+    if(sc->toDonate() == true) {
       void * head, * tail;
      
       int numb = sc->getDonateObjects(&head, &tail);
@@ -122,7 +106,17 @@ public:
     }
 
     return;
-  } 
+  }
+  
+  /* This is an important function to communicate with the Node.
+   * If the Node has freed objects, then we will utilize head and tail to bring the list of objects. 
+   * Also, the return number will be the number of objects in the freelist. 
+   * However, if Node does not have freed objects in its freelist, it will simply return a range of memory, which is also brought back by the head and tail pointer. At the same time, the returned number will be 0. 
+   * If Node do not have freed objects, and it also cannot allocate, it will fail. There is no need to handle in this function.
+   */
+  int getObjectsFromNode(unsigned int classIndex, unsigned int batch, void ** head, void ** tail);
+
+  void donateObjectsToNode(int classIndex, unsigned long batch, void * head, void * tail); 
 };
 
 #endif
