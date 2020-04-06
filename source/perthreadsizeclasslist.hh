@@ -3,7 +3,7 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include "persizeclasslist.hh"
+#include "slist.hh"
 
 class PerThreadSizeClassList {
 private:
@@ -23,43 +23,57 @@ private:
    * Due to this reason, we don't maintain the bump pointer for per-thread's size class. Instead, only the per-node heap
    * will maintain the bump pointer.
    */ 
-  unsigned long _batchSize;
+  // Let's always use the same batch number, which will be more easy to do.
+  // Then we could think about how to improve it later. 
+  // Freed objects will be donated when there are 2*_batch freed objects. 
+  // Upon donation, we will change _items, _listTail, _listNthItem and the end of list (by pointing to NULL).
   unsigned int _batch; 
-  
+
+  /****
+   There are multiple situations for donation and borrow. Then we should figure out how to design a good number for them.
+   First, when per-thread freelist don't have any objects, then it will allocate _batch number of objects at a time. 
+   Except the first one, it will only has at most _batch-1 objects. Then _listNthItem is not set up yet. 
+   
+   Then there are multiple situations
+   (1) If the thread has some deallocations that are allocated from other threads in the same node, then the items may reach the _listNthItem. Then we will only need to set the pointer of _listNthItem by checking each deallocation. 
+   (2) If the thread keeps using the objects without the donation, and then it will only invoke another borrow after all objects have been exhausted. Again, there is no need to use _listNthItem in the middle. 
+    We don't have a case that the list have some objects, and then get a batch number of objects that making it a necessary to set _listNthItem. 
+    
+   If one borrow has a large number of objects that is larger than N items (_batch + 1), then we only need to traverse very few objects in the header, which is actually benefiting the performance by the cache warmup. 
+ 
+   Donation only occurs when there are 2*batch+1 objects. Then the donation will utilize  
+   *******/
+
+  //unsigned int _lastBatch;
+
   /* Since everytime the perthreadSizeClass will have to check the per-node list, it doesn't need to maintain 
    * allocs before check any more. Basically, if the number of objects is larger than _miniBagObjects, then we will
    * contribute them to the per-node list. 
    */
-  PerSizeClassList _list; 
+  void * _listHead; 
+  void * _listTail;
+  void * _listNthItem; // N is the same as _batch;
+  unsigned long _donationWatermark;
+
+  unsigned long _items; 
 
 public: 
   void initialize(int classSize, int classIndex) {
     _classSize = classSize;
     _classIndex = classIndex;
 
-    if(classSize < SIZE_CLASS_TINY_SIZE) {
-      int objects = PAGE_SIZE/classSize;
-      _batch = objects;
-    }
-    else if((classSize * BATCH_NUMB_SMALL_OBJECTS) <= PAGE_SIZE) {
-      _batch = BATCH_NUMB_SMALL_OBJECTS; 
+    if(classSize < PAGE_SIZE) {
+      _batch = PAGE_SIZE/classSize;
     }
     else {
       _batch = 2; 
     }
 
-    _batchSize = _batch * classSize;
-    // Now initialize the corresponding size
-    _list.initialize();
-  }
-
- 
-  int getBatch(void) {
-    return _batch;
-  }
-
-  int getBatchSize(void) {
-    return _batchSize;
+    _donationWatermark = _batch * 2;
+    _listHead = NULL;
+    _listTail = NULL;
+    _listNthItem = NULL;
+    _items = 0;
   }
 
   size_t getClassIndex(void) {
@@ -71,22 +85,49 @@ public:
   }
 
   bool hasItems(void) {
-    return _list.items() > 0;
+    return _items > 0;
   }
 
   // Allocate an object. It will return NULL
-  // if no objects left
+  // if no objects left. 
+  // There is no need to set _listNthItem during the allocation, since it will only 
+  // consume freed objects. That is, it is possible to make _listNthItem point to 
+  // an invalid object during the allocations. 
+  // However, we will correct the pointer during deallocations. Since _items is the one 
+  // to control the donation.
   void * allocate() {
-    return _list.pop();
+    void * ptr = NULL;
+
+    if(_items > 0) {
+      SLL_Pop(&_listHead);
+      _items--;
+    }
+
+    return ptr;
   }
 
+  // pushRangeList will be invoked when there is no freed objects in the list. 
+  // Therefore, we should change all pointers if necessary.  
   void pushRangeList(int numb, void * head, void * tail) {
+    assert(_items == 0); 
+
     if(numb > 0) {
      // fprintf(stderr, "push numb %d head %p tail %p\n", numb, head, tail);
-      _list.pushRange(numb, head, tail);
+      SLL_PushRange(&_listHead, head, tail);
+      _items = numb;
+      _listTail = tail; 
+
+      // Set the Nth item
+      if(numb >= _batch + 1) {
+        SLL_getItem(&_listHead, _numb - batch - 1, &_listNthItem);   
+      }
+      // Otherwise, there is no need to store _listNthItem.
+      // Since the deallocation will always set this pointer correctly
     }
   }
 
+  // pushRange will be invoked when there is no freed objects in the list. 
+  // Therefore, we should change all pointers if necessary.  
   void pushRange(void * head, void * tail) {
     unsigned int numb; 
 
@@ -96,39 +137,88 @@ public:
       return;
     }
 
+    // Before calling push range, there are no items in the freelist.
+    assert(_items == 0);
+
     char * iptr = (char *)head;
 
     void ** iter = (void **)head;
     unsigned int count = 0;
-    while (count < numb) {
-      iptr += _classSize;
-      *iter = iptr;
-      iter = reinterpret_cast<void**>(iptr);
-      count++;
+
+    if(numb >= _batch + 1) {
+      // If number is larger than _batch+1, then we need to update the Nth item, since 
+      // it is possible that we only have a lot of deallocations after now. 
+      // Then the Nth item is not pointing to the correct position.
+      while (count < numb) {
+        // We will need _listNthItem points to the (n+1)th item from the tail.
+        if(count == numb - _batch - 1) {
+          _listNthItem = iptr;
+        }
+
+        iptr += _classSize;
+        *iter = iptr;
+        iter = reinterpret_cast<void**>(iptr);
+        count++;
+      }
+    }
+    else {
+      while (count < numb) {
+        iptr += _classSize;
+        *iter = iptr;
+        iter = reinterpret_cast<void**>(iptr);
+        count++;
+      }
     }
         
     tail = (void *)(iptr - _classSize);
 
-    pushRangeList(numb, head, tail);
+    SLL_PushRange(&_listHead, head, tail);
+
+    // Update other items
+    _items = numb;
+    _listTail = tail; 
+
+    return;
   }
 
 
+  // Always donate _batch objects at a time. 
   int getDonateObjects(void ** head, void ** tail) {
-    int numb = 0;
+    assert(_items == _donationWatermark);
 
-    if(_list.items() > _batch) {
-      numb = _list.popRange(_batch, head, tail);
+    // If _listNthItem is not set, which is a bug since we will always set this
+    // pointer during the deallocation.
+    assert(_listNthItem != NULL);
+
+    // Donate the older objects to the per-node heap, which helps the locality
+    *head = *((void **)_listNthItem);
+    *tail = _listTail;
+    _items -= _batch; 
+ 
+    // Update the _listTail
+    _listTail = _listNthItem;
+    *((void **)_listTail) = NULL; 
+    // NO need to set _listNthItem, since the next deallocation
+    // will set it anyway.
+    //_listNthItem = NULL;
+
+    return _batch;
+  }
+
+  // The function will return true, when the number freed objects reaches the _donationWatermark
+  bool deallocate(void *ptr) {
+    assert(ptr != NULL);
+
+    SLL_Push(&_listHead, ptr);
+
+    // Update the NthItem if necessary.
+    // This should be udpated before updating _items. 
+    if(_items == _batch) {
+      _listNthItem = ptr;
     }
+    _items++;
 
-    return numb;
-  }
-
-  bool toDonate(void) {
-    return _list.items() > _batch * 2;
-  }
-
-  void deallocate(void *ptr) {
-    _list.push(ptr);
+    return (_items == _donationWatermark) ? true : false;
   }
 };
 
