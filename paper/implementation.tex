@@ -80,6 +80,31 @@ However, the default huge page support is not good for the performance~\cite{Gau
 
 \NA{} utilizes huge pages differently. Ideally, if huge pages are utilized for private objects, then there are no hot page effect and page-level false sharing. Also, if huge pages are only utilized for big objects or all small objects in a huge page will be allocated, then the memory footprint can be minimized. \NA{} takes these consideration into account. Each per-node heap is further divided into two parts as illustrated in Fig.~\ref{fig:overview}: small objects will be allocated from the first half and will be allocated using small pages, while big objects will be allocated from the second half with huge pages (2MB). When a big object is utilized for small objects, only frequently-allocated small objects can utilize such an object. We believe that our design balances the performance and memory consumption.   
 
+\subsection{Efficient Object Migration} 
+
+\NM{} maintains per-thread heap and per-node heap in order to reduce the synchronization overhead, which indicates the necessity of moving objects between different heaps. All threads bounded to the same node will share the per-node heap. When a per-thread list has too many objects, some of them should be moved to the per-node list so that other threads could re-utilize these freed objects, reducing the memory consumption. Similarly, each per-thread list may need to obtain freed objects from its per-node heap, when a thread is running out the memory. These frequent migrations require an efficient mechanism. Currently, \NM{} utilizes singly link lists to manage freed objects, imposing an additional challenge of migrating objects efficiently. 
+
+One straightforward method is to traverse the whole list to collect a batch of objects, and then moves them at a time. Although the idea of using the batch reduces the contention, but this still has multiple issues. First, traversing a list will actually pollute the cache of the current thread, especially when a thread is moving out objects from its per-thread heap. That is, the thread does not need to access these objects any more, where traversing these objects will bring these objects to the cache. Second, it is very slow to traverse a list, which may create thread contention when multiple threads are migrating freed objects from the per-node heap concurrently. We observed a 20\% slowdown for some applications due to this straightforward mechanism. \NM{} further proposes multiple mechanisms to migrate objects efficiently. 
+
+\begin{wrapfigure}{r}{0.6\textwidth}
+\centering
+\includegraphics[width=3in]{figure/perthreadlist}
+\vspace{-0.1in}
+\caption{Avoiding the traverse of per-thread freelist\label{fig:perthreadlist}}
+\vspace{-0.1in}
+\end{wrapfigure}
+In order to avoid the pollution on the per-thread cache in moving out objects, each per-thread freelist maintains two pointers that pointing to the least recent object (shown as the \texttt{Tail} object) and the $nth$ object separately, as shown in Figure~\ref{fig:perthreadlist}. Therefore, if a thread is going to migrate $n$ objects (between $(n-1)th$ and the \texttt{Tail} object), it only requires a forward check to obtain the pointer of $(n-1)th$ object and then it could move out $n$ objects at a time. After the migration,  the \texttt{Tail} pointer can be set to the original $nth$ object. But this mechanism alone cannot reduce the contention when multiple threads are concurrently obtaining objects.
+
+\begin{wrapfigure}{r}{0.6\textwidth}
+\centering
+\includegraphics[width=3in]{figure/listarray}
+\vspace{-0.1in}
+\caption{An array of freelists for per-node heap\label{fig:listarray}}
+\vspace{-0.1in}
+\end{wrapfigure}
+In order to avoid the bottleneck of the per-node heap, \NM{} introduces a circular array of freelists as shown in Figure~\ref{fig:listarray}, where the number of entries is a variable that can be changed by the compilation flag. This array has two pointers, one is \texttt{toGetIndex} and the other one is \texttt{toPutIndex}. When a thread migrates freed objects to the per-node heap, it will add the list of objects to the freelist pointed by \texttt{toPutIndex}, and update the index after the migration. Similarly, if a thread tries to obtain freed objects from the per-node heap, it will obtain all objects in the freelist pointed by the \texttt{toGetIndex}, and update the index afterwards. If the freelist pointed by the \texttt{toGetIndex} has no freed objects, indicating that there is no freed objects in the per-node heap for this size class, then the index is not updated. As described above, if a thread running on the other node just deallocates an object to the per-node heap, then this object will be added to the head of the freelist pointed by  \texttt{toPutIndex}, but the index is not changed after the deallocation.  
+ 
+
 \subsection{Other Mechanisms}
 
 \paragraph{Node-local Metadata:} \NM{} guarantees that all of the metadata is always allocated in the same node, based on its task binding as described in Section~\ref{sec:taskassign}. Such metadata includes the PerMBInfo, per-node and per-thread freelists for different size classes, and freelists for big objects. \NM{} utilizes the \texttt{mbind} system call to bind a range of memory to a specific node.  
@@ -89,6 +114,6 @@ However, the default huge page support is not good for the performance~\cite{Gau
 
 \paragraph{MiniBag Design to Reduce Memory Consumption:} During the development, we noticed that it excessive memory consumption  can be imposed when the OS utilizes huge pages by default. In order to avoid this issue, we propose the combination of per-node heap and per-thread cache. In order to reduce the contention, \NM{} will obtain multiple objects at a time from the per-node heap. 
 
-
+ 
 %https://queue.acm.org/detail.cfm?id=2852078
 
