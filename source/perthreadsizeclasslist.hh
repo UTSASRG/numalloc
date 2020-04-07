@@ -65,8 +65,11 @@ public:
     if(classSize < PAGE_SIZE) {
       _batch = PAGE_SIZE/classSize;
     }
-    else {
+    else if(classSize < 0x40000){
       _batch = 4; 
+    }
+    else {
+      _batch = 2;
     }
 
     _donationWatermark = _batch * 2;
@@ -101,6 +104,8 @@ public:
 
     //fprintf(stderr, "allocate in perthreadsizeclass _items %d\n", _items);
     if(_items > 0) {
+      if(_classSize == 0x800000)
+      fprintf(stderr, "size %lx: last pointer %p\n", _classSize, _listHead);
       ptr = SLL_Pop(&_listHead);
       _items--;
     }
@@ -139,6 +144,8 @@ public:
       return;
     }
 
+//    if(_classSize == 0x80000)
+//    fprintf(stderr, "push range head %p tail %p\n", head, tail);
     // Before calling push range, there are no items in the freelist.
     assert(_items == 0);
 
@@ -175,6 +182,8 @@ public:
     tail = (void *)(iptr - _classSize);
 
     SLL_PushRange(&_listHead, head, tail);
+    //if(_classSize == 0x80000)
+    //fprintf(stderr, "size %ld: push range head %p tail %p to the list. Items %ld\n", _classSize, head, tail, _items);
 
     // Update other items
     _items = numb;

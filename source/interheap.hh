@@ -55,8 +55,11 @@ class InterHeap {
       if(classSize < PAGE_SIZE) {
         _batchSize = (PAGE_SIZE/classSize)*classSize;
       }
-      else {
+      else if(classSize < 0x40000) {
         _batchSize = classSize * 4;
+      }
+      else {
+        _batchSize = classSize * 2;
       }
     }
 
@@ -345,19 +348,20 @@ class InterHeap {
       void * tail = NULL;
       bool success = _smallBags[classIndex].allocate(&head, &tail);
 
-      // If success, then the memory will be at least larger than batchSize.
+      // If success, then the remaining memory in the bag will be at least larger than batchSize.
       if(!success) {
+ 
         // No more space left in the bag, then obtain a new block.
         char * bpPointer = (char *)allocateOneBag(classSize);
 
         head = bpPointer;
         tail = bpPointer + _smallBags[classIndex].getBatchSize(); 
-       
+   //     if(classSize == 0x80000)
+ //fprintf(stderr, "size %lx head %p tail %p batchSize %lx\n", classSize, head, tail, _smallBags[classIndex].getBatchSize());     
         // Push the remaining memory back to the bag.
         _smallBags[classIndex].pushRange(tail, bpPointer + SIZE_ONE_BAG);
       }
 
-      //fprintf(stderr, "now push the remaining to freelist. start %p end %p\n", (void *)((unsigned long)head + classSize), tail);
       // Now the remaining range to the freelist, except the first one
       sc->pushRange((void *)((unsigned long)head + classSize), tail);
 

@@ -106,8 +106,11 @@ public:
     if(classSize < PAGE_SIZE) {
       batch = PAGE_SIZE/classSize;
     }
-    else {
+    else if(classSize < 0x80000){
       batch = 4;
+    }
+    else if(classSize == 0x80000) {
+      batch = 2;
     }
 
     // Initialize the lock

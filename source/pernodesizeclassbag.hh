@@ -27,8 +27,12 @@ class PerNodeSizeClassBag {
         int objects = PAGE_SIZE/classSize;
         _batchSize = objects*classSize;
       }
-      else {
+      else if(classSize < 0x40000){
         _batchSize = classSize * 4;
+      }
+      else {
+        // Make batchSize less than or equal to bagSize.
+        _batchSize = classSize * 2;
       }
 
       _bags = 0;
