@@ -55,11 +55,11 @@ public:
     int numb = 0;
     if(sc->hasItems() != true) {
       void * tail = NULL;
-      unsigned int batch = sc->getBatch(); 
-      
+     
       // Get objects from Node. 
-      numb = getObjectsFromNode(sc->getClassIndex(), batch, &head, &tail);
+      numb = getObjectsFromNode(sc->getClassIndex(), &head, &tail);
 
+      //fprintf(stderr, "Getting size %ld objects %d\n", sc->getClassSize(), numb);
       if(numb == 0) {
 
         // We don't have freed objects in PerNode's freelist. Instead, 
@@ -83,7 +83,7 @@ public:
       //fprintf(stderr, "if items call allocate size %d class %d\n", size, sc->getClassSize());
       ptr = sc->allocate();
       //if(sc->getClassSize() == 2048)
-      //fprintf(stderr, "if items call allocate size %d ptr %p\n", size, ptr);
+      //fprintf(stderr, "allocate size %d ptr %p\n", size, ptr);
     }
  
     return ptr;
@@ -93,15 +93,15 @@ public:
   void deallocate(void * ptr, int classIndex) {
     PerThreadSizeClassList * sc = getPerThreadSizeClassListByIndex(classIndex);
 
-    sc->deallocate(ptr);
+    bool toDonate = sc->deallocate(ptr);
 
     // Check if there are too many freed objects in the freelist, if yes,
     // then donateObjects to the pernode freelist if necessary
-    if(sc->toDonate() == true) {
+    if(toDonate) {
       void * head, * tail;
      
       int numb = sc->getDonateObjects(&head, &tail);
-
+    //  fprintf(stderr, "donating Size %ld objects numb %d\n", sc->getClassSize(), numb); 
       donateObjectsToNode(classIndex, numb, head, tail);
     }
 
@@ -114,7 +114,7 @@ public:
    * However, if Node does not have freed objects in its freelist, it will simply return a range of memory, which is also brought back by the head and tail pointer. At the same time, the returned number will be 0. 
    * If Node do not have freed objects, and it also cannot allocate, it will fail. There is no need to handle in this function.
    */
-  int getObjectsFromNode(unsigned int classIndex, unsigned int batch, void ** head, void ** tail);
+  int getObjectsFromNode(unsigned int classIndex, void ** head, void ** tail);
 
   void donateObjectsToNode(int classIndex, unsigned long batch, void * head, void * tail); 
 };

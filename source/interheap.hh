@@ -43,25 +43,32 @@ class InterHeap {
   // There is no need to use lock, and allocation will be just from one heap.
   class PerSizeClassBag {
     private:
-    size_t _classSize; 
+    unsigned int _batchSize; 
     char * _bp;
     char * _bpEnd;
 
     public: 
-    void initialize(void) {
+    void initialize(unsigned int classSize) {
       _bp = NULL;
       _bpEnd = NULL;
+
+      if(classSize < PAGE_SIZE) {
+        _batchSize = (PAGE_SIZE/classSize)*classSize;
+      }
+      else {
+        _batchSize = classSize * 4;
+      }
     }
 
-    bool allocate(size_t batchSize, void ** head, void ** tail) {
+    bool allocate(void ** head, void ** tail) {
       bool success = false; 
 
       if(_bp < _bpEnd) {
         *head = _bp;
 
-        if(_bp + 2*batchSize < _bpEnd) {
+        if(_bp + 2*_batchSize < _bpEnd) {
           // Update the _bp pointer, but not _bpEnd
-          _bp += batchSize;
+          _bp += _batchSize;
           *tail = _bp;
         }
         else {
@@ -72,6 +79,10 @@ class InterHeap {
       }
 
       return success;
+    }
+
+    unsigned int getBatchSize() {
+      return _batchSize;
     }
 
     void pushRange(void * head, void * tail) {
@@ -199,7 +210,9 @@ class InterHeap {
       // Initialize all size classes. 
       unsigned long classSize = 16;
       for(int i = 0; i < SMALL_SIZE_CLASSES; i++) {
-        _smallBags[i].initialize();
+        // Allocate batchSize
+        _smallBags[i].initialize(classSize);
+
         _smallClasses[i].initialize(classSize, i);
 
         if(classSize < SIZE_CLASS_TINY_SIZE) {
@@ -330,8 +343,7 @@ class InterHeap {
       // Get objects from the corresponding bag.
       void * head = NULL;
       void * tail = NULL;
-      size_t batchSize = sc->getBatchSize();
-      bool success = _smallBags[classIndex].allocate(batchSize, &head, &tail);
+      bool success = _smallBags[classIndex].allocate(&head, &tail);
 
       // If success, then the memory will be at least larger than batchSize.
       if(!success) {
@@ -339,7 +351,7 @@ class InterHeap {
         char * bpPointer = (char *)allocateOneBag(classSize);
 
         head = bpPointer;
-        tail = bpPointer + batchSize; 
+        tail = bpPointer + _smallBags[classIndex].getBatchSize(); 
        
         // Push the remaining memory back to the bag.
         _smallBags[classIndex].pushRange(tail, bpPointer + SIZE_ONE_BAG);

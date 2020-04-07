@@ -185,14 +185,14 @@ class PerNodeHeap {
     return ptr;
   }
 
-  int allocateObjects(unsigned int sc, unsigned int batch, void ** head, void ** tail) {
+  int allocateObjects(unsigned int sc, void ** head, void ** tail) {
     // Get freed objects in the freelist at first.
     // If successful, we will just return the numb. 
-    int numb = _smallLists[sc].allocateBatch(batch, head, tail);
+    int numb = _smallLists[sc].allocateBatch(head, tail);
 
     if(numb == 0) {
       // If we can't get objects from the freelist, allocate from the bag (never-allocated ones)
-      _smallBags[sc].allocate(batch, head, tail);
+      _smallBags[sc].allocate(head, tail);
     } 
 
     return numb;

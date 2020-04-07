@@ -47,6 +47,18 @@ static inline void SLL_PopRange(void **head, int N, void **start, void **end) {
   SLL_SetNext(tmp, NULL);
 }
 
+// Getting the (Nth item
+static inline void SLL_getItem(void **head, int N, void **pointer) {
+  void *tmp = *head;
+
+  for (int i = 0; i < N; ++i) {
+    tmp = SLL_Next(tmp);
+  }
+
+  *pointer = tmp;
+  return;
+}
+
 static inline void SLL_PushRange(void **head, void *start, void *end) {
   if (!start) return;
   SLL_SetNext(end, *head);

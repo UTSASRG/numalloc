@@ -14,6 +14,7 @@ class PerNodeSizeClassBag {
     unsigned int  _classSize;
     unsigned int  _nodeIndex;
     pthread_spinlock_t _lock;
+    unsigned int _batchSize;
 
   public:
     void initialize(unsigned int nodeindex, unsigned int classSize) {
@@ -21,15 +22,22 @@ class PerNodeSizeClassBag {
       _bpEnd = NULL;
       _nodeIndex = nodeindex;
       _classSize = classSize;
+
+      if(classSize < PAGE_SIZE) {
+        int objects = PAGE_SIZE/classSize;
+        _batchSize = objects*classSize;
+      }
+      else {
+        _batchSize = classSize * 4;
+      }
+
       _bags = 0;
       pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
     }
 
     // This function should be always successful. Therefore, there is no
     // need for the return values. 
-    void allocate(unsigned int batch, void ** head, void ** tail) {
-      int size = batch * _classSize; 
-
+    void allocate(void ** head, void ** tail) {
       pthread_spin_lock(&_lock);
       if(_bp == _bpEnd) {
         // If the allocation is not successful, then allocateOneBag()
@@ -39,11 +47,11 @@ class PerNodeSizeClassBag {
         _bags++;  
       }
 
-      if(_bp + 2*size < _bpEnd) {
+      if((_bp + 2*_batchSize) < _bpEnd) {
         *head = _bp;
 
         // Update the _bp pointer after the allocation
-        _bp += size;
+        _bp += _batchSize;
         *tail = _bp;
       }
       else {

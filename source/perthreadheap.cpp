@@ -1,8 +1,8 @@
 #include "perthreadheap.hh"
 #include "numaheap.hh"
 
-int PerThreadHeap::getObjectsFromNode(unsigned int classIndex, unsigned int batch, void ** head, void ** tail) {
-  return NumaHeap::getInstance().getObjectsFromNode(_nodeIndex, classIndex, batch, head, tail);
+int PerThreadHeap::getObjectsFromNode(unsigned int classIndex, void ** head, void ** tail) {
+  return NumaHeap::getInstance().getObjectsFromNode(_nodeIndex, classIndex, head, tail);
 }
 
 void PerThreadHeap::donateObjectsToNode(int classIndex, unsigned long batch, void * head, void * tail) {

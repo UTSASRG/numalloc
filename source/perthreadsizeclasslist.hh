@@ -90,16 +90,18 @@ public:
 
   // Allocate an object. It will return NULL
   // if no objects left. 
-  // There is no need to set _listNthItem during the allocation, since it will only 
-  // consume freed objects. That is, it is possible to make _listNthItem point to 
-  // an invalid object during the allocations. 
-  // However, we will correct the pointer during deallocations. Since _items is the one 
+  // No need to set _listNthItem during the allocation for the performance reason, since it will only 
+  // consume freed objects and will not cause the donation itself. 
+  // That is, it is possible to make _listNthItem point to 
+  // an invalid object (not the nth object) during allocations. 
+  // However, we will correct the pointer during deallocations, since _items (available objects) is the one 
   // to control the donation.
   void * allocate() {
     void * ptr = NULL;
 
+    //fprintf(stderr, "allocate in perthreadsizeclass _items %d\n", _items);
     if(_items > 0) {
-      SLL_Pop(&_listHead);
+      ptr = SLL_Pop(&_listHead);
       _items--;
     }
 
@@ -119,7 +121,7 @@ public:
 
       // Set the Nth item
       if(numb >= _batch + 1) {
-        SLL_getItem(&_listHead, _numb - batch - 1, &_listNthItem);   
+        SLL_getItem(&_listHead, numb - _batch - 1, &_listNthItem);   
       }
       // Otherwise, there is no need to store _listNthItem.
       // Since the deallocation will always set this pointer correctly
@@ -178,6 +180,7 @@ public:
     _items = numb;
     _listTail = tail; 
 
+    //fprintf(stderr, "pushRange _items %d\n", _items);
     return;
   }
 

@@ -148,8 +148,8 @@ public:
   }
 
   // Allocate the specified number of freed objects from the specified node(nindex)'s size class (sc).
-  int getObjectsFromNode(unsigned int nindex, unsigned int classIndex, unsigned int batch, void ** head, void ** tail) {
-    return _nodes[nindex]->allocateObjects(classIndex, batch, head, tail);
+  int getObjectsFromNode(unsigned int nindex, unsigned int classIndex, void ** head, void ** tail) {
+    return _nodes[nindex]->allocateObjects(classIndex, head, tail);
   }
 
   // Contribure some objects to the node's freelist
