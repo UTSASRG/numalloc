@@ -154,7 +154,7 @@ public:
 
   // Contribure some objects to the node's freelist
   void donateObjectsToNode(int nindex, int sc, unsigned long num, void * head, void *tail) {
-    _nodes[nindex]->deallocateObjects(sc, num, head, tail);
+    _nodes[nindex]->deallocateBatch(sc, num, head, tail);
   }
 
   void deallocate(void * ptr) {

@@ -198,7 +198,7 @@ class PerNodeHeap {
     return numb;
   }
 
-  void deallocateObjects(int sc, unsigned long num, void *head, void *tail) {
+  void deallocateBatch(int sc, unsigned long num, void *head, void *tail) {
     _smallLists[sc].deallocateBatch(num, head, tail);   
   }
 
@@ -448,6 +448,7 @@ class PerNodeHeap {
     // Update the size information right now
     _bigSize += mysize;
 
+    //fprintf(stderr, "_bigSize %lx\n", _bigSize);
     // TODO: return some objects back to the OS if necessary
     unlockBigHeap();
   }

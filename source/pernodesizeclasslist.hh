@@ -10,7 +10,6 @@
 // one bumppointer and one freelist
 class PerNodeSizeClassList {
   class PerNodePerSizeClassList {
-    pthread_spinlock_t _lock;
     unsigned int      _batch; 
     unsigned int      _items; 
     void             * _listHead; 
@@ -18,10 +17,6 @@ class PerNodeSizeClassList {
 
  public:
     void initialize(unsigned int batch) {
-      // Initialize the lock
-      pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
-
-      // Initialize the freelist
       _items = 0;
       _listHead = NULL;
       _listTail = NULL;
@@ -41,7 +36,6 @@ class PerNodeSizeClassList {
         return 0;
       }
       else {
-        lock();
         numb = _items;
         *head = _listHead;
         *tail = _listTail;
@@ -49,7 +43,6 @@ class PerNodeSizeClassList {
 
         _listHead = NULL;
         _listTail = NULL;
-        unlock();
       }
 
       return numb;
@@ -59,10 +52,10 @@ class PerNodeSizeClassList {
     // No need to acquire the lock, since it is under the protection of the big lock
     bool deallocate(void * ptr) {
       bool retValue = false; 
-      //lock();
+      
       SLL_Push(&_listHead, ptr);
 
-      if(_listTail == NULL) {
+      if(_items == 0) {
         _listTail = ptr;
       }
 
@@ -73,14 +66,12 @@ class PerNodeSizeClassList {
         retValue = true;
       }
 
-      //unlock();
       return retValue;
     }
 
     // Deallocate multiple objects to the pernode's size class. 
     void deallocateBatch(unsigned long numb, void *head, void * tail) {
-      lock();
-     
+      //fprintf(stderr, "head %p tail %p\n", head, tail); 
       if(_items == 0) {
         // Update the tail if no items there.
         _listTail = tail;
@@ -89,19 +80,9 @@ class PerNodeSizeClassList {
       SLL_PushRange(&_listHead, head, tail);
       _items += numb;
       
-      unlock();
-
       return;
     }
 
- private:
-    void lock() {
-      pthread_spin_lock(&_lock);
-    }
-
-    void unlock() {
-      pthread_spin_unlock(&_lock);
-    }
   };
 
 private:
@@ -126,7 +107,7 @@ public:
       batch = PAGE_SIZE/classSize;
     }
     else {
-      batch = 2;
+      batch = 4;
     }
 
     // Initialize the lock
@@ -137,16 +118,6 @@ public:
     return; 
   }
 
-#if 0
-  // In fact, this functions should not be invoked.
-  void * allocate(void) {
-    // Always allocate one object from the current index. 
-    PerNodePerSizeClassList * list = getAllocOneList(); 
-
-    return list->allocate();
-  } 
-#endif
-
   // Return the number of items to be allocated. Head and tail is to get the pointers back
   int allocateBatch(void ** head, void ** tail) {
     int numb;
@@ -155,12 +126,14 @@ public:
     pthread_spin_lock(&_lock);
     list =  &_lists[_getIndex];
     // Update the _getIndex if there are some objects there.  
-    if(list->hasItems()) {
+    numb = list->allocateAll(head, tail);
+
+    if(numb != 0) {
       _getIndex = (_getIndex + 1)%PER_NODE_NUMB_SIZECLASS_LIST;
     }
     pthread_spin_unlock(&_lock);
 
-    return list->allocateAll(head, tail);
+    return numb; 
   }
 
   void deallocate(void * ptr) {
@@ -170,10 +143,12 @@ public:
     pthread_spin_lock(&_lock);
 
     list =  &_lists[_putIndex];
+
     // Update the _putIndex if freed objects are more than the threshold.
     if(list->deallocate(ptr) == true) {
       _putIndex = (_putIndex + 1)%PER_NODE_NUMB_SIZECLASS_LIST;
     }
+
     pthread_spin_unlock(&_lock);
 
     return; 
@@ -187,10 +162,10 @@ public:
     pthread_spin_lock(&_lock);
     list =  &_lists[_putIndex];
     _putIndex = (_putIndex + 1)%PER_NODE_NUMB_SIZECLASS_LIST;
-    pthread_spin_unlock(&_lock);
 
     list->deallocateBatch(numb, head, tail);
 
+    pthread_spin_unlock(&_lock);
     return;
   }
 

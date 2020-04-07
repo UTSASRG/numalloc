@@ -66,7 +66,7 @@ public:
       _batch = PAGE_SIZE/classSize;
     }
     else {
-      _batch = 2; 
+      _batch = 4; 
     }
 
     _donationWatermark = _batch * 2;
@@ -114,7 +114,7 @@ public:
     assert(_items == 0); 
 
     if(numb > 0) {
-     // fprintf(stderr, "push numb %d head %p tail %p\n", numb, head, tail);
+    //  fprintf(stderr, "push numb %d head %p tail %p\n", numb, head, tail);
       SLL_PushRange(&_listHead, head, tail);
       _items = numb;
       _listTail = tail; 
@@ -214,11 +214,17 @@ public:
 
     SLL_Push(&_listHead, ptr);
 
+    // Update the tail if necessary
+    if(_items == 0) {
+      _listTail = ptr;
+    }
+
     // Update the NthItem if necessary.
     // This should be udpated before updating _items. 
     if(_items == _batch) {
       _listNthItem = ptr;
     }
+
     _items++;
 
     return (_items == _donationWatermark) ? true : false;
