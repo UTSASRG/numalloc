@@ -39,7 +39,7 @@
 #include "mm.hh"
 
 class xthread {
-#define MAX_ALIVE_THREADS 256
+#define MAX_ALIVE_THREADS 1024
 
 	public:
   static inline xthread& getInstance() {
