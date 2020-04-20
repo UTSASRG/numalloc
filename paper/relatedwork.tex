@@ -48,7 +48,8 @@ Memory system performance in a numa multicore multiprocessor
 
 ~\cite{Majo:2015:LPC:2688500.2688509} proposes TBB-NUMA, a system that mainly focuses on task scheduling on NUMA architecture to achieve better performance. \NM{} employs a similar mechanism as TBB-NUMA to manage threads explicitly, but without relying on the human hints. \NM{} also deals with the memory allocation that is not presented in TBB-NUMA. 
 
-~\cite{6704666} shows that a set of simple algorithmic changes coupled with commonly available OS functionality suffice to eliminate data sharing and to regularize the memory access patterns for a subset of the PARSEC parallel benchmarks. These simple source-level changes result in performance improvements of up to 3.1X, but more importantly, they lead to a fairer and more accurate performance evaluation on NUMA-multicore systems. In the defaultconfiguration, OSs (such as Linux) tend to change the thread-to-core mapping during the execution of programs, which result in large performance variations.
+~\cite{6704666} shows that a set of simple algorithmic changes coupled with commonly available OS functionality suffice to eliminate data sharing and to regularize the memory access patterns for a subset of the PARSEC parallel benchmarks. These simple source-level changes result in performance improvements of up to 3.1X, but more importantly, they lead to a fairer and more accurate performance evaluation on NUMA-multicore systems. In the default
+configuration, OSs (such as Linux) tend to change the thread-to-core mapping during the execution of programs, which result in large performance variations.
 
 ~\cite{Bui:2019:EPV:3302424.3303960} talks about the virtualization of NUMA.
 
