@@ -118,7 +118,7 @@ class xthread {
         int max_use_node = 0;
         int start_thread_node = _nodeIndex;
         int node_foot_print=0;
-#ifdef MAX_PROCESSOR
+#ifdef MAX_USE_NODE
         max_use_node = MAX_USE_NODE;
 #endif
       // Initialize all threads's structure at once 
