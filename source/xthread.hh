@@ -115,7 +115,12 @@ class xthread {
       }
 
  #endif
-      
+        int max_use_node = 0;
+        int start_thread_node = _nodeIndex;
+        int node_foot_print=0;
+#ifdef MAX_PROCESSOR
+        max_use_node = MAX_USE_NODE;
+#endif
       // Initialize all threads's structure at once 
       thread_t * thread;
       for(int i = 0; i < MAX_ALIVE_THREADS; i++) {
@@ -137,6 +142,10 @@ class xthread {
           if(_nodeIndex >= _nodeMax) {
             _nodeIndex = 0;
           }
+            node_foot_print++;
+            if(node_foot_print>=max_use_node){
+                _nodeIndex=start_thread_node;
+            }
         }
 //fprintf(stderr, "initialize i %d _nodeIndex %d\n", i, _nodeIndex);
       }
