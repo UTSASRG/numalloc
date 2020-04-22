@@ -10,7 +10,7 @@ CXX = clang++
 
 
 CFLAGS = -std=c++14 -Wno-unused-result -g -O2 -DNUMA_NODES=2
-#-DMAX_PROCESSOR=8
+
 INCLUDE_DIRS = -I.
 LIBS     := dl pthread
 
