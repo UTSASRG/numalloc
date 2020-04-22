@@ -86,15 +86,22 @@ public:
 
   static void bindMemoryBlockwise(char * pointer, size_t pages, int startNodeIndex, bool isHugePage = false) {
 #if 1
-    int pagesPerNode = pages/NUMA_NODES;
+      int total_use_node_num=NUMA_NODES;
+#ifdef MAX_USE_NODE
+      total_use_node_num = MAX_USE_NODE;
+#endif
 
-    double totalStrides = (double)(pages - pagesPerNode*NUMA_NODES)/NUMA_NODES;
-    double stride = (double)1/NUMA_NODES;
+    int pagesPerNode = pages / total_use_node_num;
+
+
+
+      double totalStrides = (double)(pages - pagesPerNode * total_use_node_num) / total_use_node_num;
+    double stride = (double)1 / total_use_node_num;
 
     int nindex = startNodeIndex; 
     double strides = 0.0;
     size_t size;
-    for(int i = 0; i < NUMA_NODES; i++) {
+    for(int i = 0; i < total_use_node_num; i++) {
       int pages = pagesPerNode;
       strides += stride; 
       if(strides <= totalStrides) {
