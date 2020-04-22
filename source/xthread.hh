@@ -64,7 +64,12 @@ class xthread {
       _nodeMax = NUMA_NODES;
 
       fprintf(stderr, "Main thread is at node %d\n", _nodeIndex);
+      int totalCpus = 0;
+#ifdef MAX_PROCESSOR
+        totalCpus = MAX_PROCESSOR;
+#endif
       int totalCpus = get_nprocs();
+      fprintf(stderr, "max processor is  %d\n", totalCpus);
 
       cpu_set_t *cpusetp;
       size_t size;
