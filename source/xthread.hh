@@ -108,7 +108,7 @@ class xthread {
       }
 
  #endif
-        int max_use_node = 0;
+        int max_use_node = _nodeMax;
         int start_thread_node = _nodeIndex;
         int node_foot_print=0;
 #ifdef MAX_USE_NODE
