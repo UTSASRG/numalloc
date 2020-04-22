@@ -68,7 +68,7 @@ class xthread {
 #ifdef MAX_PROCESSOR
         totalCpus = MAX_PROCESSOR;
 #endif
-      totalCpus = get_nprocs();
+      int totalCpus = get_nprocs();
       fprintf(stderr, "max processor is  %d\n", totalCpus);
 
       cpu_set_t *cpusetp;
