@@ -29,7 +29,6 @@ CXX = clang++
 CFLAGS = -g -O2 -std=c++14 -Wno-unused-result -DNUMA_NODES=8 -DINTERHEAP_SUPPORT -DUSE_HUGE_PAGE
 -DMAX_USE_NODE=1
 
->>>>>>> parent of 8b9d502...  max processors
 INCLUDE_DIRS = -I.
 LIBS     := dl pthread
 
