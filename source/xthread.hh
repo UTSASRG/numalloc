@@ -114,7 +114,9 @@ class xthread {
 #ifdef MAX_USE_NODE
         max_use_node = MAX_USE_NODE;
 #endif
-      // Initialize all threads's structure at once 
+        fprintf(stderr, "totally use %d node \n", max_use_node);
+
+        // Initialize all threads's structure at once
       thread_t * thread;
       for(int i = 0; i < MAX_ALIVE_THREADS; i++) {
         thread = &_threads[i];
