@@ -145,6 +145,7 @@ class xthread {
             node_foot_print++;
             if(node_foot_print>=max_use_node){
                 _nodeIndex=start_thread_node;
+                node_foot_print=0;
             }
         }
 //fprintf(stderr, "initialize i %d _nodeIndex %d\n", i, _nodeIndex);
