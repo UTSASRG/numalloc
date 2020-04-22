@@ -126,7 +126,7 @@ class xthread {
         // Always makes the first thread to be the same node as the main thread
         if(i != 0) {
           _nodeIndex++;
-          if(_nodeIndex >= _nodeMax) {
+          if(_nodeIndex == _nodeMax) {
             _nodeIndex = 0;
           }
         }
