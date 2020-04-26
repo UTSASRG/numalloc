@@ -67,14 +67,14 @@ The number of threads of all benchmarks were adjusted according how many cores a
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth,height=200]{paper/figure/2-node-parsec-perf.pdf}
+    \includegraphics[width=\textwidth]{figure/2-node-parsec-perf.pdf}
     \caption{Normalized runtime with different allocators for PARSEC and real applications in Machine A}
     \label{2node-parsec-perf}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth,height=200]{paper/figure/8-node-parsec-perf.pdf}
+    \includegraphics[width=\textwidth]{figure/8-node-parsec-perf.pdf}
     \caption{Normalized runtime with different allocators for PARSEC and real applications in Machine B}
     \label{8node-parsec-perf}
 \end{figure}
@@ -83,7 +83,7 @@ Figure ~\ref{2node-parsec-perf} shows the normalized runtime of different alloca
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth,height=200]{paper/figure/hoard-perf.pdf}
+    \includegraphics[width=\textwidth]{figure/hoard-perf.pdf}
     \caption{Normalized runtime with different allocators for Hoard benchmarks}
     \label{hoard-perf}
 \end{figure}
@@ -91,7 +91,7 @@ Figure ~\ref{2node-parsec-perf} shows the normalized runtime of different alloca
 In the figure ~\ref{hoard-perf}, we show the normalized performance for Hoard benchmarks in Machine A and Machine B separately. We can see from figure ~\ref{hoard-perf} that the average value of \NM{} is also the best, which is 0.47 that means 2 times faster than default Linux Allocator, and jemalloc got 0.7 and Scalloc got 0.9. In the threadtest, the normalized value of \NM{} is 0.19 , far better than any of others, which means there are few central free list competitions, mainly contributed by properly node management and low overheads operations. For false sharing, \NM{}'s performance is also almost the best as same as Scalloc and jemalloc, which means they could handle false sharing issues very properly. In the larson, \NM{} and TcMalloc are the best, which mainly contributed by their low overheads for allocation and remote de-allocation, but due to our better node management, \NM{} could be better in the Machine B which will be mentioned later. In the figure ~\ref{hoard-perf}, we can also see that \NM{} got lowest average normalized value:0.33, significantly smaller than any of others that TBB got 0.99, Scalloc and jemalloc got roughly 1.14. And also, \NM{} and Scalloc could handle false sharing issue very well, and \NM{} could extremely well reduce central free list competition in threadtest. In larson, \NM{} is the best due to its properly multi-node management. 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth,height=150]{paper/figure/no-interleaved.pdf}
+    \includegraphics[width=\textwidth]{figure/no-interleaved.pdf}
     \caption{Normalized runtime with different allocators for PARSEC benchmarks after shut down interleaved heap}
     \label{parsec-no-interleaved-perf}
 \end{figure}
@@ -105,7 +105,7 @@ We also measured memory overheads of different allocators for same applications 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth,height=200]{paper/figure/8-node-memory.pdf}
+    \includegraphics[width=\textwidth]{figure/8-node-memory.pdf}
     \caption{Normalized memory overheads with different allocators for PARSEC benchmarks in Machine A}
     \label{8node-parsec-mem}
 \end{figure}
@@ -120,19 +120,19 @@ Finally, in figure ~\ref{2node-hoard-mem} and ~\ref{8node-hoard-mem}, the normal
 \label{sec:scale}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth,height=150]{paper/figure/scalobility-numalloc.pdf}
+    \includegraphics[width=\textwidth{figure/scalobility-numalloc.pdf}
     \caption{Normalized performance of \NM{} with different thread and node number for PARSEC benchmarks in Machine B}
     \label{numalloc-scalibity}
 \end{figure}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth,height=150]{paper/figure/scalobility-binding-pthread.pdf}
+    \includegraphics[width=\textwidth]{figure/scalobility-binding-pthread.pdf}
     \caption{Normalized performance of Linux's default allocator with different thread and binding to different number of nodes for PARSEC benchmarks in Machine B}
     \label{binding-pthread-scalibity}
 \end{figure}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth,height=150]{paper/figure/scalobility-pthread.pdf}
+    \includegraphics[width=\textwidth]{figure/scalobility-pthread.pdf}
     \caption{Normalized performance of Linux's default allocator without binding for PARSEC benchmarks in Machine B}
     \label{pthread-scalibity}
 \end{figure}
