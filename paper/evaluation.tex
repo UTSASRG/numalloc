@@ -37,7 +37,7 @@ Compiler & GCC-7.5.0 & GCC-8.3.0 \\ \hline
 
 \label{sec:performance}
 
-In order to evaluate the performance, we employ both synthetic applications and real applications on two different machines, where all are multithreaded applications. The number of threads is set to the the total number of cores on two machines if possible, with 40 threads in machine A and 128 threads in machine B. For applications with multiple phases (e.g., \texttt{ferret} and \texttt{dedup}) or works only for power-of-two threads, we chose the maximum number of threads that is smaller than the total number of cores.  We compare \NM{} with multiple popular allocators, such as default Linux Allocator, TcMalloc~\cite{tcmalloc}, or NUMA-Aware TcMalloc~\cite{tcmallocnew}, jemalloc~\cite{jemalloc}, Scalloc~\cite{Scalloc}. For the simplicity, NUMA aware TcMalloc is called as TcMalloc-NUMA in the remainder of this paper. The performance data is using the normalized runtime, by normalizing the runtime of each allocation to the runtime of Linux's default   allocator. That is, the lower bar indicates a better performance. In the remainder of this paper, all performance data are using the same format. 
+In order to evaluate the performance, we employ both synthetic applications and real applications on two different machines, where all are multithreaded applications. The number of threads is set to the the total number of cores on two machines if possible, with 40 threads in machine A and 128 threads in machine B. For applications with multiple phases (e.g., \texttt{ferret} and \texttt{dedup}) or works only for power-of-two threads, we chose the maximum number of threads that is smaller than the total number of cores.  We compare \NM{} with multiple popular allocators, such as default Linux Allocator, TcMalloc-2.7~\cite{tcmalloc}, NUMA-Aware TcMalloc~\cite{tcmallocnew}, jemalloc-jemalloc-5.2.1~\cite{jemalloc}, TBB--2020.1, and Scalloc-1.0.0~\cite{Scalloc}. For the simplicity, NUMA aware TcMalloc is called as TcMalloc-NUMA in the remainder of this paper. The performance data is using the normalized runtime, by normalizing the runtime of each allocation to the runtime of Linux's default   allocator. That is, the lower bar indicates a better performance. In the remainder of this paper, all performance data are using the same format. 
 
 \subsubsection{Synthetic Applications}
 \label{sec:synthetic}
@@ -55,7 +55,7 @@ The performance data can be seen in Fig.~\ref{hoard-perf}, where the normalized 
 
 \NM{} has the best overall performance for both two machines, and for each single application separately. On machine 1, \NM{} is around 2 $\times$ faster than the default allocator. \NM{} is around 3 $\times$ faster than the default one (the next best one) on machine 2.  
 
-\todo{Align all textboxes}. 
+\todo{Align all textboxes. Also, we only use the maximum scale of 1.4, since we only added one more mark if using 1.4.}. 
  
 \subsubsection{Real Applications}
 \label{sec:synthetic}
@@ -90,7 +90,10 @@ Overall, \NM{} has the best performance on two machines. Comparing to the defaul
 
 The default Linux allocator achieves a reasonable performance on the NUMA architecture due to its arena-based design. Based on our analysis, the Linux allocator will always return an object back to its original arena, and then allocate such objects to the thread owning this arena afterwards. This design is integrating well with Linux's first-touch allocation policy, which essentially avoids the owner shifting issue of most allocators. By default, Linux utilizes the first-touch policy to manage the physical memory~\cite{Lameter:2013:NO:2508834.2513149}, which a page is allocated in the same node as the thread that first touches it. Therefore, an object is typically allocated from the local node of its allocation thread, since it typically accesses this object after the allocation. Objects that are deallocated from a different thread will be always returned back to its original arena, and then will be re-utilized by its original allocation thread locally. In contrast, other allocators typically utilize a per-thread cache to store objects that are deallocated by the current thread, which may lead to remote accesses unnecessarily in a NUMA architecture when the deallocation thread is located in a different node from the allocation thread, causing the ``owner shifting'' issue.  
 
-The only    
+ TcMalloc-NUMA is the only available allocator that is claimed to support the NUMA architecture~\cite{tcmallocnew}. However, its performance is not good, which is even slower than that of TcMalloc. TcMalloc-NUMA is based on a 2008 version (TcMalloc-0.97), which does not have many new features of TcMalloc-2.7 (the version for the evaluation). TcMalloc-NUMA imposes the largest overhead for \texttt{streamcluster} ($2.1\times$) on the Machine A (2-node) and \texttt{fluidanimate} ($2.04\times$) on the Machine B (8-node). 
+ 
+ 
+ have the following mechanisms of \NM{}, including topology-aware task assignment, interleaved heap, automatic huge page support, and efficient object migration. We have     
   
 
 
@@ -105,12 +108,17 @@ The only
 
 We also measured memory overheads of different allocators for same applications above. For parsec and Hoard benchmarks, the sum of maxresident output from time utility and the size of huge page usage is used,and huge page size could be gotten by periodically collecting /proc/meminfo file. Memory assumption of server applications like MySQL, apache and Memcached is collected by the sum of the VmHWM field and HugetlbPages field from /proc/PID/status file before we shutdownt the server.We always reboot server applications for each single test. 
 
+\begin{comment}
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{figure/8-node-memory.pdf}
     \caption{Normalized memory overheads with different allocators for PARSEC benchmarks in Machine A}
     \label{8node-parsec-mem}
 \end{figure}
+
+\end{comment}
+
+\input{memorytable}
 
 In figure ~\ref{2node-parsec-mem}, we give the normalized memory overheads also compared with default Linux Allocator in Machine A. We can see that the average value of \NM{} is 1.09, which means \NM{} costs as same memory as default Linux Allocator in average and \NM{} is the best compared with others, although others also do not cost too much. In addition, for most of single application, \NM{} costs as same memory as default Linux Allocator or even less like 0.51 for blackscholes and 0.6 for facesim. The most memory consuming application in figure ~\ref{2node-parsec-mem} is Aget ,in which the value of \NM{} is 2.49, but it is still lower than TcMalloc and jemalloc and it is very acceptable. 
 
