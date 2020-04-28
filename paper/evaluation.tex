@@ -44,7 +44,7 @@ In order to evaluate the performance, we employ both synthetic applications and 
 
 \begin{figure}[!ht]
     \centering
-    \includegraphics[width=\textwidth]{figure/synthetic-perf}
+    \includegraphics[width=\textwidth]{figure/hoard-perf.pdf}
     \caption{Normalized runtime with different allocators for Hoard benchmarks}
     \label{hoard-perf}
 \end{figure}
@@ -106,13 +106,6 @@ The default Linux allocator achieves a reasonable performance on the NUMA archit
 We also measured the maximum memory overhead of different allocators for these applications. For non-server applications, such as \texttt{Aget}, \texttt{Pbscanf}, \texttt{PbZip2} and all PARSEC applications, we utilized the sum of the maxresident output from the time utility and the size of huge pages. In order to determine the huge page usage, we use a script to periodically collect the number of huge pages by reading from \texttt{/proc/meminfo} file. Memory assumption of server applications, such as \texttt{MySQL}, \texttt{SQLite}, and \texttt{Memcached}, \texttt{Apache},  is collected by the sum of both \texttt{VmHWM} and \texttt{HugetlbPages} fields from \texttt{/proc/PID/status} file, after the corresponding client exits. 
 %We always reboot server applications for each single test. 
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{figure/8-node-memory.pdf}
-    \caption{Normalized memory overheads with different allocators for PARSEC benchmarks in Machine A}
-    \label{8node-parsec-mem}
-\end{figure}
-
 %\end{comment}
 
 \input{memorytable}
@@ -132,6 +125,13 @@ In order to evaluate the scalability of \NM{}, we evaluate the following configu
     \centering
     \includegraphics[width=\textwidth]{figure/scalobility-numalloc.pdf}
     \caption{Scalability of \NM{} with different configurations.\label{fig: numalloc-scalability}}
+\end{figure}
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=\textwidth]{figure/scalability-pthread.pdf}
+    \caption{Normalized performance of Linux's default allocator without binding for PARSEC benchmarks in Machine B}
+    \label{pthread-scalibity}
 \end{figure}
 
  In order to understand the scalability of \NM{} when comparing to other allocators, we utilize synthetic applications in Section~\ref{sec:synthetic}. Since other allocators cannot specify the configuration, we only evaluate the scalability with different number of threads. For \NM{}, we maximize the number of threads on each node. For instance, the result of 32 threads will use 2 node, since each node has 16 cores. \todo{XZ: please utilizes the same method as scalloc, and lists all data like Figure 7 to Figure 9 of Scalloc paper. The corresponding data is shown between Fig.~\ref{} and Fig.~\ref{}.} 
@@ -161,7 +161,7 @@ This section further confirms multiple design choices of \NM{}. Some mechanisms 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth]{figure/no-interleaved.pdf}
+    \includegraphics[width=\textwidth]{numalloc/paper/figure/wwo-interleaved.pdf}
     \caption{Normalized runtime with different allocators for PARSEC benchmarks after shut down interleaved heap}
     \label{parsec-no-interleaved-perf}
 \end{figure}
@@ -174,7 +174,7 @@ We will only run it on the 8-node machine. \todo{confirm the results of thread b
 
 \begin{figure}[!h]
     \centering
-    \includegraphics[width=\textwidth]{figure/W:O-pthread-binding.pdf}
+    \includegraphics[width=\textwidth]{numalloc/paper/figure/WO-pthread-binding.pdf}
     \caption{Normalized performance of Linux's default allocator with the binding in Machine B}
     \label{binding-pthread-scalibity}
 \end{figure}
