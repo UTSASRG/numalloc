@@ -44,7 +44,7 @@ In order to evaluate the performance, we employ both synthetic applications and 
 
 \begin{figure}[!ht]
     \centering
-    \includegraphics[width=\textwidth]{figure/hoard-perf.pdf}
+    \includegraphics[width=\textwidth]{figure/synthetic-perf}
     \caption{Normalized runtime with different allocators for Hoard benchmarks}
     \label{hoard-perf}
 \end{figure}
@@ -62,7 +62,7 @@ The performance data can be seen in Fig.~\ref{hoard-perf}, where the normalized 
 
 For real applications, we evaluated on all applications from the PARSEC suite~\cite{parsec}, and seven real applications like \texttt{Apache httpd-2.4.35}, \texttt{MySQL-5.7.15}, \texttt{Memcached-1.4.25}, \texttt{SQLite-3.12.0}, \texttt{Aget}, \texttt{Pfscan}, and \texttt{Pbzip2}. 
 
-The inputs for these applications are listed as follows. PARSEC applications are using native inputs~\cite{parsec}. For MySQL, we use \texttt{sysbench} with 16 threads and 100,000 max requests. The \texttt{python-memcached} script is used for \texttt{Memcached}, with 3000 loops to get the sufficient runtime~\cite{memcached}. The  \texttt{ab} is used to test \texttt{Apache} server~\cite{apachetest}, by sending 1,000,000 requests. \texttt{Aget} is tested  by downloading a 30 M file, and \texttt{Pfscan} is tested by searching  a keyword in a 500M data. In terms of \texttt{Pbzip2}, we test it by compressing 10 files with 30M each. \todo{Finally, SQLite is tested through a program called \texttt{threadtest3}}~\cite{sqlitetest}. 
+The inputs for these applications are listed as follows. PARSEC applications are using native inputs~\cite{parsec}. For MySQL, we use \texttt{sysbench} \todo{with 40 and 128 threads separately, each issuing 100,000  requests}. The \texttt{python-memcached} script is used for \texttt{Memcached}, with 3000 loops to get the sufficient runtime~\cite{memcached}. The  \texttt{ab} is used to test \texttt{Apache} server~\cite{apachetest}, by sending 1,000,000 requests. \texttt{Aget} is tested  by downloading a 30 M file, and \texttt{Pfscan} is tested by searching  a keyword in a 500M data. In terms of \texttt{Pbzip2}, we test it by compressing 10 files with 30M each. \todo{Finally, SQLite is tested through a program called \texttt{threadtest3}}~\cite{sqlitetest}. 
 
 %In the Hoard~\cite{Hoard} benchmarks, we used 100 iterations and 1,280,000 64-byte objects for threadtest and also we run larson for 10 seconds with 1,000 7-2048 bytes object to cover all size classes in almost all allocators for 10,000 iterations.For false sharing , we used 100,000 inner-loop , 100,000 iterations with 8 bytes objects. 
 
@@ -90,10 +90,7 @@ Overall, \NM{} has the best performance on two machines. Comparing to the defaul
 
 The default Linux allocator achieves a reasonable performance on the NUMA architecture due to its arena-based design. Based on our analysis, the Linux allocator will always return an object back to its original arena, and then allocate such objects to the thread owning this arena afterwards. This design is integrating well with Linux's first-touch allocation policy, which essentially avoids the owner shifting issue of most allocators. By default, Linux utilizes the first-touch policy to manage the physical memory~\cite{Lameter:2013:NO:2508834.2513149}, which a page is allocated in the same node as the thread that first touches it. Therefore, an object is typically allocated from the local node of its allocation thread, since it typically accesses this object after the allocation. Objects that are deallocated from a different thread will be always returned back to its original arena, and then will be re-utilized by its original allocation thread locally. In contrast, other allocators typically utilize a per-thread cache to store objects that are deallocated by the current thread, which may lead to remote accesses unnecessarily in a NUMA architecture when the deallocation thread is located in a different node from the allocation thread, causing the ``owner shifting'' issue.  
 
- TcMalloc-NUMA is the only available allocator that is claimed to support the NUMA architecture~\cite{tcmallocnew}. However, its performance is not good, which is even slower than that of TcMalloc. TcMalloc-NUMA is based on a 2008 version (TcMalloc-0.97), which does not have many new features of TcMalloc-2.7 (the version for the evaluation). TcMalloc-NUMA imposes the largest overhead for \texttt{streamcluster} ($2.1\times$) on the Machine A (2-node) and \texttt{fluidanimate} ($2.04\times$) on the Machine B (8-node). 
- 
- 
- have the following mechanisms of \NM{}, including topology-aware task assignment, interleaved heap, automatic huge page support, and efficient object migration. We have     
+ TcMalloc-NUMA is the only available allocator that is claimed to support the NUMA architecture~\cite{tcmallocnew}. However, its performance is not good, which is even slower than that of TcMalloc. TcMalloc-NUMA is based on TcMalloc-0.97 (released in 2008), which does not have many new features of TcMalloc-2.7 (the version for our evaluation). TcMalloc-NUMA imposes the largest overhead \texttt{fluidanimate} ($2.04\times$) on the Machine B (8-node). \todo{Is it caused by thread binding?} Based on our understanding, although it achieves node-aware memory management, it does not implement following mechanisms of \NM{}, including topology-aware task assignment, interleaved heap, automatic huge page support, and efficient object migration. We examine the performance impact of these mechanisms further in Section~\ref{sec:design}.    
   
 
 
@@ -106,9 +103,9 @@ The default Linux allocator achieves a reasonable performance on the NUMA archit
 \subsection{Memory Consumption}
 \label{sec:memory}
 
-We also measured memory overheads of different allocators for same applications above. For parsec and Hoard benchmarks, the sum of maxresident output from time utility and the size of huge page usage is used,and huge page size could be gotten by periodically collecting /proc/meminfo file. Memory assumption of server applications like MySQL, apache and Memcached is collected by the sum of the VmHWM field and HugetlbPages field from /proc/PID/status file before we shutdownt the server.We always reboot server applications for each single test. 
+We also measured the maximum memory overhead of different allocators for these applications. For non-server applications, such as \texttt{Aget}, \texttt{Pbscanf}, \texttt{PbZip2} and all PARSEC applications, we utilized the sum of the maxresident output from the time utility and the size of huge pages. In order to determine the huge page usage, we use a script to periodically collect the number of huge pages by reading from \texttt{/proc/meminfo} file. Memory assumption of server applications, such as \texttt{MySQL}, \texttt{SQLite}, and \texttt{Memcached}, \texttt{Apache},  is collected by the sum of both \texttt{VmHWM} and \texttt{HugetlbPages} fields from \texttt{/proc/PID/status} file, after the corresponding client exits. 
+%We always reboot server applications for each single test. 
 
-\begin{comment}
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{figure/8-node-memory.pdf}
@@ -116,7 +113,7 @@ We also measured memory overheads of different allocators for same applications 
     \label{8node-parsec-mem}
 \end{figure}
 
-\end{comment}
+%\end{comment}
 
 \input{memorytable}
 
@@ -128,20 +125,19 @@ Finally, in figure ~\ref{2node-hoard-mem} and ~\ref{8node-hoard-mem}, the normal
 
 \subsection{Scalability}
 \label{sec:scale}
+
+In order to evaluate the scalability of \NM{}, we evaluate the following configurations on the Machine B: 8 threads on one node (called as 8T1N), 16 threads on one node (16T1N) and two nodes (16T2N), 32 threads on two nodes (32T4N) and 4 nodes (32T4N), 64 threads on two nodes (64T4N) and 4 nodes (64T8N), and 128 threads on 8 nodes (128T8N). Machine B is chosen since it has more cores and more nodes. \NM{}'s performance on these configurations is shown in Fig.~\ref{fig: numalloc-scalability}. For some applications, such as \texttt{facesim}, \texttt{ferret}, \texttt{fluidanimate}, \texttt{streamcluster}, \texttt{swaptions}, \NM{} scales very well. Some applications, such as \texttt{blackscholes}, \texttt{raytrace}, or \texttt{x264}, are not scalable very well. Due to the space limitation, we did not show the results of the Linux allocator, but they share the similar trend. We also observe that \NM{} typically performs better with the lower number of nodes, on a given number of threads.  That confirms the intuition, since a lower number cores enables a better share of data among different threads. 
+
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth{figure/scalobility-numalloc.pdf}
-    \caption{Normalized performance of \NM{} with different number of threads and nodes}
-    \label{numalloc-scalibity}
+    \includegraphics[width=\textwidth]{figure/scalobility-numalloc.pdf}
+    \caption{Scalability of \NM{} with different configurations.\label{fig: numalloc-scalability}}
 \end{figure}
 
-\begin{figure}[!h]
-    \centering
-    \includegraphics[width=\textwidth]{figure/scalobility-binding-pthread.pdf}
-    \caption{Normalized performance of Linux's default allocator with different thread and binding to different number of nodes for PARSEC benchmarks in Machine B}
-    \label{binding-pthread-scalibity}
-\end{figure}
-
+ In order to understand the scalability of \NM{} when comparing to other allocators, we utilize synthetic applications in Section~\ref{sec:synthetic}. Since other allocators cannot specify the configuration, we only evaluate the scalability with different number of threads. For \NM{}, we maximize the number of threads on each node. For instance, the result of 32 threads will use 2 node, since each node has 16 cores. \todo{XZ: please utilizes the same method as scalloc, and lists all data like Figure 7 to Figure 9 of Scalloc paper. The corresponding data is shown between Fig.~\ref{} and Fig.~\ref{}.} 
+ 
+ 
+\begin{comment}
 
 \begin{figure}[!ht]
     \centering
@@ -151,9 +147,14 @@ Finally, in figure ~\ref{2node-hoard-mem} and ~\ref{8node-hoard-mem}, the normal
 \end{figure}
 We will evaluate the scalability on 8threads, 16threads, 32 threads, 64 threads and 128 threads. 
 (one node, two node, four nodes, and 8 nodes). 
+	
+\end{comment}
+
 
 \subsection{Design Choices}
 \label{sec:design}
+
+This section further confirms multiple design choices of \NM{}. Some mechanisms are very basic, such as node-aware memory allocation, which is necessary for NUMA-aware memory allocators. Therefore, they are not evaluated here. Some design choices may only help on one or two applications, such as efficient objects migration.   
 
 \subsubsection{Interleaved Heap} 
 \label{sec:interleavedheap}
@@ -169,5 +170,13 @@ Finally, in figure ~\ref{parsec-no-interleaved-perf} we show some performance re
 
 \subsubsection{Thread Binding}
 \label{sec: threadbinding}
-We will only run it on the 8-node machine. 
+We will only run it on the 8-node machine. \todo{confirm the results of thread binding.} 
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=\textwidth]{figure/W:O-pthread-binding.pdf}
+    \caption{Normalized performance of Linux's default allocator with the binding in Machine B}
+    \label{binding-pthread-scalibity}
+\end{figure}
+
 
