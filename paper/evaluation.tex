@@ -10,157 +10,173 @@ This section aims to answer the following research questions:
 \end{itemize}
 
 \subsection{Experimental Setup}
+
 \begin{table}[h]
   \footnotesize
   \setlength{\tabcolsep}{1.0em}
 \begin{tabular}{c c c}
 \hline
 System & \textbf{Machine A} & \textbf{Machine B} \\ \hline
-CPUs/Model & Xeon Gold 6138	& \\ \hline
+CPUs/Model & Xeon Gold 6138	& Xeon(R) Platinum 8153\\ \hline
+CPU Frequency & 2.10GHz & 2.00GHz\\ \hline
 NUMA Nodes & 2 & 8 \\ \hline
 Physical Cores & 2$\times$20 & 8$\times$16 \\ \hline
-Node Latency & \specialcell{local: 1.0 \\ 1 hop: 2.1} & \\ \hline
-Interconnect Bandwidth & 8GT/s & \\ \hline
-Memory Bandwidth & 19.87 GB/s & \\ \hline
+Node Latency & \specialcell{local: 1.0 \\ 1 hop: 2.1} & \specialcell{local: 1.0 \\ 1 hop: 2.1 \\ 2 hops: 3.1}\\ \hline
+Interconnect Bandwidth & 8GT/s & 10.4GT/s\\ \hline
+Linux & Ubuntu 18.04 & Debian 10\\ \hline
+Compiler & GCC-7.5.0 & GCC-8.3.0 \\ \hline
+%Memory Bandwidth & 19.87 GB/s & \\ \hline
   \end{tabular}
   \centering
   \caption{Machine Specifications.\label{table:Machine}}
 \end{table}
 
-
-Hardware platform:
-
-Software (OS), Compiler: 
+\NM{} was evaluated on two different machines, as specified in Table~\ref{table:Machine}. Typically, machine A has 2 nodes, with 40 cores in total, while machine B has 8 nodes with 128 cores. For machine B, any two nodes are less than or equal to 3 hops. For the evaluation, both machines turned off the hyperthreading. For the performance data, all data shown in this paper is the average of 10 runs, in order to avoid any bias caused by unexpected events.  
 
 \subsection{Performance Evaluation}
 
 \label{sec:performance}
 
+In order to evaluate the performance, we employ both synthetic applications and real applications on two different machines, where all are multithreaded applications. The number of threads is set to the the total number of cores on two machines if possible, with 40 threads in machine A and 128 threads in machine B. For applications with multiple phases (e.g., \texttt{ferret} and \texttt{dedup}) or works only for power-of-two threads, we chose the maximum number of threads that is smaller than the total number of cores.  We compare \NM{} with multiple popular allocators, such as default Linux Allocator, TcMalloc-2.7~\cite{tcmalloc}, NUMA-Aware TcMalloc~\cite{tcmallocnew}, jemalloc-jemalloc-5.2.1~\cite{jemalloc}, TBB--2020.1, and Scalloc-1.0.0~\cite{Scalloc}. For the simplicity, NUMA aware TcMalloc is called as TcMalloc-NUMA in the remainder of this paper. The performance data is using the normalized runtime, by normalizing the runtime of each allocation to the runtime of Linux's default   allocator. That is, the lower bar indicates a better performance. In the remainder of this paper, all performance data are using the same format. 
 
-We compare \NM{} with multiple popular allocators, such as Linux's glibc allocator, TcMalloc~\cite{tcmalloc}, or NUMA Aware TcMalloc~\cite{tcmallocnew}, jemalloc~\cite{jemalloc}, Scalloc~\cite{Scalloc}. For the simplicity, NUMA aware TcMalloc is called as TcMalloc-NUMA in the remainder of this paper. 
-
-Performance evaluation will be performed on two different hardware as further described in the Table~\ref{table:Machine}:
-
-%numactl --hardware Finding out latency information across nodes. 
-% numactl --show Will show the physical core id information. 
-
-
-
-
-%Scalloc is located in https://github.com/cksystemsgroup/scalloc
-
-% Christoph also has a benchmark suite to evaluate the performance of memory allocator. 
-
-% export LD_LIBRARY_PATH="/usr/local/lib/" for running tcmalloc.
-
-
-%\paragraph{Application Statistics} We also checked the corresponding details of \\
 \subsubsection{Synthetic Applications}
 \label{sec:synthetic}
 
-To make our evaluation results more convincing, we evaluated 23 applications, and showed both normalized values for every single of them and final average normalized values in the following sections. All the values are normalized based on the performance results of Linux's glibc allocator, so that a smaller value less than one means better performance and vice versa. Among the 23 applications, twelve are from the PARSEC suite~\cite{parsec} of applications, seven are real applications like Apache httpd-2.4.35, MySQL-5.7.15, Memcached-1.4.25, SQLite-3.12.0, Aget, Pfscan, and Pbzip2, and rest four are benchmarks from Hoard~\cite{Hoard}, including threadtest, larson, active-false sharing and passive-false sharing. All of these benchmarks are multi-threaded application and threads are distributed over nodes in our target machines sharing data with each other more or less, which made them more relevant toward gauging performance on modern NUMA machines than single-threaded benchmark suites, such as SPEC.
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=\textwidth]{figure/hoard-perf.pdf}
+    \caption{Normalized runtime with different allocators for Hoard benchmarks}
+    \label{hoard-perf}
+\end{figure}
 
+For synthetic applications, we are using four benchmarks from Hoard~\cite{Hoard}, including \texttt{threadtest}, \texttt{larson}, \texttt{active-false sharing} and \texttt{passive-false sharing}, which is also employed by existing work~\cite{Scalloc}. For \texttt{threadtest}, we use 100 iterations and 1,280,000 64-byte objects.  \todo{We test \texttt{larson} for 10 seconds with 1,000 objects for 10,000 iterations, which the size between 7 and 2048 bytes in order to cover all size classes in almost all allocators.} For false sharing tests, we use 100,000 inner-loop, and 100,000 iterations with 8-byte objects.
+
+The performance data can be seen in Fig.~\ref{hoard-perf}, where the normalized runtime is shown. 
+
+\NM{} has the best overall performance for both two machines, and for each single application separately. On machine 1, \NM{} is around 2 $\times$ faster than the default allocator. \NM{} is around 3 $\times$ faster than the default one (the next best one) on machine 2.  
+
+\todo{Align all textboxes. Also, we only use the maximum scale of 1.4, since we only added one more mark if using 1.4.}. 
+ 
 \subsubsection{Real Applications}
 \label{sec:synthetic}
 
-The number of threads of all benchmarks were adjusted according how many cores and nodes in the target machine to make threads could be properly distributed over the nodes and cores, making the number of threads as close as the number of cores. Mostly, thread number was 40 in the Machine A and 128 in the Machine B, and I will give the specific number below if it is not this default value. For specific, in PARSEC applications, native inputs~\cite{parsec} were used here.For MySQL, we used sysbench with 16 threads and 100,000 max requests. Besides, python-memcached~\cite{memcached} script was used for memcached with 3000 loops to get sufficient runtime and ab~\cite{apachetest} is used to test Apache by sending 1,000,000 requests. For Aget, we tested it by dowloading a 30 M file. For Pfscan, we executed a keyword search in a 500M data. In terms of Pbzip2, we tested it by compressing 10 30M files. Finally, SQLite was tested through a program called "threadtest3.c"~\cite{sqlitetest}. In the Hoard~\cite{Hoard} benchmarks, we used 100 iterations and 1,280,000 64-byte objects for threadtest and also we run larson for 10 seconds with 1,000 7-2048 bytes object to cover all size classes in almost all allocators for 10,000 iterations.For false sharing , we used 100,000 inner-loop , 100,000 iterations with 8 bytes objects. 
+For real applications, we evaluated on all applications from the PARSEC suite~\cite{parsec}, and seven real applications like \texttt{Apache httpd-2.4.35}, \texttt{MySQL-5.7.15}, \texttt{Memcached-1.4.25}, \texttt{SQLite-3.12.0}, \texttt{Aget}, \texttt{Pfscan}, and \texttt{Pbzip2}. 
+
+The inputs for these applications are listed as follows. PARSEC applications are using native inputs~\cite{parsec}. For MySQL, we use \texttt{sysbench} \todo{with 40 and 128 threads separately, each issuing 100,000  requests}. The \texttt{python-memcached} script is used for \texttt{Memcached}, with 3000 loops to get the sufficient runtime~\cite{memcached}. The  \texttt{ab} is used to test \texttt{Apache} server~\cite{apachetest}, by sending 1,000,000 requests. \texttt{Aget} is tested  by downloading a 30 M file, and \texttt{Pfscan} is tested by searching  a keyword in a 500M data. In terms of \texttt{Pbzip2}, we test it by compressing 10 files with 30M each. \todo{Finally, SQLite is tested through a program called \texttt{threadtest3}}~\cite{sqlitetest}. 
+
+%In the Hoard~\cite{Hoard} benchmarks, we used 100 iterations and 1,280,000 64-byte objects for threadtest and also we run larson for 10 seconds with 1,000 7-2048 bytes object to cover all size classes in almost all allocators for 10,000 iterations.For false sharing , we used 100,000 inner-loop , 100,000 iterations with 8 bytes objects. 
+
+%The number of threads of all benchmarks were adjusted according how many cores and nodes in the target machine to make threads could be properly distributed over the nodes and cores, making the number of threads as close as the number of cores. Mostly, thread number was 40 in the Machine A and 128 in the Machine B, and I will give the specific number below if it is not this default value. 
+
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth,height=200]{figure/2-node-parsec-perf.png}
-    \caption{Normalized runtime with different allocators for PARSEC and real applications in Machine A}
-    \label{2node-parsec-perf}
-\end{figure}
+    \begin{subfigure}{0.9\textwidth}
+    \includegraphics[width=\textwidth]{figure/2-node-parsec-perf.pdf}
+    \caption{Machine A (2-node)\label{2node-parsec-perf}}
+    \end{subfigure}
+    
+	\vspace{0.1in}  
+	
+	\begin{subfigure}{0.9\textwidth}    \includegraphics[width=\textwidth]{figure/8-node-parsec-perf.pdf}
+    \caption{Machine B (8-node)\label{8node-parsec-perf}}
+    \end{subfigure}
+    \caption{Normalized performance overhead for different allocators \label{sec:perf}}
+ \end{figure}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth,height=200]{figure/8-node-parsec-perf.png}
-    \caption{Normalized runtime with different allocators for PARSEC and real applications in Machine B}
-    \label{8node-parsec-perf}
-\end{figure}
+The normalized performance runtime of different allocators on Machine A an on Machine B can be seen in Fig.~\ref{8node-parsec-perf} and Fig.~\ref{2node-parsec-perf} separately,  where all data is normalized to the runtime of the default Linux allocator. By default, \NM{} will embed with the interleaved heap support. However, two applications, \texttt{canneal} and \texttt{raytrace}, have  a much worse performance when the interleaved heap is enabled, since both of them spend a large portion of their time (over 62\% and 82\%) in the serial phase (before creating any child thread). Since the interleaved heap indicates that the allocations can be satisfied in remote NUMA nodes, this design may lead to a large number of remote accesses for the serial phase. Thus, these two figures show the best data for two applications, without the support of interleaved heap. We further discuss the pros and cons of using interleaved heap in Section~\ref{sec:interleavedheap}.  
 
-Figure ~\ref{2node-parsec-perf} shows the normalized runtime of different allocators in Machine A and figure ~\ref{8node-parsec-perf} is for Machine B, compared with Linux allocator. We can see that the average value of \NM{} is 0.97 in Machine A and 0.92 in Machine B and it is always the best among all other allocators. The reason that \NM{} got better performance in Machine B is that there are more nodes and more cores in Machine B, which means \NM{} could be very helpful to better to take use hardware resource of multi nodes and cores.In the figure ~\ref{2node-parsec-perf}, we could get that the average normalized performance of \NM{} is 0.97 that is the best through these 7 allocators with 0.98 for TcMalloc, 1.00 for Scalloc. And \NM{} is also the best for most of single applications here, especially for fluidanimate, streamcluster and x264 in which 10 percent of improvements or even more are gotten. Besides \NM{}'s performance of  ratrace and canneal is not very good here, which is caused by their few data sharing between threads, but we could get amazing improvement if we shutdown interleaved heap in \NM{} and we will give the data in following sections.In the figure ~\ref{8node-parsec-perf}, we could see more exciting improvement from \NM{}, with average normalized value of 0.92 that is not only the best but also far aware better than all the rest allocators that TcMalloc and jemalloc got 0.99, TcMalloc-NUMA and TBB got roughly 1.07 and 1.01 separately. And also, we can see that the performance of \NM{} is the best for almost each single applications, especially it got 0.17 in fluidanimate and 0.66 in streamcluster which is far better than any of other allocators. As the same thing, the performance of ratrace and canneal is not good here, we will talk about it later after we shut down the interleaved heap.
+Overall, \NM{} has the best performance on two machines. Comparing to the default allocator, \NM{} is 6\% faster on Machine A and 13\% faster on Machine B. TcMalloc is the second best one among all allocators, which is only 1\% faster than that of the default allocator. \NM{} is actually much faster than the other NUMA-aware allocator -- TcMalloc-NUMA~\cite{tcmallocnew}. For the best case (e.g., \texttt{fluidanimate}), \NM{} is running up to  $5.8\times$ faster than the default Linux allocator, and it is $4.7\times$ than the second best one--TcMalloc. We also notice that \NM{} achieves a much better performance on the machine with more hardware cores and more NUMA nodes, which indicates \NM{}'s scalable design. 
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth,height=200]{figure/2-node-hoard-perf.png}
-    \caption{Normalized runtime with different allocators for Hoard benchmarks in Machine A}
-    \label{2node-hoard-perf}
-\end{figure}
+The default Linux allocator achieves a reasonable performance on the NUMA architecture due to its arena-based design. Based on our analysis, the Linux allocator will always return an object back to its original arena, and then allocate such objects to the thread owning this arena afterwards. This design is integrating well with Linux's first-touch allocation policy, which essentially avoids the owner shifting issue of most allocators. By default, Linux utilizes the first-touch policy to manage the physical memory~\cite{Lameter:2013:NO:2508834.2513149}, which a page is allocated in the same node as the thread that first touches it. Therefore, an object is typically allocated from the local node of its allocation thread, since it typically accesses this object after the allocation. Objects that are deallocated from a different thread will be always returned back to its original arena, and then will be re-utilized by its original allocation thread locally. In contrast, other allocators typically utilize a per-thread cache to store objects that are deallocated by the current thread, which may lead to remote accesses unnecessarily in a NUMA architecture when the deallocation thread is located in a different node from the allocation thread, causing the ``owner shifting'' issue.  
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth,height=200]{figure/8-node-hoard-perf.png}
-    \caption{Normalized runtime with different allocators for Hoard benchmarks in Machine B}
-    \label{8node-hoard-perf}
-\end{figure}
+ TcMalloc-NUMA is the only available allocator that is claimed to support the NUMA architecture~\cite{tcmallocnew}. However, its performance is not good, which is even slower than that of TcMalloc. TcMalloc-NUMA is based on TcMalloc-0.97 (released in 2008), which does not have many new features of TcMalloc-2.7 (the version for our evaluation). TcMalloc-NUMA imposes the largest overhead \texttt{fluidanimate} ($2.04\times$) on the Machine B (8-node). \todo{Is it caused by thread binding?} Based on our understanding, although it achieves node-aware memory management, it does not implement following mechanisms of \NM{}, including topology-aware task assignment, interleaved heap, automatic huge page support, and efficient object migration. We examine the performance impact of these mechanisms further in Section~\ref{sec:design}.    
+  
 
-In the figure ~\ref{2node-hoard-perf} and figure ~\ref{8node-hoard-perf}, we show the normalized performance for Hoard benchmarks in Machine A and Machine B separately. We can see from figure ~\ref{2node-hoard-perf} that the average value of \NM{} is also the best, which is 0.47 that means 2 times faster than Linux's glibc, and jemalloc got 0.7 and Scalloc got 0.9. In the threadtest, the normalized value of \NM{} is 0.19 , far better than any of others, which means there are few central free list competitions, mainly contributed by properly node management and low overheads operations. For false sharing, \NM{}'s performance is also almost the best as same as Scalloc and jemalloc, which means they could handle false sharing issues very properly. In the larson, \NM{} and TcMalloc are the best, which mainly contributed by their low overheads for allocation and remote de-allocation, but due to our better node management, \NM{} could be better in the Machine B which will be mentioned later. In the figure ~\ref{8node-hoard-perf}, we can also see that \NM{} got lowest average normalized value:0.33, significantly smaller than any of others that TBB got 0.99, Scalloc and jemalloc got roughly 1.14. And also, \NM{} and Scalloc could handle false sharing issue very well, and \NM{} could extremely well reduce central free list competition in threadtest. In larson, \NM{} is the best due to its properly multi-node management. 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth,height=150]{figure/2-node-no-interleaved.png}
-    \caption{Normalized runtime with different allocators for PARSEC benchmarks in Machine A after shut down interleaved heap}
-    \label{2node-parsec-no-interleaved-perf}
-\end{figure}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth,height=150]{figure/8-node-no-interleaved.png}
-    \caption{Normalized runtime with different allocators for PARSEC benchmarks in Machine B after shut down interleaved heap}
-    \label{8node-parsec-no-interleaved-perf}
-\end{figure}
-Finally, in figure ~\ref{2node-parsec-no-interleaved-perf} and figure ~\ref{8node-parsec-no-interleaved-perf}, we show some performance results of some applications that got significant different values after we shut down interleaved heap for \NM{}. We can see that for some applicatios with less data sharing between threads like ratrace and canneal, \NM{} could got significant improvements due to its low overheads and proper memory management. But for some other applications with intensive memory operations and sharing like fluidanimate, shutting down interleaved heap could hurt performance, since interleaved heap could help to distributed resource contention evenly over multi-nodes and then got low overheads.
+%We  can see that the average value of \NM{} is 0.97 in Machine A and 0.92 in Machine B and it is always the best among all other allocators. The reason that \NM{} got better performance in Machine B is that there are more nodes and more cores in Machine B, which means \NM{} could be very helpful to better to take use hardware resource of multi nodes and cores. but we could get amazing improvement if we shutdown interleaved heap in \NM{} and we will give the data in following sections.In the figure ~\ref{8node-parsec-perf}, we could see more exciting improvement from \NM{}, with average normalized value of 0.92 that is not only the best but also far aware better than all the rest allocators that TcMalloc and jemalloc got 0.99, TcMalloc-NUMA and TBB got roughly 1.07 and 1.01 separately. And also, we can see that the performance of \NM{} is the best for almost each single applications, especially it got 0.17 in fluidanimate and 0.66 in streamcluster which is far better than any of other allocators. As the same thing, the performance of ratrace and canneal is not good here, we will talk about it later after we shut down the interleaved heap.
+
+
+%In the figure ~\ref{hoard-perf}, we show the normalized performance for Hoard benchmarks in Machine A and Machine B separately. We can see from figure ~\ref{hoard-perf} that the average value of \NM{} is also the best, which is 0.47 that means 2 times faster than default Linux Allocator, and jemalloc got 0.7 and Scalloc got 0.9. In the threadtest, the normalized value of \NM{} is 0.19 , far better than any of others, which means there are few central free list competitions, mainly contributed by properly node management and low overheads operations. For false sharing, \NM{}'s performance is also almost the best as same as Scalloc and jemalloc, which means they could handle false sharing issues very properly. In the larson, \NM{} and TcMalloc are the best, which mainly contributed by their low overheads for allocation and remote de-allocation, but due to our better node management, \NM{} could be better in the Machine B which will be mentioned later. In the figure ~\ref{hoard-perf}, we can also see that \NM{} got lowest average normalized value:0.33, significantly smaller than any of others that TBB got 0.99, Scalloc and jemalloc got roughly 1.14. And also, \NM{} and Scalloc could handle false sharing issue very well, and \NM{} could extremely well reduce central free list competition in threadtest. In larson, \NM{} is the best due to its properly multi-node management. 
+
 
 \subsection{Memory Consumption}
 \label{sec:memory}
 
-We also measured memory overheads of different allocators for same applications above. For parsec and Hoard benchmarks, the sum of maxresident output from time utility and the size of huge page usage is used,and huge page size could be gotten by periodically collecting /proc/meminfo file. Memory assumption of server applications like MySQL, apache and Memcached is collected by the sum of the VmHWM field and HugetlbPages field from /proc/PID/status file before we shutdownt the server.We always reboot server applications for each single test. 
+We also measured the maximum memory overhead of different allocators for these applications. For non-server applications, such as \texttt{Aget}, \texttt{Pbscanf}, \texttt{PbZip2} and all PARSEC applications, we utilized the sum of the maxresident output from the time utility and the size of huge pages. In order to determine the huge page usage, we use a script to periodically collect the number of huge pages by reading from \texttt{/proc/meminfo} file. Memory assumption of server applications, such as \texttt{MySQL}, \texttt{SQLite}, and \texttt{Memcached}, \texttt{Apache},  is collected by the sum of both \texttt{VmHWM} and \texttt{HugetlbPages} fields from \texttt{/proc/PID/status} file, after the corresponding client exits. 
+%We always reboot server applications for each single test. 
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth,height=200]{figure/2-node-parsec-mem.png}
-    \caption{Normalized memory overheads with different allocators for PARSEC benchmarks in Machine A}
-    \label{2node-parsec-mem}
-\end{figure}
+%\end{comment}
 
-In figure ~\ref{2node-parsec-mem}, we give the normalized memory overheads also compared with Linux's glibc in Machine A. We can see that the average value of \NM{} is 1.09, which means \NM{} costs as same memory as Linux's glibc in average and \NM{} is the best compared with others, although others also do not cost too much. In addition, for most of single application, \NM{} costs as same memory as Linux's glibc or even less like 0.51 for blackscholes and 0.6 for facesim. The most memory consuming application in figure ~\ref{2node-parsec-mem} is Aget ,in which the value of \NM{} is 2.49, but it is still lower than TcMalloc and jemalloc and it is very acceptable. 
+\input{memorytable}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth,height=200]{figure/8-node-parsec-mem.png}
-    \caption{Normalized memory overheads with different allocators for PARSEC benchmarks in Machine B}
-    \label{8node-parsec-mem}
-\end{figure}
+In figure ~\ref{2node-parsec-mem}, we give the normalized memory overheads also compared with default Linux Allocator in Machine A. We can see that the average value of \NM{} is 1.09, which means \NM{} costs as same memory as default Linux Allocator in average and \NM{} is the best compared with others, although others also do not cost too much. In addition, for most of single application, \NM{} costs as same memory as default Linux Allocator or even less like 0.51 for blackscholes and 0.6 for facesim. The most memory consuming application in figure ~\ref{2node-parsec-mem} is Aget ,in which the value of \NM{} is 2.49, but it is still lower than TcMalloc and jemalloc and it is very acceptable. 
 
-Figure ~\ref{8node-parsec-mem} is the nurmalized memory overheads in Machine B. In this figure, we can see that some allocators get a high average nurmalized value compared with figure ~\ref{2node-parsec-mem}, that \NM{} is 2.9, jemalloc is 3.7 and Scalloc is 15.1. The reason is that there are far more cores in Machine B which is 128 compare with Machine A which is 40. So these allocators will preserve more memories in their thread local area and also per node area in \NM{}, that there are 8 nodes in Machine B and only 2 nodes in Machine A. But we can also see that in most applications like blackscholes, canneal and facesim etc, the memory overheads of \NM{} are actually very low , equal or less than Linux's glibc. Compared with the its huge performance improvements, this memory overheads are negligible.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth,height=200]{figure/2-node-hoard-mem.png}
-    \caption{Normalized memory overheads with different allocators for Hoard benchmarks in Machine A}
-    \label{2node-hoard-mem}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth,height=200]{figure/8-node-hoard-mem.png}
-    \caption{Normalized memory overheads with different allocators for Hoard benchmarks in Machine B}
-    \label{8node-hoard-mem}
-\end{figure}
+Figure ~\ref{8node-parsec-mem} is the nurmalized memory overheads in Machine B. In this figure, we can see that some allocators get a high average nurmalized value compared with figure ~\ref{2node-parsec-mem}, that \NM{} is 2.9, jemalloc is 3.7 and Scalloc is 15.1. The reason is that there are far more cores in Machine B which is 128 compare with Machine A which is 40. So these allocators will preserve more memories in their thread local area and also per node area in \NM{}, that there are 8 nodes in Machine B and only 2 nodes in Machine A. But we can also see that in most applications like blackscholes, canneal and facesim etc, the memory overheads of \NM{} are actually very low , equal or less than default Linux Allocator. Compared with the its huge performance improvements, this memory overheads are negligible.
 
 Finally, in figure ~\ref{2node-hoard-mem} and ~\ref{8node-hoard-mem}, the normalized memory overheads for Hoard benchmarks are given, and we can see that the average values of all allocators in figure ~\ref{8node-hoard-mem} are bigger than figure ~\ref{2node-hoard-mem}. The reason is same as we mentioned above that there are more cores and more nodes in Machine B than Machine A, so that allocators usually preserve more memories in their thread local area or per node area. In figure ~\ref{2node-hoard-mem}, the average normalized value of \NM{} is larger than others, but actually not too much, which is 2.3 for \NM{}, 1.9 for TcMalloc-NUMA and 1.8 for TcMalloc. It is because that proper node management is utilized in \NM{} and also in TcMalloc-NUMA, so that each node also preserves some memory not only thread locals.But we believe that this little more memory overheads are totally acceptable. It is also the same thing for figure 10, that the average value for \NM{} is little higher than others, which is 5.3. But in this 8 nodes machine, numalloc is not the worst, that Scalloc's average value is 25 and jemalloc is 9.4. One main reason that the value of \NM{} is smaller is that we use mini size bags in \NM{} which is less than the size of one page for small objects and also memories for small objects are shared per node but per cores in Scalloc.
 
 \subsection{Scalability}
 \label{sec:scale}
+
+In order to evaluate the scalability of \NM{}, we evaluate the following configurations on the Machine B: 8 threads on one node (called as 8T1N), 16 threads on one node (16T1N) and two nodes (16T2N), 32 threads on two nodes (32T4N) and 4 nodes (32T4N), 64 threads on two nodes (64T4N) and 4 nodes (64T8N), and 128 threads on 8 nodes (128T8N). Machine B is chosen since it has more cores and more nodes. \NM{}'s performance on these configurations is shown in Fig.~\ref{fig: numalloc-scalability}. For some applications, such as \texttt{facesim}, \texttt{ferret}, \texttt{fluidanimate}, \texttt{streamcluster}, \texttt{swaptions}, \NM{} scales very well. Some applications, such as \texttt{blackscholes}, \texttt{raytrace}, or \texttt{x264}, are not scalable very well. Due to the space limitation, we did not show the results of the Linux allocator, but they share the similar trend. We also observe that \NM{} typically performs better with the lower number of nodes, on a given number of threads.  That confirms the intuition, since a lower number cores enables a better share of data among different threads. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figure/scalobility-numalloc.pdf}
+    \caption{Scalability of \NM{} with different configurations.\label{fig: numalloc-scalability}}
+\end{figure}
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=\textwidth]{figure/scalability-pthread.pdf}
+    \caption{Normalized performance of Linux's default allocator without binding for PARSEC benchmarks in Machine B}
+    \label{pthread-scalibity}
+\end{figure}
+
+ In order to understand the scalability of \NM{} when comparing to other allocators, we utilize synthetic applications in Section~\ref{sec:synthetic}. Since other allocators cannot specify the configuration, we only evaluate the scalability with different number of threads. For \NM{}, we maximize the number of threads on each node. For instance, the result of 32 threads will use 2 node, since each node has 16 cores. \todo{XZ: please utilizes the same method as scalloc, and lists all data like Figure 7 to Figure 9 of Scalloc paper. The corresponding data is shown between Fig.~\ref{} and Fig.~\ref{}.} 
+ 
+ 
+\begin{comment}
+
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=\textwidth]{figure/scalobility-pthread.pdf}
+    \caption{Normalized performance of Linux's default allocator without binding for PARSEC benchmarks in Machine B}
+    \label{pthread-scalibity}
+\end{figure}
 We will evaluate the scalability on 8threads, 16threads, 32 threads, 64 threads and 128 threads. 
 (one node, two node, four nodes, and 8 nodes). 
+	
+\end{comment}
+
 
 \subsection{Design Choices}
 \label{sec:design}
 
+This section further confirms multiple design choices of \NM{}. Some mechanisms are very basic, such as node-aware memory allocation, which is necessary for NUMA-aware memory allocators. Therefore, they are not evaluated here. Some design choices may only help on one or two applications, such as efficient objects migration.   
+
 \subsubsection{Interleaved Heap} 
+\label{sec:interleavedheap}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{numalloc/paper/figure/wwo-interleaved.pdf}
+    \caption{Normalized runtime with different allocators for PARSEC benchmarks after shut down interleaved heap}
+    \label{parsec-no-interleaved-perf}
+\end{figure}
+
+Finally, in figure ~\ref{parsec-no-interleaved-perf} we show some performance results of some applications that got significant different values after we shut down interleaved heap for \NM{}. We can see that for some applicatios with less data sharing between threads like ratrace and canneal, \NM{} could got significant improvements due to its low overheads and proper memory management. But for some other applications with intensive memory operations and sharing like fluidanimate, shutting down interleaved heap could hurt performance, since interleaved heap could help to distributed resource contention evenly over multi-nodes and then got low overheads.
 
 \subsubsection{Thread Binding}
 \label{sec: threadbinding}
-We will only run it on the 8-node machine. 
+We will only run it on the 8-node machine. \todo{confirm the results of thread binding.} 
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=\textwidth]{numalloc/paper/figure/WO-pthread-binding.pdf}
+    \caption{Normalized performance of Linux's default allocator with the binding in Machine B}
+    \label{binding-pthread-scalibity}
+\end{figure}
+
 

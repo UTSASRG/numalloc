@@ -3,9 +3,9 @@
 
 The NUMA architecture was proposed to accommodate the hardware trend with the increasing number of CPU cores. However, existing memory allocators have multiple issues for support the NUMA architecture: most of them were not designed for the NUMA architecture; NUMA-aware allocators still miss some performance opportunities promised by the hardware. 
 
-This paper proposes a novel memory allocator--\NM{}---that is designed for the NUMA architecture. Different from existing allocators, \NM{} integrates the task assignment into the allocator, where each thread is bound to a specific core in an interleaved way. Based on the location of a task, \NM{} designs a node-aware memory allocation. \NM{} also utilizes huge page support to improve the performance, and designs its interleaved and block-wise memory allocation to accommodate shared objects. 
+This paper proposes a novel memory allocator--\NM{}---that is designed for the NUMA architecture. Different from existing allocators, \NM{} integrates the task assignment into the allocator, where each thread is bound to a specific core in an interleaved way. Based on the location of a task, \NM{} designs a node-aware memory allocation. \NM{} also utilizes huge page support to improve the performance, and designs its interleaved heap to accommodate shared objects. 
 %\NM{} supports huge pages that are already available inside the OS and the hardware, and introduces an optional interleaved heap. 
-Based on its extensive evaluation, \NM{} achieves up to $5\times$ performance speedup comparing to the default Linu	x allocator.  
+Based on its extensive evaluation, \NM{} has the best performance than other popular allocators, such as \texttt{TcMalloc}, \texttt{jemalloc}, and the Linux allocator, and the only available NUMA-aware allocator--TcMalloc-NUMA. Also, it is significantly faster than the second best one, over 12\% on average on a 8-node machine. For the best case, \NM{} achieves up to $5.8\times$ performance speedup comparing to the default Linux allocator, and $4.7\times$ than the second best one (TcMalloc).  
 
 	
 \end{abstract}

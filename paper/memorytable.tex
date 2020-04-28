@@ -1,0 +1,38 @@
+\renewcommand{\arraystretch}{1.5}
+\begin{table}[tp]
+
+  \centering
+  \fontsize{6.5}{8}\selectfont
+  \caption{Memory consumption in Machine B (8 nodes)}
+  \label{tab:memory_consumption}
+    \begin{tabular}{|c|c|c|c|c|c|c|c|}
+    \hline
+    \multirow{2}{*}{Program}&
+    \multicolumn{7}{c}{Memory Usage (MB)}\\
+    \cline{2-8}
+    &Linux's Default&\NM{}&TcMalloc&TcMalloc-NUMA&jemalloc&TBB&Scalloc\cr\hline
+    \hline
+    blackscholes&615&509&621&623&633&615&630\cr\hline
+    bodytrack&37&161&45&46&570&37&1994\cr\hline
+    canneal&888&879&774&757&1294&888&36149\cr\hline
+    dedup&912&1236&983&1023&1389&912&8556\cr\hline
+    facesim&560&500&603&601&1133&547&3056\cr\hline
+    ferret&184&493&195&183&596&184&3377\cr\hline
+    fluidanimate&470&392&483&484&481&470&3437\cr\hline
+    raytrace&1288&1472&1092&1543&1287&1288&4398\cr\hline
+    streamcluster&113&105&123&121&127&113&193\cr\hline
+    swaptions&33&268&16&21&540&37&1817\cr\hline
+    vips&228&536&248&269&778&227&3681\cr\hline
+    x264&2859&2721&3047&3064&3719&2859&5402\cr\hline
+    \hline
+    aget&8&74&11&10&93&8&80\cr\hline
+    pbzip2&463&747&817&813&1121&454&4881\cr\hline
+    pfscan&522&542&528&528&535&522&554\cr\hline
+    sqlite3&45&284&60&75&139&44&681\cr\hline
+    apache&8&34&10&9&10&4&42\cr\hline
+    memcached&16&80&25&24&41&18&263\cr\hline
+    mysql&277&732&314&315&500&276&\nexists\cr\hline
+    \hline
+    Total&{\bf 9527}&{\bf 11763}&{\bf 9993}&{\bf 10510}&{\bf 14986}&{\bf 9502}&{\bf 79190}\cr\hline
+    \end{tabular}
+\end{table}
