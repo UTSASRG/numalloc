@@ -1,3 +1,6 @@
-\section{Discussion}
+\section{Limitation}
+\label{sec:limit}
 
 Possible limitations. Sometimes, \NM{} utilizes more memory than the default allocator. 
+
+Second, currently, \NM{} may introduce some reliability issue by preallocating a huge chunk of memory from the OS in the beginning. A program that will be crashed in other allocators may not crash if the address is landed on the pre-allocated range. Instead, \NM{} aims to achieve the high performance only. 
