@@ -74,7 +74,7 @@ However, it is very challenging to determine the allocation callsite \textit{uni
 
 \NA{} utilizes a hash table to track the status of every callsite. Upon every allocation of the main thread, \NA{} checks the status of the allocation callsite, with the callsite key as described above. If the callsite key is not existing in the hash table or the callsite is identified as a shared callsite, the current allocation will be satisfied from the interleaved heap. Otherwise, it will be allocated from the per-node heap. When an allocation is satisfied in the callsite and the callsite is new, the corresponding allocation will be tracked in the second hash table. The second hash table will be checked upon deallocations, where the corresponding allocation callsite will be marked as private if an object is allocated in the same epoch. 
 
-\subsection{Automatic Huge Page Support} 
+\subsection{Explicit Huge Page Support} 
 \label{sec:hugepage}
 
 \NA{} employs the existing huge page support to further improve the performance. Modern hardware typically installs with huge page support. A huge page is a page that its page size is much larger than 4 kilobytes. Currently, the Linux system has two page sizes, 4 kilobytes and 2 megabytes. Based on the existing study~\cite{hugepages}, huge pages can reduce Translation Look-aside Buffer (TLB) misses that may significantly affect the performance, since a huge page covers a larger range of memory than a normal page. Reducing TLB misses helps reduce the interferences on the cache utilization caused by TLB misses, and therefore reduces cache misses. Huge pages could also reduces the contention in the OS memory manager. We observed around 10\% performance improvement for some applications, when we are using huge page support. 

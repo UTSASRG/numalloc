@@ -2,28 +2,56 @@
 \section{Introduction}
 \label{sec:intro}
 
-The Non-Uniform Memory Access (NUMA) architecture is an appealing solution for the scalability of multi-core era. Compared to Uniform Memory Access (NMUA) architecture, the NUMA architecture avoids the bottleneck of a central memory controller: each processor (also known as a domain or node) consists of multiple cores, while each node can access its own memory controller. Different nodes are connected via high-speed inter-connection (such as Quick Path Interconnect (QPI)~\cite{intelqpi} or HyperTransport bus~\cite{hypertransport}) to form a cache-coherent system that presents an abstraction of a single globally addressable memory. 
+The Non-Uniform Memory Access (NUMA) architecture is an appealing solution for the scalability of multi-core era. Compared to Uniform Memory Access (UMA) architecture, the NUMA architecture avoids the bottleneck of a central memory controller: each processor (also known as a domain or node) consists of multiple cores, while each node can access its own memory controller. Different nodes are connected via high-speed inter-connection (such as Quick Path Interconnect (QPI)~\cite{intelqpi} or HyperTransport bus~\cite{hypertransport}) to form a cache-coherent system that presents an abstraction of a single globally addressable memory. 
+However, NUMA applications may have serious performance issues, if programs have one of the following issues, such as large amount of remote accesses, load imbalance, contention for interconnection and last level cache~\cite{Blagodurov:2011:CNC:2002181.2002182, Dashti:2013:TMH:2451116.2451157}, as discussed more in Section~\ref{sec:overview}. 
 
-%For such cache-coherent NUMA (ccNUMA) systems, programmers may not need to change their programs to run on them. 
+Multiple types of approaches help improve the performance of NUMA systems. The first type of approaches migrate tasks or physical pages reactively based on memory access patterns or other hardware characteristics~\cite{Blagodurov:2011:CNC:2002181.2002182, AutoNUMA, Dashti:2013:TMH:2451116.2451157, Lepers:2015:TMP:2813767.2813788}. They improve the performance automatically without human involvement. However, they cannot solve all issues. For instance, if multiple objects located in the same page are concurrently accessed by multiple threads, either task migration or page movement cannot eliminate remote accesses completely~\cite{Gaud:2014:LPM:2643634.2643659}. The second type of approaches rely on programmers to manage memory allocations and task assignments explicitly~\cite{Zhang:2015:NGA:2688500.2688507, Kaestle:2015:SSA:2813767.2813787, Lin:2016:MTP:2872362.2872401, Majo:2017:LPC:3057718.3040222}. Although they could improve the performance greatly, they typically require significant human effort to rewrite the programs, where legacy systems cannot benefit automatically. 
 
-However, NUMA systems may have serious performance issues if programs have one of the following issues, such as large amount of remote accesses, load imbalance, contention for interconnection and last level cache~\cite{Blagodurov:2011:CNC:2002181.2002182, Dashti:2013:TMH:2451116.2451157}, as discussed more in Section~\ref{sec:overview}. There exists multiple types of approaches that devoting to improve the performance of NUMA systems. 
-
-First, some research may rely on programmers to manage memory allocations and task assignments explicitly~\cite{Zhang:2015:NGA:2688500.2688507, Kaestle:2015:SSA:2813767.2813787, Lin:2016:MTP:2872362.2872401, Majo:2017:LPC:3057718.3040222}. Although they could improve the performance greatly, they typically require significant human effort to rewrite the programs, where legacy systems cannot benefit from. 
-
-Second, some approaches migrate tasks or physical pages reactively based on memory access patterns or other hardware characteristics~\cite{Blagodurov:2011:CNC:2002181.2002182, AutoNUMA, Dashti:2013:TMH:2451116.2451157, Lepers:2015:TMP:2813767.2813788}. These reactive approaches could improve the performance automatically without human involvement. However, they cannot solve all issues. For instance, if multiple objects located in the same page are concurrently accessed by multiple threads, either task migration or page movement may not offer much benefit~\cite{Gaud:2014:LPM:2643634.2643659}.
 %However, these approaches are not architecture or OS independent, such as Carrefour~\cite{Dashti:2013:TMH:2451116.2451157}. More importantly, they cannot achieve the optimal performance due to \textbf{their reactive approaches} that only migrate a task or memory pages whenever contention. However, the migration  will require additional overhead. Also, some issues cannot be solved by the reactive approach. For instance,  
 
 
-Third, some researchers focus on the memory management by providing a new memory manager for existing software~\cite{}. 
-However, none of these systems could achieve the performance promised by the hardware. Given a simple example, if one page is fulled with objects that are utilized by different threads running on different nodes, then it is not able to achieve the best performance no matter where this page is located. Similarly, the pemissive tracking of memory ownership of an object cannot completely avoid the ownership drifting problem, where the . 
-
-In this paper, we propose a new memory management method that employs the proactive memory management policy. 
-There are multiple approaches: first, it combines the affinity of memory management and task management. Tasks were bound to memory nodes initially, and memory management will be based on the placement of each thread. Second, it proactively bound the memory to different nodes, so that it could reduce the . Third, it takes a different method to deal with allocations from main thread, Fourth, it takes the advantage of hardware progress automatically, e.g., huge pages. One application achieves 10\% performance speedup with this consideration.  
+Another type of approach focus on heap management~\cite{tcmallocnew, }, since the heap easily cause performance issue due to extensive allocations and deallocations and extensive accesses on these heap objects. The NUMA-aware memory management is appealing, because there is no need to change applications explicitly. For this task, it is essential to reduce the number of remote accesses. Kaminski et. al. designs a NUMA-aware memory management based on TcMalloc~\cite{tcmallocnew}, called as TcMalloc-NUMA in the remainder of this paper.TcMalloc-NUMA designs a node-aware memory management by tracking the memory locality information. It invokes the \texttt{mbind} system call to bind the memory explicitly, so that it could check the locality via the stored information inside the user space. Also, it could always return a freed object back to a corresponding node based on the locality information. However, TcMalloc-NUMA has multiple design issues that may affect its performance. First, it does not regulate the task assignment, which could potentially introduce significant overhead by querying the locality of tasks dynamically. Second, it does not consider the load balance issue, but only focusing on remote accesses. Third, it does not employ the recent progress of the hardware and OS support, such as huge pages, due to its development in 2012. 
 
 
-There are other implementation issues that may also contribute to the performance improvement. For instance, the metadata will be always allocated locally. The big objects will be re-utilized by small objects automatically, in order to reduce the potential cache misses. 
+\begin{comment}
 
-We have designed a memory allocator based on the  methods described above, and have evaluated it on a range of benchmarks and real applications on two different NUMA architecture. The evaluation showed that \NA{} could significant improve the performance by up to 2X, with the average of 10\% performance. The evaluation also show that \NA{} has a bigger performance improvement on  
+It first assumes that a memory block is belong to the same node for its allocating thread. However, this assumption is invalid, and is also contradict with the first-touch policy of the OS. 
+
+If there is no such assumption, we will expect that the OS will provide an efficient API to query the locality of a page. However, no such APIs exist in both Linux and Windows. 
+
+It checks the physical memory usage to determine the future allocations of the same node or the re-use of a remote node. But that is very slow by checking meminfo. 
+
+In the end, it utilizes the mbind to bind the memory to a node specifically. 
+	
+\end{comment}
+	 
+
+%Based on our evaluation, TcMalloc-NUMA cannot achieve good performance for many applications.  
+%However, none of these systems could achieve the performance promised by the hardware. Given a simple example, if one page is fulled with objects that are utilized by different threads running on different nodes, then it is not able to achieve the best performance no matter where this page is located. Similarly, the passive tracking of memory ownership of an object cannot completely avoid the ownership drifting problem, where the . 
+
+This paper proposes a novel memory manage --\NM{}--to address these issues. First, it combines memory management and task management altogether, by binding tasks to different NUMA nodes interleavedly and binding the memory explicitly. The task binding not only benefits the load balance, due to its even distribution of tasks, but also constructs the basis for its memory management. In this design, there is no need to query the locality of tasks dynamically, and it is guaranteed to have the correct locality for the memory. Second, it proposes an interleaved heap for potentially-shared objects that are typically allocated in the serial phase. This design helps solve the load imbalance issue, when the main thread performs a large number of allocations but then pass them to different threads.  Third, \NM{} also employs the recent progress of the hardware and the OS, such as huge pages support. Based on our evaluation, this design achieves additional 10\% performance speedup automatically for some applications, due to the reduced TLB misses and cache misses. Besides that, \NM{} also implements very carefully in order to achieve the good performance. It introduces many implementation techniques, such as fast metadata lookup, cache warmup mechanism, efficient objects migration, node-local metadata, as further described in Section~\ref{sec:implement}. 
+ 
+% Second, it proactively bound the memory to different nodes, so that it could reduce the . Third, it takes a different method to deal with allocations from main thread, Fourth, it takes the advantage of hardware progress automatically, e.g., huge pages. One application achieves 10\% performance speedup with this consideration.  
+
+
+%There are other implementation issues that may also contribute to the performance improvement. For instance, the metadata will be always allocated locally. The big objects will be re-utilized by small objects automatically, in order to reduce the potential cache misses. 
+
+To evaluate \NM{}, we perform extensive evaluation on synthetic and real applications, and compare \NM{} with popular allocators, such as the default Linux allocator, TcMalloc~\cite{tcmalloc}, jemalloc~\cite{jemalloc}, Intel TBB~\cite{tbb}, and Scalloc~\cite{Scalloc}. For the performance on real applications, \NM{} achieves around 13\% speedup on average comparing to the default Linux allocator, which is also 11\% faster than the second best one. For the \texttt{fluidanimate} application, \NM{} achieves up to $5.8\times$ faster than the default allocator, and $4.7\times$ faster than the second best one. For synthetic applications, \NM{} is running 44\% faster than the second best one in an 2-node machine, and is around $3\times$ faster than the second best one in an 8-node machine.  In total, \NM{} may impose around \todo{XX} memory overhead, but is much more scalable than all other allocators.  \NM{} is ready for the practical employment, due to its high performance, and good scalability. 
+
+Overall, this paper has the following contributions. 
+
+\begin{itemize}
+\item First, we propose to integrate task management into the memory allocation for the NUMA memory management. 
+\item Second, we propose an interleaved heap in order to reduce the load balance issue caused by shared objects allocated in the main thread. 
+\item Third, we employ huge page support for large objects and small objects that are projected to be allocated extensively. 
+\item In the end, this paper also includes a large number of careful designs to reduce the performance and memory overhead. 
+\end{itemize}
+
+The remainder of this paper is organized as follows. Section~\ref{sec:overview} introduces some background, such as the NUMA architecture and the OS support. Section~\ref{sec:implement} focuses on the design and implementation of \NM{}. After that, Section~\ref{sec:evaluation} describes its experimentation evaluation, and Section~\ref{sec:limit} discusses the limitation of \NM{}. In the end, Section\ref{sec:related} discusses some relevant related work, and then Section~\ref{sec:conclusion} concludes. 
+
+\begin{comment}
+
+eve have evaluated it on a range of benchmarks and real applications on two different NUMA architecture. The evaluation showed that \NA{} could significant improve the performance by up to 2X, with the average of 10\% performance. The evaluation also show that \NA{} has a bigger performance improvement on  
 
 
  
@@ -74,7 +102,7 @@ Programs also have some inherent imbalance. For instance, main thread typically 
 Also, many applications are typically utilizes a producer-consumer architecture, where the objects allocated in one thread will be deallocated by another thread. This issue, if not handle correctly, will cause the ownership thrifting issues, which will cause that it is impossible to know the placement of an object after a while. Very quickly, it may cause a lot of unnecessary remote accesses, when using the existing NUMA allocator~\cite{}.  
 
 Therefore, a good NUMA allocator should deal with these inherent imbalance of programs. Also, it should deal with the normal problems of NUMA hardware. It should 
-
+	
 \subsection{Novelty}
 
 \begin{itemize}
@@ -87,8 +115,11 @@ Therefore, a good NUMA allocator should deal with these inherent imbalance of pr
 
 \end{itemize}
 
+\end{comment}
 
-\subsection{TODO list}
+
+\begin{comment}
+
 
 \begin{enumerate}
 \item Dividing each node's memory into two parts, one for small objects, and one for big objects. 
@@ -104,4 +135,6 @@ Therefore, a good NUMA allocator should deal with these inherent imbalance of pr
 
 	
 \end{enumerate}
+	
+\end{comment}
 
