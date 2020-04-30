@@ -1,6 +1,8 @@
 \section{Limitation}
 \label{sec:limit}
 
-Possible limitations. Sometimes, \NM{} utilizes more memory than the default allocator. 
+This section describes some limitations of \NM{}. 
 
-Second, currently, \NM{} may introduce some reliability issue by preallocating a huge chunk of memory from the OS in the beginning. A program that will be crashed in other allocators may not crash if the address is landed on the pre-allocated range. Instead, \NM{} aims to achieve the high performance only. 
+The first limitation of \NM{} is that it consumes more memory than some popular allocators. Based on our analysis, the memory consumption is caused by \NM{}'s bag mechanism. Currently, \NM{} employs one MB as a bag, which indicates that objects of each size will occupy at least of 1 MB, when transparent huge page support is enabled. This design achieves a fast lookup on the metadata, but will utilize more memory unfortunately. We will investigate whether reducing the size of a bag could help reduce the memory consumption in the future.
+
+The second limitation is that \NM{} may introduce some reliability issue by preallocating a huge chunk of memory from the OS in the beginning. A program that will crash in other allocators may not crash, if the address is landed on the pre-allocated range. Instead, \NM{} aims to achieve the high performance over the reliability. 
