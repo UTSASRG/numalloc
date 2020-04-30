@@ -198,6 +198,15 @@ We will only run it on the 8-node machine. \todo{confirm the results of thread b
 \end{figure}
 
 \subsubsection{Huge Page Support} 
-Since Machine B will utilize huge pages by default, we will evaluate the performance impact of huge page support on Machine A (2-node machine). 
+Since Machine B will utilize huge pages by default, we will evaluate the performance impact of huge page support on Machine A (2-node machine). We only utilize PARSEC applications for this evaluation. 
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=\textwidth]{figure/hugepage.pdf}
+    \caption{Normalized runtime with and without huge page support on Machine A (2-node).}
+    \label{fig:hugepage}
+\end{figure}
+
+The results are shown in Fig.~\ref{fig:hugepage}. When integrating with huge page support, \NM{} achieves a significantly better performance for \texttt{dedup}, where the performance difference is around 15\%. On average,  the huge page support improves the performance of all evaluated applications about 2.5\%. This clearly indicates that it is beneficial to have huge page support integrated with the memory allocator.  
 
 

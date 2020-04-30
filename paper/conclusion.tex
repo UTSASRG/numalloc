@@ -1,4 +1,4 @@
 \section*{Conclusion}
 \label{sec:conclusion}
 
-\NM{} is a drop-in memory allocator replacement that is specially designed for the NUMA architecture. It could automatically adapt to different hardware with different number of cores. It employs multiple mechanisms to improve its performance. 
+\NM{} is a drop-in memory allocator replacement that is specially designed for the NUMA architecture. Applications can be linked to \NM{} directly, without the change and the recompilation. \NM{} can  automatically adapt to the hardware with different number of NUMA nodes and hardware cores. It employs multiple mechanisms, such as the combination of task assignment and memory management, node-aware memory management, interleaved heap, and explicit huge page support together to improve the performance. Based on extensive evaluation, \NM{} achieves significantly better performance than all existing allocators on the NUMA architecture.  
