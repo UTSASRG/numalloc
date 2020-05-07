@@ -111,7 +111,7 @@ In figure ~\ref{2node-hoard-mem}, the average normalized value of \NM{} is large
 
 In order to evaluate the scalability of \NM{}, we evaluate the following configurations on the Machine B: 8 threads on one node (called as 8T1N), 16 threads on one node (16T1N) and two nodes (16T2N), 32 threads on two nodes (32T4N) and 4 nodes (32T4N), 64 threads on two nodes (64T4N) and 4 nodes (64T8N), and 128 threads on 8 nodes (128T8N). Machine B is chosen since it has more cores and more nodes. \NM{}'s performance on these configurations is shown in Fig.~\ref{fig: numalloc-scalability}. For some applications, such as \texttt{facesim}, \texttt{ferret}, \texttt{fluidanimate}, \texttt{streamcluster}, \texttt{swaptions}, \NM{} scales very well. Some applications, such as \texttt{blackscholes}, \texttt{raytrace}, or \texttt{x264}, are not scalable very well. Due to the space limitation, we did not show the results of the Linux allocator, but they share the similar trend. We also observe that \NM{} typically performs better with the lower number of nodes, on a given number of threads.  This indicates that a lower number cores enables a better share of data among different threads. 
 
-\begin{figure}[H]
+\begin{figure}[!h]
     \centering
     \includegraphics[width=\textwidth]{figure/scalobility-numalloc.pdf}
     \caption{Scalability of \NM{} with different configurations.\label{fig: numalloc-scalability}}
@@ -120,40 +120,36 @@ In order to evaluate the scalability of \NM{}, we evaluate the following configu
 \begin{figure}[!h]
     \centering
     \includegraphics[width=\textwidth]{figure/scalability-pthread.pdf}
-    \caption{Normalized performance of Linux's default allocator without binding for PARSEC benchmarks in Machine B}
+    \caption{Scalability of the Linux's default allocator in Machine B (8-Node)}
     \label{pthread-scalibity}
 \end{figure}
 
- In order to understand the scalability of \NM{} when comparing to other allocators, we utilize synthetic applications. The reason of utilizing synthetic applications is that they were designed to be scalable~\cite{Scalloc}. Therefore, we could eliminate the scalability issue caused by applications. Since other allocators cannot specify the configuration, we only evaluate the scalability with different number of threads. For \NM{}, we maximize the number of threads on each node. For instance, the result of 32 threads will use 2 node, since each node has 16 cores. \todo{XZ: please utilizes the same method as scalloc, and lists all data like Figure 7 to Figure 9 of Scalloc paper. The corresponding data is shown between Fig.~\ref{} and Fig.~\ref{}.} 
-
-
-\begin{figure}[!ht]
-    \centering
-    \includegraphics[width=\textwidth]{figure/hoard-perf.pdf}
-    \caption{Normalized runtime with different allocators for Hoard benchmarks}
-    \label{hoard-perf}
-\end{figure}
-
-\begin{figure}[!ht]
-    \centering
-    \includegraphics[width=\textwidth]{numalloc/paper/figure/sythentic-scalobility.pdf}
-    \caption{Speedup with respect to the default Linux allocator}
-    \label{sythentic-scalility}
-\end{figure}
-
-For synthetic applications, we are using four benchmarks from Hoard~\cite{Hoard}, including \texttt{threadtest}, \texttt{larson}~\cite{Larson}, \texttt{cache-scratch} and \texttt{cache-slash}, which is also employed by existing work~\cite{Scalloc}. 
-
-\texttt{threadtest} is an application that performs a large number of allocations and deallocations with a specified number of threads. Also, it allows to specify how much work to be done between each allocation and deallocation. For \texttt{threadtest}, we use 100 iterations, 1,280,000 allocations, 0 work, and 64-byte objects (for the allocation).  Basically, this benchmark will stressfully test the performance overhead of allocation and deallocation. For \texttt{threadtest}, the reason why \NM{} achieves much better performance than other allocators can be caused by the following reasons: first, \NM{} imposes very minimal system call overhead, since it allocates a large chunk of memory at one time. By comparison, \texttt{TcMalloc} will invoke \texttt{mmap} for every page. Second, \NM{} imposes little synchronization overhead, since every thread will has its own heap and it only imposes some when getting objects from the shared bag. But \NM{} obtains a number of objects at a time, at the page level, which significant reduce the possibility of contention. 
-
-The \texttt{larson} is to simulate a multithreaded server that could respond to requests from different clients. Each thread   will receive a random number of objects in the beginning, perform a random number of allocation and deallocations to simulate the handler for processing requests, and then pass objects to the next thread. We test \texttt{larson} for 10 seconds with 1,000 objects for 10,000 iterations, where each allocation is between 7 bytes and 2048 bytes. 
-
-
-\texttt{cache-scratch} tests passive false sharing, and \texttt{cache-thrash} tests active false sharing. False sharing occurs when multiple threads are concurrently accessing different words in the same cache line. Since allocators cannot control false sharing inside one object, false sharing of allocators mainly focuses on whether objects are allocated from the same cache line or not. It further includes two types of false sharing.   Passive false sharing is introduced upon deallocations, where the reallocation of freed objects introduces the false sharing. In contrast, active false sharing can be introduced during the first allocation of objects, where each thread is not responsible for allocating continuous objects.   For false sharing tests, we use 100,000 inner-loop, and 100,000 iterations with 8-byte objects. The performance data can be seen in Fig.~\ref{hoard-perf}, where the normalized runtime is shown. \NM{} will not introduce active false sharing, since each thread will get a page. That is the reason why it has a good performance as the Linux allocator for \texttt{cache-thrash}. Although \NM{} might introduce passive false sharing in theory, due to its per-thread cache design. However, \NM{} avoids remote allocations, since every thread only places a freed object into its local cache when it is originated from the same node.  Other allocators do not have such mechanisms.   
-
-
-When the number of threads is equal to the number of cores, \NM{} has the best overall performance for both two machines, and for almost all single applications. On machine 1, \NM{} is around 2 $\times$ faster than the default allocator. \NM{} is around 3 $\times$ faster than the default one (the next best one) on machine 2.  
-
+ In order to understand the scalability of \NM{} when comparing to other allocators, we also evaluate them with synthetic applications from Hoard~\cite{Hoard}, including \texttt{threadtest}, \texttt{larson}~\cite{Larson}, \texttt{cache-scratch} and \texttt{cache-slash}, which is also employed by existing work~\cite{Scalloc}. . The reason of utilizing synthetic applications is that they were designed to be scalable~\cite{Scalloc}. Therefore, we could eliminate the scalability issue caused by applications. Since other allocators cannot specify the configuration, we only evaluate the scalability with different number of threads. For \NM{}, we maximize the number of threads on each node. For instance, the result of 32 threads will use 2 node, since each node has 16 cores. The corresponding data is shown as Fig.~\ref{sythentic-scalability}. 
  
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=\textwidth]{figure/sythentic-scalobility.pdf}
+    \caption{Speedup with respect to the default Linux allocator}
+    \label{sythentic-scalability}
+\end{figure}
+
+Among these applications, \texttt{cache-scratch} tests passive false sharing, and \texttt{cache-thrash} tests active false sharing. False sharing occurs when multiple threads are concurrently accessing different words in the same cache line. 
+Passive false sharing is introduced upon deallocations, where the reallocation of freed objects introduces the false sharing. In contrast, active false sharing can be introduced during the first allocation of objects, where a thread is not responsible for allocating all continuous objects in the cache line. For these false sharing tests, we use 100,000 inner-loop, and 100,000 iterations with 8-byte objects. \NM{} will not introduce active false sharing, since each thread will get a page initially. 
+ Although \NM{} might introduce passive false sharing in theory, due to its per-thread cache design, it avoids remote allocations across the node. Other allocators do not have such mechanisms. That is the reason why \NM{} is one of the best allocators for
+ \texttt{cache-scratch} , and achieves much better speedup than all other allocators in \texttt{cache-thrash} (30\% faster than the second best one), as shown in Fig.~\ref{sythentic-scalability}.  
+
+ \texttt{larson} is to simulate a multithreaded server that could respond to requests from different clients. Each thread  will receive a random number of objects in the beginning, perform a random number of allocation and deallocations to simulate the handler for processing requests, and then pass objects to the next thread. We test \texttt{larson} for 10 seconds with 1,000 objects for 10,000 iterations, where each allocation is between 7 bytes and 2048 bytes. As shown in Fig.~\ref{sythentic-scalability}, \NM{} is around 16\% faster than the second best allocator--TcMalloc--with 128 threads.   
+
+
+\texttt{threadtest} is an application that performs a large number of allocations and deallocations with a specified number of threads. Also, it allows to specify how much work to be done between each allocation and deallocation. For \texttt{threadtest}, we use 100 iterations, 1,280,000 allocations, 0 work, and 64-byte objects (for the allocation).  This benchmark will stressfully test the performance overhead of allocation and deallocation. For this application, \NM{} is $2.6\times$ faster than the second best one (jemalloc), when there are 128 threads. Multiple reasons contribute to the good performance of \NM{}:  \NM{} imposes very minimal system call overhead, and little synchronization overhead. 
+%since every thread will has its own heap and it only imposes some when getting objects from the shared bag. But \NM{} obtains a number of objects at a time, at the page level, which significant reduce the possibility of contention. 
+
+
+When the number of threads is equal to the number of cores (128), \NM{} has the best overall performance, and for almost all single applications. Overall, \NM{} is running 79\% faster than the second best one (Scalloc), and  $2.2\times$ faster than the default one on machine 2.  
+
+
+%That is the reason why it has a good performance as the Linux allocator for \texttt{cache-thrash}.
+
  
 \begin{comment}
 
