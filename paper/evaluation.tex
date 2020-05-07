@@ -134,6 +134,13 @@ In order to evaluate the scalability of \NM{}, we evaluate the following configu
     \label{hoard-perf}
 \end{figure}
 
+\begin{figure}[!ht]
+    \centering
+    \includegraphics[width=\textwidth]{numalloc/paper/figure/sythentic-scalobility.pdf}
+    \caption{Speedup with respect to the default Linux allocator}
+    \label{sythentic-scalility}
+\end{figure}
+
 For synthetic applications, we are using four benchmarks from Hoard~\cite{Hoard}, including \texttt{threadtest}, \texttt{larson}~\cite{Larson}, \texttt{cache-scratch} and \texttt{cache-slash}, which is also employed by existing work~\cite{Scalloc}. 
 
 \texttt{threadtest} is an application that performs a large number of allocations and deallocations with a specified number of threads. Also, it allows to specify how much work to be done between each allocation and deallocation. For \texttt{threadtest}, we use 100 iterations, 1,280,000 allocations, 0 work, and 64-byte objects (for the allocation).  Basically, this benchmark will stressfully test the performance overhead of allocation and deallocation. For \texttt{threadtest}, the reason why \NM{} achieves much better performance than other allocators can be caused by the following reasons: first, \NM{} imposes very minimal system call overhead, since it allocates a large chunk of memory at one time. By comparison, \texttt{TcMalloc} will invoke \texttt{mmap} for every page. Second, \NM{} imposes little synchronization overhead, since every thread will has its own heap and it only imposes some when getting objects from the shared bag. But \NM{} obtains a number of objects at a time, at the page level, which significant reduce the possibility of contention. 
