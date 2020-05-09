@@ -287,7 +287,8 @@ url="http://dx.doi.org/10.1007/978-3-642-35606-3_24"
 @misc{dlmalloc,
   author = {Doug Lea},
   title = {The {GNU} {C} Library},
-  howpublished = "\url{http://www.gnu.org/software/libc/libc.html}",
+  howpublished = {"\url{http://www.gnu.org/software/libc/libc.html}"},
+  year={1988}
 }
 
 @article{diener2015automatic,
@@ -1226,25 +1227,45 @@ month={April},}
 } 
 
 @article{Majo:2017:LPC:3057718.3040222,
- author = {Majo, Zoltan and Gross, Thomas R.},
- title = {A Library for Portable and Composable Data Locality Optimizations for NUMA Systems},
- journal = {ACM Trans. Parallel Comput.},
- issue_date = {March 2017},
- volume = {3},
- number = {4},
- month = mar,
- year = {2017},
- issn = {2329-4949},
- pages = {20:1--20:32},
- articleno = {20},
- numpages = {32},
- url = {http://doi.acm.org/10.1145/3040222},
- doi = {10.1145/3040222},
- acmid = {3040222},
- publisher = {ACM},
- address = {New York, NY, USA},
- keywords = {NUMA, data placement, scheduling},
-} 
+author = {Majo, Zoltan and Gross, Thomas R.},
+title = {A Library for Portable and Composable Data Locality Optimizations for NUMA Systems},
+year = {2017},
+issue_date = {March 2017},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {3},
+number = {4},
+issn = {2329-4949},
+url = {https://doi.org/10.1145/3040222},
+doi = {10.1145/3040222},
+journal = {ACM Trans. Parallel Comput.},
+month = mar,
+articleno = {20},
+numpages = {32},
+keywords = {data placement, scheduling, NUMA}
+}
+  
+@article{10.1145/2858788.2688509,
+author = {Majo, Zoltan and Gross, Thomas R.},
+title = {A Library for Portable and Composable Data Locality Optimizations for NUMA Systems},
+year = {2015},
+issue_date = {August 2015},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {50},
+number = {8},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/2858788.2688509},
+doi = {10.1145/2858788.2688509},
+journal = {SIGPLAN Not.},
+month = jan,
+pages = {227–238},
+numpages = {12},
+keywords = {scheduling, data placement, NUMA}
+}
+  
+
+
 
 
 @inproceedings{Lin:2016:MTP:2872362.2872401,
@@ -1308,13 +1329,15 @@ month={April},}
 @misc{hugepages,
   author = {Mel Gorman},
   title = {Huge pages},
-  howpublished = "\url{https://lwn.net/Articles/374424/}"
+  howpublished = {"\url{https://lwn.net/Articles/374424/}"},
+  year={2010}
 }
 
 @misc{AutoNUMA,
  author = {Jonathan Corbet}, 
  title = {AutoNUMA: the other approach to NUMA scheduling}, 
- howpublished = "\url{https://lwn.net/Articles/488709/}"
+ howpublished = {"\url{https://lwn.net/Articles/488709/}"},
+ year = {2012}
 }
 
 @inproceedings{NumaGiC,
@@ -1354,6 +1377,7 @@ note={Last accessed: Dec. 13, 2013.}
 author = {HyperTransport Consortium},
 title ={HyperTransport},
 howpublished={\url{https://en.wikipedia.org/wiki/HyperTransport}},
+year = {2019}
 }
 
 
@@ -1377,15 +1401,23 @@ lastaccessed={Last accessed: Dec. 16, 2009.}}
   author = {Andrea Arcangeli},
   company = {Red Hat, Inc.} ,
   title = {AutoNUMA alpha10},
-  howpublished = "\url{https://lwn.net/Articles/488686/}"
+  howpublished = {"\url{https://lwn.net/Articles/488686/}"},
+  year = {2012}
 }
 
 @misc{AutoNUMA2,
-  author = {Jonathan Corbet},
-  title = {AutoNUMA: the other approach to NUMA scheduling},
-  howpublished = "\url{https://lwn.net/Articles/488709/}"
+author = {Jonathan Corbet},
+title ={AutoNUMA: the other approach to NUMA scheduling},
+howpublished={"\url{https://lwn.net/Articles/488709/}"},
+year = {2012}
 }
 
+@misc{tbb,
+  author = {Kirill Rogozhin},
+  title = {Controlling memory consumption with Intel® Threading Building Blocks (Intel® TBB) scalable allocator},
+  howpublished = {"\url{https://software.intel.com/content/www/us/en/develop/articles/controlling-memory-consumption-with-intel-threading-building-blocks-intel-tbb-scalable.html}"},
+  year={2014}
+}
 
 @misc{Brandeis,
   author = {NISD},
@@ -2008,7 +2040,15 @@ month={August},}
 @misc{tcmalloc,
   author = {Sanjay Ghemawat and Paul Menage},
   title = {"TCMalloc : Thread-Caching Malloc"},
-  howpublished = "\url{http://goog-perftools.sourceforge.net/doc/tcmalloc.html}"
+  howpublished = {"\url{http://goog-perftools.sourceforge.net/doc/tcmalloc.html}"},
+  year={2007}
+}
+
+@misc{OpenBSD,
+  author = {OpenBSD Foundation},
+  title = {"OpenBSD"},
+  howpublished = {"\url{https://www.openbsd.org}"},
+  year={2012}
 }
 
 @article{1742-6596-664-9-092010,
@@ -2060,6 +2100,81 @@ month={Sept},}
  publisher = {USENIX Association},
  address = {Berkeley, CA, USA},
 } 
+
+@article{10.1145/2692916.2555271,
+author = {Liu, Xu and Mellor-Crummey, John},
+title = {A Tool to Analyze the Performance of Multithreaded Programs on NUMA Architectures},
+year = {2014},
+issue_date = {August 2014},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {49},
+number = {8},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/2692916.2555271},
+doi = {10.1145/2692916.2555271},
+journal = {SIGPLAN Not.},
+month = feb,
+pages = {259–272},
+numpages = {14},
+keywords = {threads, performance optimization, NUMA, memory access pattern, profiler}
+}
+
+@article{Larson,
+author = {Larson, Per-\r{A}ke and Krishnan, Murali},
+title = {Memory Allocation for Long-Running Server Applications},
+year = {1998},
+issue_date = {March 1999},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {34},
+number = {3},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/301589.286880},
+doi = {10.1145/301589.286880},
+journal = {SIGPLAN Not.},
+month = oct,
+pages = {176–185},
+numpages = {10},
+keywords = {concurrency, dynamic memory allocation, multiprocessor scalability, reducing lock contention, server applications, cache-conscious algorithms}
+}
+  
+@inproceedings{10.1145/286860.286880,
+author = {Larson, Per-\r{A}ke and Krishnan, Murali},
+title = {Memory Allocation for Long-Running Server Applications},
+year = {1998},
+isbn = {1581131143},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/286860.286880},
+doi = {10.1145/286860.286880},
+booktitle = {Proceedings of the 1st International Symposium on Memory Management},
+pages = {176–185},
+numpages = {10},
+keywords = {dynamic memory allocation, cache-conscious algorithms, server applications, multiprocessor scalability, reducing lock contention, concurrency},
+location = {Vancouver, British Columbia, Canada},
+series = {ISMM ’98}
+}
+  
+
+@inproceedings{XULIU,
+author = {Liu, Xu and Mellor-Crummey, John},
+title = {A Tool to Analyze the Performance of Multithreaded Programs on NUMA Architectures},
+year = {2014},
+isbn = {9781450326568},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2555243.2555271},
+doi = {10.1145/2555243.2555271},
+booktitle = {Proceedings of the 19th ACM SIGPLAN Symposium on Principles and Practice of Parallel Programming},
+pages = {259–272},
+numpages = {14},
+keywords = {performance optimization, profiler, threads, NUMA, memory access pattern},
+location = {Orlando, Florida, USA},
+series = {PPoPP ’14}
+}
+  
+
 
 @inproceedings {180813,
 author = {Renaud Lachaize and Baptiste Lepers and Vivien Quema},
@@ -3118,7 +3233,8 @@ language={English}
 @misc{jemalloc,
   author = {Jason Evans},
   title = {Scalable memory allocation using jemalloc},
-  howpublished = "\url{https://www.facebook.com/notes/facebook-engineering/scalable-memory-allocation-using-jemalloc/480222803919/}"
+  howpublished = {"\url{https://www.facebook.com/notes/facebook-engineering/scalable-memory-allocation-using-jemalloc/480222803919/}"},
+  year={2011}
 } 
 
 @misc{jemalloc2,
@@ -4129,17 +4245,20 @@ language={English}
 @misc{memcached,
  title = {"Pure python memcached client"},
  author = {  Sean Reifschneider}, 
- howpublished = "\url{https://pypi.python.org/pypi/python-memcached}",
+ howpublished = {"\url{https://pypi.python.org/pypi/python-memcached}"},
+ year={2013}
 }
 
 @misc{apachetest,
  title = {ab - Apache HTTP server benchmarking tool},
  author = {The Apache Software Foundation},
- howpublished = "\url{https://httpd.apache.org/docs/2.4/programs/ab.html}",
+ howpublished = {"\url{https://httpd.apache.org/docs/2.4/programs/ab.html}"},
+ year={2020}
 }
 
 @misc{sqlitetest,
  title = {How SQLite Is Tested},
  author = {SQL Developers.},
- howpublished = "\url{https://www.sqlite.org/testing.html}",
+ howpublished = {"\url{https://www.sqlite.org/testing.html}"},
+ year={2019}
 }

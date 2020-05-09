@@ -200,6 +200,8 @@ We will only run it on the 8-node machine. \todo{confirm the results of thread b
     \label{binding-pthread-scalibity}
 \end{figure}
 
+From Fig.~\ref{binding-pthread-scalibity}, we can see that it got some huge performance improvement from binding, especially that the performance difference of \texttt{fluidanimate} is around 0.8, and 0.2 for \texttt{streamcluster}.It clearly indicates that binding threads evenly over nodes could heavily reduce resource contention and bring significant improvement.
+
 \subsubsection{Huge Page Support} 
 Since Machine B will utilize huge pages by default, we will evaluate the performance impact of huge page support on Machine A (2-node machine). We only utilize PARSEC applications for this evaluation. 
 
