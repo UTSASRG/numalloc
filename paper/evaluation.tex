@@ -54,15 +54,15 @@ The normalized performance runtime of different allocators on Machine A an on Ma
     \centering
     \begin{subfigure}{0.9\textwidth}
     \includegraphics[width=\textwidth]{figure/2-node-parsec-perf.pdf}
-    \caption{Machine A (2-node)\label{2node-parsec-perf}}
+    \caption{Machine A (2-Node)\label{2node-parsec-perf}}
     \end{subfigure}
     
 	\vspace{0.1in}  
 	
 	\begin{subfigure}{0.9\textwidth}    \includegraphics[width=\textwidth]{figure/8-node-parsec-perf.pdf}
-    \caption{Machine B (8-node)\label{8node-parsec-perf}}
+    \caption{Machine B (8-Node)\label{8node-parsec-perf}}
     \end{subfigure}
-    \caption{Normalized performance overhead for different allocators \label{sec:perf}}
+    \caption{Performance with different allocators, where all data are normalized the default Linux allocator. \label{sec:perf}}
  \end{figure}
 
 
@@ -99,7 +99,7 @@ The memory overhead of different allocators is listed in Table~\ref{tab:memory_c
 \begin{comment}
 
 
-In figure ~\ref{2node-hoard-mem}, the average normalized value of \NM{} is larger than others, but actually not too much, which is 2.3 for \NM{}, 1.9 for TcMalloc-NUMA and 1.8 for TcMalloc. It is because that proper node management is utilized in \NM{} and also in TcMalloc-NUMA, so that each node also preserves some memory not only thread locals.But we believe that this little more memory overheads are totally acceptable. It is also the same thing for figure 10, that the average value for \NM{} is little higher than others, which is 5.3. But in this 8 nodes machine, numalloc is not the worst, that Scalloc's average value is 25 and jemalloc is 9.4. One main reason that the value of \NM{} is smaller is that we use mini size bags in \NM{} which is less than the size of one page for small objects and also memories for small objects are shared per node but per cores in Scalloc.
+In Fig.~\ref{2node-hoard-mem}, the average normalized value of \NM{} is larger than others, but actually not too much, which is 2.3 for \NM{}, 1.9 for TcMalloc-NUMA and 1.8 for TcMalloc. It is because that proper node management is utilized in \NM{} and also in TcMalloc-NUMA, so that each node also preserves some memory not only thread locals.But we believe that this little more memory overheads are totally acceptable. It is also the same thing for Fig. 10, that the average value for \NM{} is little higher than others, which is 5.3. But in this 8 nodes machine, numalloc is not the worst, that Scalloc's average value is 25 and jemalloc is 9.4. One main reason that the value of \NM{} is smaller is that we use mini size bags in \NM{} which is less than the size of one page for small objects and also memories for small objects are shared per node but per cores in Scalloc.
 	
 \end{comment}
 
@@ -112,13 +112,13 @@ In order to evaluate the scalability of \NM{}, we evaluate the following configu
 \begin{figure}[!h]
     \centering
     \includegraphics[width=\textwidth]{figure/scalobility-numalloc.pdf}
-    \caption{Scalability of \NM{} with different configurations.\label{fig: numalloc-scalability}}
+    \caption{Scalability of \NM{} with different configurations on Machine B (8-Node), where the data are normalized to 8T1N.\label{fig: numalloc-scalability}}
 \end{figure}
 
 \begin{figure}[!h]
     \centering
     \includegraphics[width=\textwidth]{figure/scalability-pthread.pdf}
-    \caption{Scalability of the Linux's default allocator in Machine B (8-Node)}
+    \caption{Scalability of the Linux's default allocator on Machine B (8-Node), where the data are normalized to 8Threads.}
     \label{pthread-scalibity}
 \end{figure}
 
@@ -127,7 +127,7 @@ In order to evaluate the scalability of \NM{}, we evaluate the following configu
 \begin{figure}[!ht]
     \centering
     \includegraphics[width=\textwidth]{figure/sythentic-scalobility.pdf}
-    \caption{Speedup with respect to the default Linux allocator}
+    \caption{Scalability of different allocators\\  the data are normalized the runtime of the default Linux allocator with one thread.}
     \label{sythentic-scalability}
 \end{figure}
 
@@ -173,7 +173,7 @@ This section further confirms multiple design choices of \NM{}. Some mechanisms 
 \begin{figure}[!h]
     \centering
     \includegraphics[width=\textwidth]{figure/WO-pthread-binding.pdf}
-    \caption{Normalized runtime with and without thread binding in Machine B (8-Node)}
+    \caption{Normalized runtime with and without thread binding on Machine B (8-Node) (using the Linux allocator)}
     \label{binding-pthread-scalibity}
 \end{figure}
 
@@ -186,7 +186,7 @@ Fig.~\ref{binding-pthread-scalibity} shows performance difference with and witho
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{figure/interleavedheap.pdf}
-    \caption{Normalized runtime with and without interleaved heap.\label{fig:interleavedheap}}  
+    \caption{Normalized runtime with  and without interleaved heap on Machine B (8-Node).\label{fig:interleavedheap}}  
 \end{figure}
 
 We first evaluate the performance difference when the support of interleaved heap is enabled or not. As described in Section~\ref{sec:performance}, some applications, especially those ones having a large portion of time in the serial phase, may not have good performance with the interleaved heap support. The interleaved heap will allocate the memory from all nodes interleavedly, instead of from the local node (based on the default first-touch policy). The interleaved heap could be utilized to avoid load imbalance issue for shared objets. 
