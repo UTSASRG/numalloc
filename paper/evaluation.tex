@@ -107,18 +107,18 @@ In Fig.~\ref{2node-hoard-mem}, the average normalized value of \NM{} is larger t
 \subsection{Scalability}
 \label{sec:scale}
 
-In order to evaluate the scalability of \NM{}, we evaluate the following configurations on the Machine B: 8 threads on one node (called as 8T1N), 16 threads on one node (16T1N) and two nodes (16T2N), 32 threads on two nodes (32T4N) and 4 nodes (32T4N), 64 threads on two nodes (64T4N) and 4 nodes (64T8N), and 128 threads on 8 nodes (128T8N). Machine B is chosen since it has more cores and more nodes. \NM{}'s performance on these configurations is shown in Fig.~\ref{fig: numalloc-scalability}. For some applications, such as \texttt{facesim}, \texttt{ferret}, \texttt{fluidanimate}, \texttt{streamcluster}, \texttt{swaptions}, \NM{} scales very well. Some applications, such as \texttt{blackscholes}, \texttt{raytrace}, or \texttt{x264}, are not scalable very well. Due to the space limitation, we did not show the results of the Linux allocator, but they share the similar trend. We also observe that \NM{} typically performs better with the lower number of nodes, on a given number of threads.  This indicates that a lower number cores enables a better share of data among different threads. 
+In order to evaluate the scalability of \NM{}, we evaluate the following configurations on the Machine B: 8 threads on one node (called as 8T1N), 16 threads on one node (16T1N) and two nodes (16T2N), 32 threads on two nodes (32T4N) and 4 nodes (32T4N), 64 threads on two nodes (64T4N) and 4 nodes (64T8N), and 128 threads on 8 nodes (128T8N). Machine B is chosen since it has more cores and more nodes, making it better to evaluate the scalability. \NM{}'s performance on these configurations is shown in Fig.~\ref{fig: numalloc-scalability}. For some applications, such as \texttt{facesim}, \texttt{ferret}, \texttt{fluidanimate}, \texttt{streamcluster}, \texttt{swaptions}, \NM{} scales very well. Some applications, such as \texttt{blackscholes}, \texttt{raytrace}, or \texttt{x264}, are not scalable very well. Due to the space limitation, we did not show the results of the Linux allocator, but they share the similar trend. We also observe that \NM{} typically performs better with the lower number of nodes, on a given number of threads.  This indicates that a lower number cores enables a better share of data among different threads. 
 
 \begin{figure}[!h]
     \centering
     \includegraphics[width=\textwidth]{figure/scalobility-numalloc.pdf}
-    \caption{Scalability of \NM{} with different configurations on Machine B (8-Node), where the data are normalized to 8T1N.\label{fig: numalloc-scalability}}
+    \caption{Scalability of \NM{} with multiple configurations, where all data are normalized to runtime of 8T1N.\label{fig: numalloc-scalability}}
 \end{figure}
 
 \begin{figure}[!h]
     \centering
     \includegraphics[width=\textwidth]{figure/scalability-pthread.pdf}
-    \caption{Scalability of the Linux's default allocator on Machine B (8-Node), where the data are normalized to 8Threads.}
+    \caption{Scalability of the Linux's default allocator, where all data are normalized to 8Threads.}
     \label{pthread-scalibity}
 \end{figure}
 
@@ -127,7 +127,7 @@ In order to evaluate the scalability of \NM{}, we evaluate the following configu
 \begin{figure}[!ht]
     \centering
     \includegraphics[width=\textwidth]{figure/sythentic-scalobility.pdf}
-    \caption{Scalability of different allocators\\  the data are normalized the runtime of the default Linux allocator with one thread.}
+    \caption{Scalability of different allocators\\  all data is normalized runtime of the default Linux allocator with one thread.}
     \label{sythentic-scalability}
 \end{figure}
 
@@ -177,7 +177,7 @@ This section further confirms multiple design choices of \NM{}. Some mechanisms 
     \label{binding-pthread-scalibity}
 \end{figure}
 
-Fig.~\ref{binding-pthread-scalibity} shows performance difference with and without thread binding. \NM{} relies on thread binding, which can not be disabled explicitly. For this experiment, we utilize the default allocator, but designing a specific library to bind threads to different nodes in an round-bin way, similar to \NM{}'s thread binding policy. We observe that thread binding may achieve significant difference. \texttt{fluidanimate} runs around $5\times$ faster with the thread binding, while  \texttt{streamcluster} runs 20\% faster than the default one with the binding. This clearly indicates that thread binding benefits the performance. Based on our analysis, there are two reasons for this performance speedup. First, a thread will not be migrated to a different core, avoiding unnecessary remote accesses. Second, \NM{}'s thread binding helps load balance, thus reducing interconnect or memory controller congestion.
+Fig.~\ref{binding-pthread-scalibity} shows performance difference with and without thread binding. \NM{} relies on thread binding, which can not be disabled explicitly. For this experiment, we utilize the default allocator, but designing a specific library to bind threads to different nodes in an round-bin way, similar to \NM{}'s thread binding policy. We observe that thread binding may achieve significant difference. \texttt{fluidanimate} runs around $4.5\times$ faster with the thread binding, while  \texttt{streamcluster} runs 22\% faster than the default one with the binding. This clearly indicates that thread binding benefits the performance. Based on our analysis, there are two reasons for this performance speedup. First, a thread will not be migrated to a different core, avoiding unnecessary remote accesses. Second, \NM{}'s thread binding helps load balance, thus reducing interconnect or memory controller congestion.
 
 
 \subsubsection{Interleaved Heap} 
@@ -189,11 +189,17 @@ Fig.~\ref{binding-pthread-scalibity} shows performance difference with and witho
     \caption{Normalized runtime with  and without interleaved heap on Machine B (8-Node).\label{fig:interleavedheap}}  
 \end{figure}
 
-We first evaluate the performance difference when the support of interleaved heap is enabled or not. As described in Section~\ref{sec:performance}, some applications, especially those ones having a large portion of time in the serial phase, may not have good performance with the interleaved heap support. The interleaved heap will allocate the memory from all nodes interleavedly, instead of from the local node (based on the default first-touch policy). The interleaved heap could be utilized to avoid load imbalance issue for shared objets. 
+We also evaluate the performance difference when the support of interleaved heap is enabled or not. The performance data is shown in Fig.~\ref{fig:interleavedheap}. Note that we have evaluated all real applications listed in Section~\ref{sec:performance}. The applications that have no or little performance impact by the interleaved heap are omitted in this figure. 
 
-However, there are two issues for the interleaved heap. First, the allocator may not know whether an object is shared or not at the first time. Therefore, all objects that are allocated in the main heap (before creating any child thread) will be treated as the shared heap. However, a private object, if it is allocated interleavedly in multiple nodes, may introduce unnecessary overhead due to remote accesses. Second, some applications are spending too much time in the serial phase, where the interleaved heap cannot benefit the performance for the serial phase. 
+From Fig.~\ref{fig:interleavedheap}, we have the following conclusion: the interleaved heap will benefit (or at least no harmful impact) the performance for most applications. Some applications, such as \texttt{fluidanimate}, will have the performance speedup of $3.5\times$ with the interleaved heap. Therefore, the interleaved heap can be enabled by default, unless programmers know that it will not benefit the performance. A simple metrics is to use the portion of its serial phase. Applications having a large portion of time in the serial phase, such as \texttt{canneal} and \texttt{raytrace}, may not have good performance with the interleaved heap support. The interleaved heap will allocate the memory from all nodes interleavedly, instead of from the local node (based on the default first-touch policy). But private objects that are allocated interleavedly in multiple nodes, may introduce unnecessary overhead due to remote accesses. 
 
-The performance data with and without interleaved heap is shown in Fig.~\ref{fig:interleavedheap}. Note that we have evaluated all real applications listed in Section~\ref{sec:performance}. The applications that have no or little performance impact by the interleaved heap are omitted in this figure. From Fig.~\ref{fig:interleavedheap}, we have the following conclusion: the interleaved heap will benefit (or at least no harmful impact) the performance for most applications, except applications with a large portion of serial phase (e.g., \texttt{canneal} and \texttt{raytrace}). Some applications, such as \texttt{fluidanimate}, will have the performance speedup of $3.5\times$ with the interleaved heap. Therefore, the interleaved heap can be enabled by default, unless programmers know that it will not benefit the performance. A simple metrics is to use the portion of its serial phase. 
+%, except applications with a large portion of serial phase (e.g., \texttt{canneal} and \texttt{raytrace})
+
+%The interleaved heap could be utilized to avoid load imbalance issue for shared objets. 
+
+%However, there are two issues for the interleaved heap. First, the allocator may not know whether an object is shared or not at the first time. Therefore, all objects that are allocated in the main heap (before creating any child thread) will be treated as the shared heap. Second, some applications are spending too much time in the serial phase, where the interleaved heap cannot benefit the performance for the serial phase. 
+
+
 
 
 %figure ~\ref{parsec-no-interleaved-perf} we show some performance results of some applications that got significant different values after we shut down interleaved heap for \NM{}. We can see that for some applicatios with less data sharing between threads like ratrace and canneal, \NM{} could got significant improvements due to its low overheads and proper memory management. But for some other applications with intensive memory operations and sharing like fluidanimate, shutting down interleaved heap could hurt performance, since interleaved heap could help to distributed resource contention evenly over multi-nodes and then got low overheads.
