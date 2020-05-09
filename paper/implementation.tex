@@ -153,7 +153,7 @@ In order to avoid the bottleneck of the per-node heap, \NM{} introduces a circul
 
 \paragraph{Reducing Memory Consumption:} During the development, we noticed that excessive memory consumption can be imposed when the OS enables transparent huge pages by default. In order to reduce memory consumption, \NM{} makes multiple threads share the same bag for the same size class, instead of having a separate bag for each thread. Each thread will get a number of objects from the  bag, if it runs out of the memory for a size class. Currently, if a class size is less than one page, then we will at most get objects with the total size of one normal page. Otherwise, it will get 4 objects (with the size less than 64 KB) or 2 objects afterwards.  
 
-%we propose the combination of per-node heap and per-thread cache. \todo{In order to reduce the contention, \NM{} will obtain multiple objects at a time from the per-node heap. }
+%we propose the combination of per-node heap and per-thread cache. In order to reduce the contention, \NM{} will obtain multiple objects at a time from the per-node heap. 
 
  
 %https://queue.acm.org/detail.cfm?id=2852078

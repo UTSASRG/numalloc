@@ -70,7 +70,7 @@ Overall, \NM{} has the best performance on two machines. Comparing to the defaul
 
 The default Linux allocator achieves a reasonable performance on the NUMA architecture due to its arena-based design. Based on our analysis, the Linux allocator will always return an object back to its original arena, and then allocate such objects to the thread owning this arena afterwards. This design is integrating well with Linux's first-touch allocation policy, which essentially avoids the owner shifting issue of most allocators. By default, Linux utilizes the first-touch policy to manage the physical memory~\cite{Lameter:2013:NO:2508834.2513149}, which a page is allocated in the same node as the thread that first touches it. Therefore, an object is typically allocated from the local node of its allocation thread, since it typically accesses this object after the allocation. Objects that are deallocated from a different thread will be always returned back to its original arena, and then will be re-utilized by its original allocation thread locally. In contrast, other allocators typically utilize a per-thread cache to store objects that are deallocated by the current thread, which may lead to remote accesses unnecessarily in a NUMA architecture when the deallocation thread is located in a different node from the allocation thread, causing the ``owner shifting'' issue.  
 
- TcMalloc-NUMA is the only available allocator that is claimed to support the NUMA architecture~\cite{tcmallocnew}. However, its performance is not good, which is even slower than that of TcMalloc. TcMalloc-NUMA is based on TcMalloc-0.97 (released in 2008), which does not have many new features of TcMalloc-2.7 (the version for our evaluation). TcMalloc-NUMA imposes the largest overhead \texttt{fluidanimate} ($2.04\times$) on the Machine B (8-node). \todo{Is it caused by thread binding?} Based on our understanding, although it achieves node-aware memory management, it does not implement following mechanisms of \NM{}, including topology-aware task assignment, interleaved heap, automatic huge page support, and efficient object migration. We examine the performance impact of these mechanisms further in Section~\ref{sec:design}.    
+ TcMalloc-NUMA is the only available allocator that is claimed to support the NUMA architecture~\cite{tcmallocnew}. However, its performance is not good, which is even slower than that of TcMalloc. TcMalloc-NUMA is based on TcMalloc-0.97 (released in 2008), which does not have many new features of TcMalloc-2.7 (the version for our evaluation). TcMalloc-NUMA imposes the largest overhead \texttt{fluidanimate} ($2.04\times$) on the Machine B (8-node), due to without the thread binding support.  Based on our understanding, although it achieves node-aware memory management, it does not implement following mechanisms of \NM{}, including topology-aware task assignment, interleaved heap, automatic huge page support, and efficient object migration. We examine the performance impact of these mechanisms further in Section~\ref{sec:design}.    
   
 
 
@@ -94,7 +94,6 @@ The memory overhead of different allocators is listed in Table~\ref{tab:memory_c
  
  Based on our analysis, the following reasons may lead to \NM{}'s more memory consumption. The Linux will utilize huge pages by default in machine B, if a memory area is larger than the size of a huge page (2MB). Since \NM{} utilizes \texttt{mmap} to allocate a huge chunk of virtual memory, this makes all heap memory for real objects will be allocated from huge pages. Currently, \NM{} also utilizes 1MB as the superblock for each size class, making objects of a size class that will occupy at least 1MB. Therefore, an application with many size classes will waste more memory.  
  
-% \todo{Understand the data.}
     
 
 \begin{comment}
@@ -104,7 +103,6 @@ In figure ~\ref{2node-hoard-mem}, the average normalized value of \NM{} is large
 	
 \end{comment}
 
-%\todo{Maybe we should collect the memory for 2-node machine.}
 
 \subsection{Scalability}
 \label{sec:scale}
@@ -191,19 +189,17 @@ The performance data with and without interleaved heap is shown in Fig.~\ref{fig
 \subsubsection{Thread Binding}
 \label{sec: threadbinding}
 
-We will only run it on the 8-node machine. \todo{confirm the results of thread binding.} 
-
 \begin{figure}[!h]
     \centering
     \includegraphics[width=\textwidth]{figure/WO-pthread-binding.pdf}
-    \caption{Normalized performance of Linux's default allocator with the binding in Machine B}
+    \caption{Normalized runtime with and without thread binding in Machine B (8-Node)}
     \label{binding-pthread-scalibity}
 \end{figure}
 
-From Fig.~\ref{binding-pthread-scalibity}, we can see that it got some huge performance improvement from binding, especially that the performance difference of \texttt{fluidanimate} is around 0.8, and 0.2 for \texttt{streamcluster}.It clearly indicates that binding threads evenly over nodes could heavily reduce resource contention and bring significant improvement.
+Fig.~\ref{binding-pthread-scalibity} shows performance difference with and without thread binding. \NM{} relies on thread binding, which can not be disabled explicitly. For this experiment, we utilize the default allocator, but designing a specific library to bind threads to different nodes in an round-bin way, similar to \NM{}'s thread binding policy. We observe that thread binding may achieve significant difference. \texttt{fluidanimate} runs around $5\times$ faster with the thread binding, while  \texttt{streamcluster} runs 20\% faster than the default one with the binding. This clearly indicates that thread binding benefits the performance. Based on our analysis, there are two reasons for this performance speedup. First, a thread will not be migrated to a different core, avoiding unnecessary remote accesses. Second, \NM{}'s thread binding helps load balance, thus reducing interconnect or memory controller congestion.
 
 \subsubsection{Huge Page Support} 
-Since Machine B will utilize huge pages by default, we will evaluate the performance impact of huge page support on Machine A (2-node machine). We only utilize PARSEC applications for this evaluation. 
+Since Machine B utilizes transparent huge pages by default, we evaluate the performance impact of huge page support on Machine A (2-node machine). We only utilize PARSEC applications for this evaluation. 
 
 \begin{figure}[!h]
     \centering
