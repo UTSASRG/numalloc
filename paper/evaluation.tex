@@ -90,12 +90,12 @@ We also measured the maximum memory overhead of different allocators for these a
 
 \input{memorytable}
 
-The memory overhead of different allocators is listed in Table~\ref{tab:memory_consumption}. In total, Intel TBB allocator has the smallest memory consumption, and the default Linux allocator is the second best one. Scalloc is the worst one in terms of memory consumption, which consumes around  $8.3\times$ more memory that that of TBB.  \NM{}'s memory consumption is around 23\% more than that of the default Linux allocator. For applications with small footprint, \NM{} may utilize up to $9.3\times$ more memory, such as \texttt{Aget}.
+The memory overhead of different allocators is listed in Table~\ref{tab:memory_consumption}, which is running on Machine B. We chose Machine B, because it has more nodes and physical cores. Then it is better to see the scalability of an allocator. In total, \NM{}'s memory consumption is around 23\% more than that of the default Linux allocator. For applications with small footprint, \NM{} may utilize up to $9.3\times$ more memory, such as \texttt{Aget}. Intel TBB allocator has the smallest memory consumption, and the default Linux allocator is the second best one. Scalloc is the worst one in terms of memory consumption, which consumes around  $8.3\times$ more memory that that of TBB.  
  
  Based on our analysis, the following reasons may lead to \NM{}'s more memory consumption. The Linux will utilize huge pages by default in machine B, if a memory area is larger than the size of a huge page (2MB). Since \NM{} utilizes \texttt{mmap} to allocate a huge chunk of virtual memory, this makes all heap memory for real objects will be allocated from huge pages. Currently, \NM{} also utilizes 1MB as the superblock for each size class, making objects of a size class that will occupy at least 1MB. Therefore, an application with many size classes will waste more memory.  
  
-    
-
+ Scalloc has excessive memory consumption, since its design does not support transparent huge pages very well. Similar to \NM{}, Scalloc utilizes a \texttt{mmap} system call to allocate a continuous huge region of virtual memory from the underlying OS. Thus, the OS will utilize huge pages for any memory usage from such a region, when transparent huge pages are enabled by default. Coincidentally, every thread will get a virtual span (2MB) for each size class, even if only one object is allocated from a size class. This indicates that each size class of each thread will utilize 2MB physical memory at least, even if only one object is used.  Differently, \NM{} supports transparent huge pages in its design, as described in Section~\ref{sec: others}.
+ 
 \begin{comment}
 
 
@@ -167,6 +167,18 @@ We will evaluate the scalability on 8threads, 16threads, 32 threads, 64 threads 
 \label{sec:design}
 
 This section further confirms multiple design choices of \NM{}. Some mechanisms are very basic, such as node-aware memory allocation, which is mandatory for NUMA-aware memory allocators, and cannot be evaluated separately. Therefore, they are not evaluated here. Some design choices may only help on one or two applications, such as efficient objects migration. 
+\subsubsection{Thread Binding}
+\label{sec: threadbinding}
+
+\begin{figure}[!h]
+    \centering
+    \includegraphics[width=\textwidth]{figure/WO-pthread-binding.pdf}
+    \caption{Normalized runtime with and without thread binding in Machine B (8-Node)}
+    \label{binding-pthread-scalibity}
+\end{figure}
+
+Fig.~\ref{binding-pthread-scalibity} shows performance difference with and without thread binding. \NM{} relies on thread binding, which can not be disabled explicitly. For this experiment, we utilize the default allocator, but designing a specific library to bind threads to different nodes in an round-bin way, similar to \NM{}'s thread binding policy. We observe that thread binding may achieve significant difference. \texttt{fluidanimate} runs around $5\times$ faster with the thread binding, while  \texttt{streamcluster} runs 20\% faster than the default one with the binding. This clearly indicates that thread binding benefits the performance. Based on our analysis, there are two reasons for this performance speedup. First, a thread will not be migrated to a different core, avoiding unnecessary remote accesses. Second, \NM{}'s thread binding helps load balance, thus reducing interconnect or memory controller congestion.
+
 
 \subsubsection{Interleaved Heap} 
 \label{sec:interleavedheap}
@@ -185,18 +197,6 @@ The performance data with and without interleaved heap is shown in Fig.~\ref{fig
 
 
 %figure ~\ref{parsec-no-interleaved-perf} we show some performance results of some applications that got significant different values after we shut down interleaved heap for \NM{}. We can see that for some applicatios with less data sharing between threads like ratrace and canneal, \NM{} could got significant improvements due to its low overheads and proper memory management. But for some other applications with intensive memory operations and sharing like fluidanimate, shutting down interleaved heap could hurt performance, since interleaved heap could help to distributed resource contention evenly over multi-nodes and then got low overheads.
-
-\subsubsection{Thread Binding}
-\label{sec: threadbinding}
-
-\begin{figure}[!h]
-    \centering
-    \includegraphics[width=\textwidth]{figure/WO-pthread-binding.pdf}
-    \caption{Normalized runtime with and without thread binding in Machine B (8-Node)}
-    \label{binding-pthread-scalibity}
-\end{figure}
-
-Fig.~\ref{binding-pthread-scalibity} shows performance difference with and without thread binding. \NM{} relies on thread binding, which can not be disabled explicitly. For this experiment, we utilize the default allocator, but designing a specific library to bind threads to different nodes in an round-bin way, similar to \NM{}'s thread binding policy. We observe that thread binding may achieve significant difference. \texttt{fluidanimate} runs around $5\times$ faster with the thread binding, while  \texttt{streamcluster} runs 20\% faster than the default one with the binding. This clearly indicates that thread binding benefits the performance. Based on our analysis, there are two reasons for this performance speedup. First, a thread will not be migrated to a different core, avoiding unnecessary remote accesses. Second, \NM{}'s thread binding helps load balance, thus reducing interconnect or memory controller congestion.
 
 \subsubsection{Huge Page Support} 
 Since Machine B utilizes transparent huge pages by default, we evaluate the performance impact of huge page support on Machine A (2-node machine). We only utilize PARSEC applications for this evaluation. 
