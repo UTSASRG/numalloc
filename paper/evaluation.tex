@@ -50,7 +50,7 @@ The inputs for these applications are listed as follows. PARSEC applications are
 The normalized performance runtime of different allocators on Machine A an on Machine B can be seen in Fig.~\ref{8node-parsec-perf} and Fig.~\ref{2node-parsec-perf} separately,  where all data is normalized to the runtime of the default Linux allocator. By default, \NM{} will embed with the interleaved heap support. However, two applications, \texttt{canneal} and \texttt{raytrace}, have  a much worse performance when the interleaved heap is enabled, since both of them spend a large portion of their time (over 62\% and 82\%) in the serial phase (before creating any child thread). Since the interleaved heap indicates that the allocations can be satisfied in remote NUMA nodes, this design may lead to a large number of remote accesses for the serial phase. Thus, these two figures show the best data for two applications, without the support of interleaved heap. We further discuss the pros and cons of using interleaved heap in Section~\ref{sec:interleavedheap}.  
 
 
-\begin{figure}[H]
+\begin{figure}[!ht]
     \centering
     \begin{subfigure}{0.9\textwidth}
     \includegraphics[width=\textwidth]{figure/2-node-parsec-perf.pdf}
@@ -107,7 +107,12 @@ In Fig.~\ref{2node-hoard-mem}, the average normalized value of \NM{} is larger t
 \subsection{Scalability}
 \label{sec:scale}
 
-In order to evaluate the scalability of \NM{}, we evaluate the following configurations on the Machine B: 8 threads on one node (called as 8T1N), 16 threads on one node (16T1N) and two nodes (16T2N), 32 threads on two nodes (32T4N) and 4 nodes (32T4N), 64 threads on two nodes (64T4N) and 4 nodes (64T8N), and 128 threads on 8 nodes (128T8N). Machine B is chosen since it has more cores and more nodes, making it better to evaluate the scalability. \NM{}'s performance on these configurations is shown in Fig.~\ref{fig: numalloc-scalability}. For some applications, such as \texttt{facesim}, \texttt{ferret}, \texttt{fluidanimate}, \texttt{streamcluster}, \texttt{swaptions}, \NM{} scales very well. Some applications, such as \texttt{blackscholes}, \texttt{raytrace}, or \texttt{x264}, are not scalable very well. Due to the space limitation, we did not show the results of the Linux allocator, but they share the similar trend. We also observe that \NM{} typically performs better with the lower number of nodes, on a given number of threads.  This indicates that a lower number cores enables a better share of data among different threads. 
+We evaluated the scalability on the Machine B. Machine B is chosen since it has more cores and more nodes, making it better to evaluate the scalability.  In order to understand the scalability of \NM{} when comparing to other allocators, we also evaluate synthetic applications from Hoard~\cite{Hoard}, including \texttt{threadtest}, \texttt{larson}~\cite{Larson}, \texttt{cache-scratch} and \texttt{cache-slash}, which is also employed by existing work~\cite{Scalloc}.  The reason of utilizing synthetic applications is that they were designed to be scalable~\cite{Scalloc}. Therefore, we could eliminate the scalability issue caused by applications. Since other allocators cannot specify the configuration, we only evaluate the scalability with different number of threads. For \NM{}, we maximize the number of threads on each node. For instance, the result of 32 threads will use 2 node, since each node has 16 cores. The corresponding data is shown as Fig.~\ref{sythentic-scalability}. 
+
+
+\begin{comment}
+
+: 8 threads on one node (called as 8T1N), 16 threads on one node (16T1N) and two nodes (16T2N), 32 threads on two nodes (32T4N) and 4 nodes (32T4N), 64 threads on two nodes (64T4N) and 4 nodes (64T8N), and 128 threads on 8 nodes (128T8N). Machine B is chosen since it has more cores and more nodes, making it better to evaluate the scalability. \NM{}'s performance on these configurations is shown in Fig.~\ref{fig: numalloc-scalability}. For some applications, such as \texttt{facesim}, \texttt{ferret}, \texttt{fluidanimate}, \texttt{streamcluster}, \texttt{swaptions}, \NM{} scales very well. Some applications, such as \texttt{blackscholes}, \texttt{raytrace}, or \texttt{x264}, are not scalable very well.  We also observe that \NM{} typically performs better with the lower number of nodes, on a given number of threads.  This indicates that a lower number cores enables a better share of data among different threads. 
 
 \begin{figure}[!h]
     \centering
@@ -121,13 +126,14 @@ In order to evaluate the scalability of \NM{}, we evaluate the following configu
     \caption{Scalability of the Linux's default allocator, where all data are normalized to 8Threads.}
     \label{pthread-scalibity}
 \end{figure}
+	
+\end{comment}
 
- In order to understand the scalability of \NM{} when comparing to other allocators, we also evaluate them with synthetic applications from Hoard~\cite{Hoard}, including \texttt{threadtest}, \texttt{larson}~\cite{Larson}, \texttt{cache-scratch} and \texttt{cache-slash}, which is also employed by existing work~\cite{Scalloc}. . The reason of utilizing synthetic applications is that they were designed to be scalable~\cite{Scalloc}. Therefore, we could eliminate the scalability issue caused by applications. Since other allocators cannot specify the configuration, we only evaluate the scalability with different number of threads. For \NM{}, we maximize the number of threads on each node. For instance, the result of 32 threads will use 2 node, since each node has 16 cores. The corresponding data is shown as Fig.~\ref{sythentic-scalability}. 
  
 \begin{figure}[!ht]
     \centering
     \includegraphics[width=\textwidth]{figure/sythentic-scalobility.pdf}
-    \caption{Scalability of different allocators\\  all data is normalized runtime of the default Linux allocator with one thread.}
+    \caption{Scalability of different allocators\\  all data is normalized to the runtime of the default Linux allocator with one thread.}
     \label{sythentic-scalability}
 \end{figure}
 
@@ -142,7 +148,8 @@ Passive false sharing is introduced upon deallocations, where the reallocation o
 \texttt{threadtest} is an application that performs a large number of allocations and deallocations with a specified number of threads. Also, it allows to specify how much work to be done between each allocation and deallocation. For \texttt{threadtest}, we use 100 iterations, 1,280,000 allocations, 0 work, and 64-byte objects (for the allocation).  This benchmark will stressfully test the performance overhead of allocation and deallocation. For this application, \NM{} is $2.6\times$ faster than the second best one (jemalloc), when there are 128 threads. %since every thread will has its own heap and it only imposes some when getting objects from the shared bag. But \NM{} obtains a number of objects at a time, at the page level, which significant reduce the possibility of contention. 
 
 
-When the number of threads is equal to the number of cores (128), \NM{} has the best overall performance, and for almost all single applications. Overall, \NM{} is running 79\% faster than the second best one (Scalloc), and  $2.2\times$ faster than the default one on machine 2.  Multiple reasons contribute to the good performance of \NM{}:  \NM{} imposes very minimal system call overhead, and little synchronization overhead. Also, it introduces less remote accesses than all other allocators, due to its NUMA-aware design. 
+When the number of threads is equal to the number of cores (128), \NM{} has the best overall performance, and for almost all single applications. Overall, \NM{} is running 79\% faster than the second best one (Scalloc), and $2.2\times$ faster than the default Linux one on machine 2.  Multiple reasons contribute to the good performance of \NM{}:  \NM{} imposes very minimal system call overhead, and little synchronization overhead. Also, it introduces less remote accesses than all other allocators, due to its NUMA-aware design. 
+%\todo{Surprisingly, TcMalloc and  }.
 
 
 
@@ -205,6 +212,8 @@ From Fig.~\ref{fig:interleavedheap}, we have the following conclusion: the inter
 %figure ~\ref{parsec-no-interleaved-perf} we show some performance results of some applications that got significant different values after we shut down interleaved heap for \NM{}. We can see that for some applicatios with less data sharing between threads like ratrace and canneal, \NM{} could got significant improvements due to its low overheads and proper memory management. But for some other applications with intensive memory operations and sharing like fluidanimate, shutting down interleaved heap could hurt performance, since interleaved heap could help to distributed resource contention evenly over multi-nodes and then got low overheads.
 
 \subsubsection{Huge Page Support} 
+\label{sec:hugepage}
+
 Since Machine B utilizes transparent huge pages by default, we evaluate the performance impact of huge page support on Machine A (2-node machine). We only utilize PARSEC applications for this evaluation. 
 
 \begin{figure}[!h]
