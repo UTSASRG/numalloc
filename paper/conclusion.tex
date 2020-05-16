@@ -1,6 +1,5 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-\NM{} is a drop-in memory allocator replacement that is specially designed for the NUMA architecture. Applications can be linked to \NM{} directly, without the change of code and the recompilation. \NM{} is different from existing memory allocators, since it proposes binding-based and fine-grained memory to ensure the locality and load balance. 
-%Based can  automatically adapt to the hardware with different number of NUMA nodes and hardware cores. It employs multiple mechanisms, such as the combination of task assignment and memory management, node-aware memory management, interleaved heap, and explicit huge page support together to improve the performance. 
-Based on our extensive evaluation, \NM{} achieves significantly better performance than other popular allocators on the NUMA architecture, up to $5.8\times$ faster than the default allocator.  
+\NM{} is a drop-in memory allocator replacement that is specially designed for the NUMA architecture. Applications can be linked to \NM{} directly, without the change of code and the recompilation. \NM{} is different from existing memory allocators, since it proposes  fine-grained memory management to accommodate the heterogeneity of both modern hardware and applications. It further proposes binding-based memory management and an interleaved heap to ensure locality and load balance. 
+Based on our extensive evaluation, \NM{} achieves a significantly better performance than other popular allocators on the NUMA architecture, up to $5.8\times$ faster than the default allocator.  \NM{} is available at https://github.com/availableuponacceptance. 
