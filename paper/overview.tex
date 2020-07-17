@@ -1,7 +1,12 @@
 \section{Background}
 \label{sec:overview}
 
-This section introduces some background that is necessary for \NM{}. It starts with the description of the NUMA architecture and some potential performance issues. Then it further discusses existing OS support for the NUMA architecture.  
+%This section introduces some background that is necessary for \NM{}. 
+This section discusses existing OS support for the NUMA architecture, and then discusses some common designs of memory allocators that affect \NM{}.  
+
+\begin{comment}
+
+\todo{Cutting half for this section}
 
 \subsection{NUMA Architecture}
 
@@ -22,15 +27,25 @@ The Non-Uniform Memory Access (NUMA) architecture is proposed to solve the scala
 
  Based on the study~\cite{Blagodurov:2011:CNC:2002181.2002182}, node imbalance and interconnect congestion may have a larger performance impact than cache contention and remote accesses. These performance issues cannot be solved by the hardware automatically. Software support is required to control the placement of tasks, physical pages, and objects to achieve the optimal performance for multithreaded applications.  
 
+	
+\end{comment}
+
 \subsection{NUMA Support Inside OS}
+\label{sec:ossupport}
+Operating System already provides some support for the NUMA architecture, especially on task scheduling, or physical memory allocation. For the task scheduling support, the OS provides some system calls that allow users to bind a task to a specific node. For memory allocation, the OS also provides system calls (e.g., \texttt{mbind}) to change memory allocation policy for a range of memory or the whole process~\cite{lameter2013numa, diener2015locality}. 
 
-Currently, the Operating System already provides some support for the NUMA architecture, especially on task scheduling, or physical memory allocation. 
+However, they still require programmers to specify the policy explicitly, which cannot achieve the performance speedup automatically. \NM{} relies on these existing system calls to support NUMA-aware memory allocations explicitly, as further described in Section~\ref{sec:implement}.
 
-For the task scheduling support, the OS provides  system calls that allow users to place a task to a specific node. One example of such system calls is \texttt{pthread\_attr\_setaffinity\_np} that   sets the CPU affinity mask attribute  for a thread. Therefore, users may employ these system calls to assign tasks on a specific memory node or even a specific core. However, programmers should specify the task assignment explicitly. 
+% the first-touch or interleaved policy~\cite{lameter2013numa, diener2015locality} multiple methods to support NUMA related memory management. First, the OS, such as Linux, supports the first-touch or interleaved policy~\cite{lameter2013numa, diener2015locality}. By default, the OS will allocate a physical page from the same node as a task that first accesses the corresponding virtual page, also called  first-touch policy. The interleaved policy blances workload on interconnection and memory controllers, but may incur remote accesses. 
 
-For memory allocation, the OS provides multiple methods to support NUMA related memory management. First, the OS, such as Linux, supports the first-touch or interleaved policy~\cite{lameter2013numa, diener2015locality}. By default, the OS will allocate a physical page from the same node as a task that first accesses the corresponding virtual page, also called  first-touch policy. First-touch policy maximizes local accesses over remote accesses, but it cannot eliminate remote accesses for shared objects~\cite{yang2019jarena}. The interleaved policy helps to achieve a balanced workload  on interconnection and memory controller, avoiding the load imbalance issue described above. However, users may require to invoke a specific system call explicitly to change the allocation policy to be the interleaved policy.  Second, the OS also provides some system calls that allow users to specify the physical memory node explicitly, via system calls like \texttt{mbind}. On top of these system calls, \texttt{libnuma} provides stable APIs for controlling the scheduling and memory allocation policies, and \texttt{numactl} allows a process to control the scheduling or memory placement policy inside the user space. 
+%One example of such system calls is \texttt{pthread\_attr\_setaffinity\_np} in Linux that  sets the CPU affinity mask attribute for a thread. Therefore, users may employ these system calls to assign tasks on a specific memory node or even a specific core. 
 
-Overall, existing OS or runtime systems already provide some interfaces that allow users to control the scheduling and memory policy for NUMA architecture inside the user space~\cite{yang2019jarena}. However, they all require programmers to specify the policy explicitly, which cannot achieve the performance speedup automatically. \NM{} relies on these existing system calls to support NUMA-aware memory allocations explicitly, as further described in Section~\ref{sec:implement}. 
+%For memory allocation, the OS provides multiple methods to support NUMA related memory management. First, the OS, such as Linux, supports the first-touch or interleaved policy~\cite{lameter2013numa, diener2015locality}. By default, the OS will allocate a physical page from the same node as a task that first accesses the corresponding virtual page, also called  first-touch policy. The interleaved policy blances workload on interconnection and memory controllers, but may incur remote accesses. 
+%First-touch policy maximizes local accesses over remote accesses, but it cannot eliminate remote accesses for shared objects~\cite{yang2019jarena}. But iHowever, users may require to invoke a specific system call explicitly to change the allocation policy to be the interleaved policy. 
+%Second, the OS also provides some system calls that allow users to specify the physical memory node explicitly, via system calls like \texttt{mbind}. 
+%On top of these system calls, \texttt{libnuma} provides stable APIs for controlling the scheduling and memory allocation policies, and \texttt{numactl} allows a process to control the scheduling or memory placement policy inside the user space. 
+
+%Overall, existing OS or runtime systems already provide some interfaces that allow users to control the scheduling and memory policy for NUMA architecture inside the user space~\cite{yang2019jarena}.  
 
 %First, it won't work for producer-consumer model, where the memory will be utilized by threads that are not in the same node. This is actually very common, especially for the main thread. Second, it does not work when cores on different processors have to be used, if the application utilizes more physical memory of one node, or if threads are migrated later. Third, it requires the user-level memory manager support. Otherwise, an deallocated object can be allocated to threads running on the other node, causing many remote accesses. 
 
@@ -41,4 +56,11 @@ Overall, existing OS or runtime systems already provide some interfaces that all
 
 %Overall, most of such support cannot benefit the performance of programs automatically, which will require programmer effort to tell OS.   
 
+\subsection{Common Designs of Memory Allocators}
+
+Memory allocators share some common designs. First, most allocators manage objects differently, based on the size of objects. For big objects that are typically unusual, allocators may request objects from the OS directly and return them to the OS directly upon  deallocation~\citep{Hoard}. On the other hand, small objects will be tracked using freelists based on size classes. The method of managing small objects can be further classified into multiple categories, such as sequential, BiBOP, and region-based allocators~\citep{DieHarder, Gay:1998:MME:277650.277748}. \todo{Region-based allocators are suitable for special situations in which all allocated objects within the same region are deallocated together}~\citep{Gay:1998:MME:277650.277748}, which do not belong to the class of general-purpose allocators. For sequential allocators, subsequent memory allocations are satisfied in a continuous memory block~\citep{Cling}. BiBOP-style allocators, which stands for ''Big Bag of Pages''~\citep{hanson1980}, utilize one or multiple continuous pages that are treated as a ``bag'' used to hold objects of the same size class. Many performance-oriented allocators, such as TcMalloc~\citep{tcmalloc}, \texttt{jemalloc}~\citep{jemalloc}, Hoard~\citep{Hoard}, Scalloc~\citep{Scalloc}, and most of secure allocators, such as OpenBSD~\citep{openbsd} and DieHarder~\citep{DieHarder}, belong to this category. 
+
+\NM{} borrows some of these existing mechanisms. First, it uses different mechanisms to manage small and big objects. Second, small objects are also managed by size classes with the BiBOP-style. \NA{} utilizes fine-grained size classes for small objects, such as 16 bytes apart for objects less than 128 bytes, and 32 bytes apart for objects between 128 bytes and 256 bytes, then power-of-2 sizes afterwards. Third, similar to existing work, such as Linux and TcMalloc~\cite{tcmalloc}, \NA{} utilizes  the freelist to track freed objects, and uses the first word of freed objects to link different objects. But the difference of \NM{} is further described in Section~\ref{sec:implement}. 
+
+%\NA{} only tracks the size information of each page, which helps reduce its memory overhead for the metadata. Third, \NA{} utilizes freelist to manage freed objects. Every freed object will be added into a corresponding freelist, and objects in the freelist will be allocated first in order to reduce possible cache misses. Further,  This mechanism helps to reduce the memory overhead, but is prone to memory vulnerabilities, such as buffer overflows and double-frees~\cite{DieHarder, Guarder}.     
  
