@@ -10,8 +10,10 @@ This section aims to answer the following research questions:
 \item \textbf{Design Decisions:} How important every design choice can actually impact  performance? (Section~\ref{sec:design})	
 \end{itemize}
 
-\subsection{Experimental Setup}
- \NM{} was evaluated on two different machines as specified in Table~\ref{table:Machine}. Typically, machine A has 2 nodes, with 40 cores in total, while machine B has 8 nodes with 128 cores. For machine B, any two nodes are less than or equal to 3 hops. For the evaluation, the hyperthreading was turned off on both machines. The performance data shown in this paper is the average of 10 runs, in order to avoid any bias caused by unexpected events.  
+\paragraph{Experimental Setup}
+ \NM{} was evaluated on a machine with 8 nodes with $8\times16$ cores in total. Any two nodes are less than or equal to 3 hops, where the latency of two hops and three hops is 2.1 and 3.1 separately. The machine is installed with $8\times64GB$ memory. The underlying OS is Linux Debian 10 and the compiler is GCC-8.3.0. For the evaluation, the hyperthreading was turned off. The performance data shown in this paper is the average of 10 runs, in order to avoid any bias caused by unexpected events.  
+
+\begin{comment}
 
 \begin{table}[!ht]
  \centering
@@ -34,6 +36,7 @@ Compiler & GCC-7.5.0 & GCC-8.3.0 \\ \hline
   %\vspace{-0.4in}
 \end{table}
 
+\end{comment}
 
 \subsection{Performance Evaluation}
 
@@ -55,21 +58,20 @@ The inputs for these applications are listed as follows. PARSEC applications are
 
 \begin{figure}[!ht]
     \centering
-    \begin{subfigure}{0.9\textwidth}
-    \includegraphics[width=\textwidth]{figure/2-node-parsec-perf.pdf}
-    \caption{Machine A (2-Node)\label{2node-parsec-perf}}
-    \end{subfigure}
-    
-	\vspace{0.1in}  
-	
-	\begin{subfigure}{0.9\textwidth}    \includegraphics[width=\textwidth]{figure/8-node-parsec-perf.pdf}
-    \caption{Machine B (8-Node)\label{8node-parsec-perf}}
-    \end{subfigure}
+   
+  %  \begin{subfigure}{0.9\textwidth}
+   % \includegraphics[width=\textwidth]{figure/2-node-parsec-perf.pdf}
+   % \caption{Machine A (2-Node)\label{2node-parsec-perf}}
+   % \end{subfigure}
+    %\begin{subfigure}{0.9\textwidth}    
+    \includegraphics[width=\textwidth]{figure/8-node-parsec-perf.pdf}
+    %\caption{Machine B (8-Node)\label{8node-parsec-perf}}
     \caption{Performance of different allocators, where all data are normalized the default Linux allocator. \label{sec:perf}}
  \end{figure}
 
 
-Overall, \NM{} has the best performance on both machines. Comparing to the default allocator, \NM{} is 6\% faster on Machine A and 13\% faster on Machine B. TcMalloc is the second-best one among all allocators, which is only 1\% faster than that of the default allocator. For the best case (e.g., \texttt{fluidanimate}) on the 8-node machine, \NM{} is running up to  $5.8\times$ faster than the default Linux allocator, and it is $4.7\times$ than the second-best one--TcMalloc.  Comparing with the other NUMA-aware allocator -- TcMalloc-NUMA~\cite{tcmallocnew}, \NM{} runs 6\% faster on Machine A (2-node) and 23\% faster on Machine B with 8 nodes. We also notice that \NM{} achieves a much better performance on the machine with more hardware cores and more NUMA nodes, which indicates \NM{}'s scalable design. 
+Overall, \NM{} has the best performance on both machines. Comparing to the default allocator, \NM{} is running 13\% faster than the default allocator, and 12\% faster than the second best one--TcMalloc~\cite{tcmalloc}. For the best case (e.g., \texttt{fluidanimate}) on the 8-node machine, \NM{} is running up to  $5.8\times$ faster than the default Linux allocator, and it is $4.7\times$ than the second-best one--TcMalloc.  Comparing with the NUMA-aware allocator -- TcMalloc-NUMA~\cite{tcmallocnew}, \NM{} runs 23\% faster.
+%We also notice that \NM{} achieves a much better performance on the machine with more hardware cores and more NUMA nodes, which indicates \NM{}'s scalable design. 
 
 The default Linux allocator achieves a reasonable performance on the NUMA architecture due to its arena-based design. Based on our analysis, the Linux allocator will always return an object back to its original arena, and then allocate such objects to the thread owning this arena afterward. This design is integrating well with Linux's first-touch allocation policy~\cite{Lameter:2013:NO:2508834.2513149}, where a page is allocated in the same node as the thread that touches it first. Therefore, an object is typically allocated from the local node of its allocation thread. An object that is deallocated from a different thread will be always returned back to its original arena, and then will be re-utilized by its original allocation thread locally. In contrast, other allocators typically utilize a per-thread cache to store objects that are deallocated by the current thread, which may lead to remote accesses as described in Section~\ref{sec:intro}. 
 % TcMalloc-NUMA also has this issue, causing remote accesses unnecessarily. The default Linux allocator essentially avoids the owner shifting issue by always returning an object to its owner. 
