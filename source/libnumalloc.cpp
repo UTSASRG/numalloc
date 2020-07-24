@@ -119,7 +119,8 @@ __attribute__((constructor)) void initializer() {
   #if GET_TIME
   origTime = rdtscp();
   #endif
-  heapinitialize();
+  ///Jin
+//  heapinitialize();
 }
 
 
@@ -150,7 +151,7 @@ void * operator new[] (size_t sz) {
 
 // Heap initialization function
 void heapinitialize() {
-	if(heapInitStatus == E_HEAP_INIT_WORKING) {
+    if(heapInitStatus == E_HEAP_INIT_WORKING) {
     
     // Including the number of nodes, and the size of freed memory if possible
     NumaHeap::getInstance().initialize();
@@ -160,23 +161,23 @@ void heapinitialize() {
 
     fprintf(stderr, "heap is initialized now\n");
     heapInitStatus = E_HEAP_INIT_DONE;
-	} 
-  else {
+	} else {
 			while(heapInitStatus != E_HEAP_INIT_DONE);
 	}
 }
 
  void * xxmalloc(size_t size) {
-
-    // If this is the first allocation before the initialization, 
-    // then we will try to use a local buffer, since Real::initializer() 
-    // will invoke malloc as well.
-    if(localPtr == NULL) {
-      localPtr = localBuffer;
-      localPtrEnd = &localBuffer[4096];
+     // If this is the first allocation before the initialization,
+     // then we will try to use a local buffer, since Real::initializer()
+     // will invoke malloc as well.
+     if(localPtr == NULL) {
+         localPtr = localBuffer;
+         localPtrEnd = &localBuffer[4096];
 
       Real::initializer();
       heapInitStatus = E_HEAP_INIT_WORKING;
+      ///Jin
+      heapinitialize();
     }
 
     void * ptr = NULL;
@@ -217,7 +218,7 @@ void heapinitialize() {
       break;
   
     }
-    //fprintf(stderr, "xxmalloc size %ld ptr %p\n", size, ptr);
+//    fprintf(stderr, "xxmalloc size %ld ptr %p\n", size, ptr);
 //     void *tem = (void *) ((long) ptr + size);
 //     fprintf(stderr, "xxmalloc ptr check %p %ld %c\n", ptr, size , (char *) tem);
     return ptr;
@@ -227,28 +228,26 @@ void heapinitialize() {
 		if(ptr == NULL) {
       return;
 		}
-   //fprintf(stderr, "xxfree ptr %p\n", ptr);
    if(heapInitStatus == E_HEAP_INIT_WORKING) { 
      Real::free(ptr);
    }
-   else { 
-    // fprintf(stderr, "free ptr %p\n", ptr);
+   else {
 #if GET_TIME
      unsigned long long start = rdtscp(); 
 #endif
-     //fprintf(stderr, "free ptr %p\n", ptr);
      // Perform the free operation
      NumaHeap::getInstance().deallocate(ptr); 
 #if GET_TIME
       totalFreeCycles += rdtscp() - start;
 #endif
-     //fprintf(stderr, "free ptr %p done\n", ptr);
    }
 }
 
 void * xxcalloc(size_t nelem, size_t elsize) {
 	void * ptr = NULL;
-	ptr = malloc(nelem * elsize);
+///Jin
+//	ptr = malloc(nelem * elsize);
+	ptr = xxmalloc(nelem * elsize);
 	if(ptr != NULL) {
 		memset(ptr, 0, nelem * elsize);
 	}
@@ -256,7 +255,7 @@ void * xxcalloc(size_t nelem, size_t elsize) {
 }
 
 void * xxrealloc(void * ptr, size_t sz) {
-    if(heapInitStatus == E_HEAP_INIT_WORKING) { 
+    if(heapInitStatus == E_HEAP_INIT_WORKING) {
       return Real::realloc(ptr, sz);
     }
 
@@ -274,10 +273,18 @@ void * xxrealloc(void * ptr, size_t sz) {
 
     // If the object is unknown to us, return NULL to indicate error.
     size_t oldSize = NumaHeap::getInstance().getSize(ptr);
-
-		void * newObject = xxmalloc(sz);
-        memcpy(newObject, ptr, oldSize < sz ? oldSize : sz);
-		xxfree(ptr);
+		///Jin
+		void * newObject;
+		if(oldSize == (size_t)-1) {
+            void * tmp = Real::realloc(ptr, sz);
+            newObject = xxmalloc(sz);
+            memcpy(newObject, tmp, sz);
+            Real::free(tmp);
+        } else {
+            newObject = xxmalloc(sz);
+            memcpy(newObject, ptr, oldSize < sz ? oldSize : sz);
+            xxfree(ptr);
+		}
 		return newObject;
 }
 
