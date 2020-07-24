@@ -191,6 +191,11 @@ public:
     // Compute the node index by the offset
     int index = offset >> SIZE_PER_NODE_SHIFT;
 
+    ///Jin
+    if(_nodes[index] == nullptr) {
+        return -1;
+    }
+
     return _nodes[index]->getSize(ptr);
   }
 
