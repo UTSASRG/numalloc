@@ -316,7 +316,9 @@ void * xxmemalign(size_t alignment, size_t size) {
 	}
 
 	size_t allocObjectSize = alignment + size;
-	void * object = malloc(allocObjectSize);
+  ///Jin
+//	void * object = malloc(allocObjectSize);
+    void * object = xxmalloc(allocObjectSize);
 	unsigned long residualBytes = (unsigned long)object % alignment;
 	void * alignedObject = (void *)((char *)object + residualBytes);
 
