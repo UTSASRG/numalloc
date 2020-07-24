@@ -1,16 +1,14 @@
-\renewcommand{\arraystretch}{1.5}
+%\renewcommand{\arraystretch}{1.5}
 \begin{table}[tp]
 \footnotesize
+	\setlength{\tabcolsep}{0.3em}
   \centering
- % \fontsize{6.5}{8}\selectfont
-  \caption{Memory consumption of Different Allocators in Machine B (8-node)\label{tab:memory_consumption}}
-  
     \begin{tabular}{|l|r|r|r|r|r|r|r|}
     \hline
-    \multirow{2}{*}{Applications}&
-    \multicolumn{7}{c}{Memory Usage (MB)}\\
+    \multirow{2}{*}{Apps}&
+    \multicolumn{7}{c|}{Memory Usage (MB)}\\
     \cline{2-8}
-    &Linux's Default&\NM{}&TcMalloc&TcMalloc-NUMA&jemalloc&TBB&Scalloc \\ \hline
+    &Linux&\NM{}&TcM&TcM-N&jem&TBB&Scalloc \\ \hline
     \hline
     blackscholes&615&509&621&623&633&615&630\\ \hline
     bodytrack&37&161&45&46&570&37&1994\\ \hline
@@ -34,4 +32,5 @@
     \hline
     Total&{\bf 9527}&{\bf 11763}&{\bf 9993}&{\bf 10510}&{\bf 14986}&{\bf 9502}&{\bf 79190}\cr\hline
     \end{tabular}
+  \caption{Memory consumption of different allocators. Here, TcM stands for TcMalloc, TcM-N is TcMalloc-NUMA, and jem is jemalloc. \label{tab:memory_consumption}}
 \end{table}

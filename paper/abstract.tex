@@ -1,7 +1,11 @@
 \begin{abstract}
 
 
-The NUMA architecture was proposed to accommodate the hardware trend of the increasing number of CPU cores. However, none of the existing memory allocators can accommodate the heterogeneity of both modern hardware and applications, and therefore they cannot perform well on the NUMA architecture. This paper proposes a novel memory allocator--\NM{}, with fine-grained memory management that is designed for the NUMA architecture. \NM{} further proposes binding-based memory management and an interleaved heap to ensure locality and load balance. \NM{}'s memory management is based on the size, the allocation pattern, the shared pattern, the origin of objects, and the location of a thread. According to our extensive evaluation, \NM{} has the best performance among all evaluated allocators. It is significantly faster than the second-best one, around 11\% on average on an 8-node machine. For the best case, \NM{} achieves up to $5.8\times$ performance speedup comparing to the default Linux allocator, and $4.7\times$ faster than the second-best one (TcMalloc). \NM{} is also scalable to 128 threads, and is ready for the deployment. 
+The NUMA architecture was proposed to accommodate the hardware trend of the increasing number of CPU cores. However, none of the existing memory allocators can accommodate the heterogeneity of both modern hardware and applications, and therefore they cannot perform well on the NUMA architecture. 
+
+This paper proposes a novel memory allocator--\NM{}, with fine-grained memory management that is designed for the NUMA architecture. \NM{} first proposes the origin-based memory management to ensure the locality of memory allocations. It further node-balanced thread binding and an interleaved heap to reduce load imbalance among different nodes.
+ \NM{} also employs the benefits of huge pages with an explicit huge page support. 
+ According to our extensive evaluation, \NM{} has the best performance among all evaluated allocators. It is significantly faster than the second-best one, around 11\% on average on an 8-node machine. For the best case, \NM{} achieves up to $5.8\times$ performance speedup comparing to the default Linux allocator, and $4.7\times$ faster than the second-best one (TcMalloc). \NM{} is also scalable to 128 threads, and is ready for the deployment. 
 
 	
 \end{abstract}
