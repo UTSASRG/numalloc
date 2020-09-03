@@ -120,7 +120,8 @@ __attribute__((constructor)) void initializer() {
   origTime = rdtscp();
   #endif
   ///Jin
-//  heapinitialize();
+  fprintf(stderr, "from initializer\n");
+  heapinitialize();
 }
 
 
@@ -156,14 +157,19 @@ void heapinitialize() {
     // Including the number of nodes, and the size of freed memory if possible
     NumaHeap::getInstance().initialize();
     
-    // Thread initialization, which can be occurred before or after numap heap initialization
+    // Thread initialization, which can be occurred before or after numa heap initialization
 		xthread::getInstance().initialize();
 
     fprintf(stderr, "heap is initialized now\n");
     heapInitStatus = E_HEAP_INIT_DONE;
-	} else {
-			while(heapInitStatus != E_HEAP_INIT_DONE);
 	}
+    ///Jin
+    else {
+        heapInitStatus = E_HEAP_INIT_WORKING;
+    }
+//    else {
+//			while(heapInitStatus != E_HEAP_INIT_DONE);
+//	}
 }
 
  void * xxmalloc(size_t size) {
@@ -175,9 +181,10 @@ void heapinitialize() {
          localPtrEnd = &localBuffer[4096];
 
       Real::initializer();
-      heapInitStatus = E_HEAP_INIT_WORKING;
       ///Jin
-      heapinitialize();
+//         heapInitStatus = E_HEAP_INIT_WORKING;
+         fprintf(stderr, "from xxmalloc\n");
+         heapinitialize();
     }
 
     void * ptr = NULL;
