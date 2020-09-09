@@ -148,7 +148,8 @@ private:
             strerror(errno), startaddr, sz, protInfo, sharedInfo);
 			exit(-1);
     }
-
+//      if(isHugePage)
+//    fprintf(stderr, "huge addr = %p, sz = %lu\n", ptr, sz);
     return ptr;
   }
 };

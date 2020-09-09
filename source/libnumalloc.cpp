@@ -76,7 +76,6 @@ extern "C" int __libc_start_main(main_fn_t, int, char**, void (*)(), void (*)(),
 extern "C" int light_libc_start_main(main_fn_t main_fn, int argc, char** argv, void (*init)(), void (*fini)(), void (*rtld_fini)(), void* stack_end) {
     // real run
   	auto real_libc_start_main = (decltype(__libc_start_main)*)dlsym(RTLD_NEXT, "__libc_start_main");
-
     // only for main thread
 //    current->startFrame = (char *)__builtin_frame_address(0);
 
@@ -87,6 +86,7 @@ extern "C" int light_libc_start_main(main_fn_t main_fn, int argc, char** argv, v
 extern "C" {
 	void   xxfree(void *);
 	void * xxmalloc(size_t);
+	///Jin
 	void * xxcalloc(size_t, size_t);
 	void * xxrealloc(void *, size_t);
 
@@ -100,6 +100,7 @@ extern "C" {
 	// Function aliases
 	void   free(void *) __attribute__ ((weak, alias("xxfree")));
 	void * malloc(size_t) __attribute__ ((weak, alias("xxmalloc")));
+	///Jin
 	void * calloc(size_t, size_t) __attribute__ ((weak, alias("xxcalloc")));
 	void * realloc(void *, size_t) __attribute__ ((weak, alias("xxrealloc")));
 
@@ -120,7 +121,13 @@ __attribute__((constructor)) void initializer() {
   origTime = rdtscp();
   #endif
   ///Jin
-  fprintf(stderr, "from initializer\n");
+  if(localPtr == NULL) {
+        localPtr = localBuffer;
+        localPtrEnd = &localBuffer[4096];
+
+        Real::initializer();
+        heapInitStatus = E_HEAP_INIT_WORKING;
+  }
   heapinitialize();
 }
 
@@ -163,10 +170,7 @@ void heapinitialize() {
     fprintf(stderr, "heap is initialized now\n");
     heapInitStatus = E_HEAP_INIT_DONE;
 	}
-    ///Jin
-    else {
-        heapInitStatus = E_HEAP_INIT_WORKING;
-    }
+//    ///Jin
 //    else {
 //			while(heapInitStatus != E_HEAP_INIT_DONE);
 //	}
@@ -182,9 +186,7 @@ void heapinitialize() {
 
       Real::initializer();
       ///Jin
-//         heapInitStatus = E_HEAP_INIT_WORKING;
-         fprintf(stderr, "from xxmalloc\n");
-         heapinitialize();
+      heapInitStatus = E_HEAP_INIT_WORKING;
     }
 
     void * ptr = NULL;
@@ -225,9 +227,6 @@ void heapinitialize() {
       break;
   
     }
-//    fprintf(stderr, "xxmalloc size %ld ptr %p\n", size, ptr);
-//     void *tem = (void *) ((long) ptr + size);
-//     fprintf(stderr, "xxmalloc ptr check %p %ld %c\n", ptr, size , (char *) tem);
     return ptr;
 }
 
@@ -250,10 +249,9 @@ void heapinitialize() {
    }
 }
 
+///Jin
 void * xxcalloc(size_t nelem, size_t elsize) {
 	void * ptr = NULL;
-///Jin
-//	ptr = malloc(nelem * elsize);
 	ptr = xxmalloc(nelem * elsize);
 	if(ptr != NULL) {
 		memset(ptr, 0, nelem * elsize);
@@ -323,8 +321,6 @@ void * xxmemalign(size_t alignment, size_t size) {
 	}
 
 	size_t allocObjectSize = alignment + size;
-  ///Jin
-//	void * object = malloc(allocObjectSize);
     void * object = xxmalloc(allocObjectSize);
 	unsigned long residualBytes = (unsigned long)object % alignment;
 	void * alignedObject = (void *)((char *)object + residualBytes);
