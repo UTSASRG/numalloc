@@ -1,0 +1,36 @@
+%\renewcommand{\arraystretch}{1.5}
+\begin{table}[tp]
+\footnotesize
+	\setlength{\tabcolsep}{0.3em}
+  \centering
+    \begin{tabular}{|l|r|r|r|r|r|r|r|}
+    \hline
+    \multirow{2}{*}{Apps}&
+    \multicolumn{7}{c|}{Memory Usage (MB)}\\
+    \cline{2-8}
+    &Linux&\NM{}&TcM&TcM-N&jem&TBB&Scalloc \\ \hline
+    \hline
+    blackscholes&615&509&621&623&633&615&630\\ \hline
+    bodytrack&37&161&45&46&570&37&1994\\ \hline
+    canneal&888&879&774&757&1294&888&36149\\ \hline
+    dedup&912&1236&983&1023&1389&912&8556\\ \hline
+    facesim&560&500&603&601&1133&547&3056\\ \hline
+    ferret&184&493&195&183&596&184&3377\\ \hline
+    fluidanimate&470&392&483&484&481&470&3437\\ \hline
+    raytrace&1288&1472&1092&1543&1287&1288&4398\\ \hline
+    streamcluster&113&105&123&121&127&113&193\\ \hline
+    swaptions&33&268&16&21&540&37&1817\\ \hline
+    vips&228&536&248&269&778&227&3681\\ \hline
+    x264&2859&2721&3047&3064&3719&2859&5402\\ \hline \hline  
+    Aget&8&74&11&10&93&8&80 \\ \hline
+    Apache&8&34&10&9&10&4&42\\ \hline
+    Memcached&16&80&25&24&41&18&263\\ \hline
+    Mysql&277&732&314&315&500&276& N/A \\ \hline
+    Pbzip2&463&747&817&813&1121&454&4881 \\ \hline
+    Pfscan&522&542&528&528&535&522&554\\ \hline
+    Sqlite3&45&284&60&75&139&44&681 \\ \hline
+    \hline
+    Total&{\bf 9527}&{\bf 11763}&{\bf 9993}&{\bf 10510}&{\bf 14986}&{\bf 9502}&{\bf 79190}\cr\hline
+    \end{tabular}
+  \caption{Memory consumption of different allocators. Here, TcM stands for TcMalloc, TcM-N is TcMalloc-NUMA, and jem is jemalloc. \label{tab:memory_consumption}}
+\end{table}
