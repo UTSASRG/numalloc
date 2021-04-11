@@ -16,6 +16,32 @@
  keywords = {concurrency, monitoring, race, threading},
 } 
 
+
+
+@inproceedings{DBLP:conf/IEEEpact/DrebesPH0D16,
+  author    = {Andi Drebes and
+               Antoniu Pop and
+               Karine Heydemann and
+               Albert Cohen and
+               Nathalie Drach},
+  editor    = {Ayal Zaks and
+               Bilha Mendelson and
+               Lawrence Rauchwerger and
+               Wen{-}mei W. Hwu},
+  title     = {Scalable Task Parallelism for {NUMA:} {A} Uniform Abstraction for
+               Coordinated Scheduling and Memory Management},
+  booktitle = {Proceedings of the 2016 International Conference on Parallel Architectures
+               and Compilation, {PACT} 2016, Haifa, Israel, September 11-15, 2016},
+  pages     = {125--137},
+  publisher = {{ACM}},
+  year      = {2016},
+  url       = {https://doi.org/10.1145/2967938.2967946},
+  doi       = {10.1145/2967938.2967946},
+  timestamp = {Wed, 16 Oct 2019 14:14:52 +0200},
+  biburl    = {https://dblp.org/rec/conf/IEEEpact/DrebesPH0D16.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
 @inproceedings{DBLP:conf/cgo/ZengR0AJ014,
   author    = {Qiang Zeng and
                Junghwan Rhee and
@@ -77,15 +103,12 @@
  author = {Blagodurov, Sergey and Zhuravlev, Sergey and Dashti, Mohammad and Fedorova, Alexandra},
  title = {A Case for NUMA-aware Contention Management on Multicore Systems},
  booktitle = {Proceedings of the 2011 USENIX Conference on USENIX Annual Technical Conference},
- series = {USENIXATC'11},
  year = {2011},
  location = {Portland, OR},
  pages = {1--1},
  numpages = {1},
  url = {http://dl.acm.org/citation.cfm?id=2002181.2002182},
  acmid = {2002182},
- publisher = {USENIX Association},
- address = {Berkeley, CA, USA},
 } 
 
 @inproceedings{diener2015locality,
@@ -122,8 +145,6 @@
  url = {http://doi.acm.org/10.1145/2451116.2451157},
  doi = {10.1145/2451116.2451157},
  acmid = {2451157},
- publisher = {ACM},
- address = {New York, NY, USA},
  keywords = {multicore, numa, operating systems, scheduling},
 } 
 
@@ -162,10 +183,10 @@
 }
 
 @techreport{cantalupo2015memkind,
-  title={memkind: An Extensible Heap Memory Manager for Heterogeneous Memory Platforms and Mixed Memory Policies.},
+  title={memkind: An Extensible Heap Memory Manager for Heterogeneous Memory Platforms and Mixed Memory Policies.  (No. SAND2015-1862C).},
   author={Cantalupo, Christopher and Venkatesan, Vishwanath and Hammond, Jeff and Czurlyo, Krzysztof and Hammond, Simon David},
   year={2015},
-  institution={Sandia National Lab.(SNL-NM), Albuquerque, NM (United States)}
+  institution={Sandia National Lab.(SNL-NM), Albuquerque, NM}
 }
 
 @phdthesis{kim2013node,
@@ -195,8 +216,6 @@
  url = {http://doi.acm.org/10.1145/2814270.2814294},
  doi = {10.1145/2814270.2814294},
  acmid = {2814294},
- publisher = {ACM},
- address = {New York, NY, USA},
  keywords = {Memory allocator, concurrent data structures, multicore scalability, virtual memory},
 } 
 
@@ -214,8 +233,6 @@
  url = {http://doi.acm.org/10.1145/3302424.3303960},
  doi = {10.1145/3302424.3303960},
  acmid = {3303960},
- publisher = {ACM},
- address = {New York, NY, USA},
  keywords = {NUMA, Virtualization},
 } 
 
@@ -230,7 +247,7 @@
 
 @inproceedings{Diener:2014:KAK:2628071.2628085,
  author = {Diener, Matthias and Cruz, Eduardo H.M. and Navaux, Philippe O.A. and Busse, Anselm and Hei\ss, Hans-Ulrich},
- title = {kMAF: Automatic Kernel-level Management of Thread and Data Affinity},
+ title = {{kMAF}: Automatic Kernel-level Management of Thread and Data Affinity},
  booktitle = {Proceedings of the 23rd International Conference on Parallel Architectures and Compilation},
  series = {PACT '14},
  year = {2014},
@@ -241,8 +258,6 @@
  url = {http://doi.acm.org/10.1145/2628071.2628085},
  doi = {10.1145/2628071.2628085},
  acmid = {2628085},
- publisher = {ACM},
- address = {New York, NY, USA},
  keywords = {cache hierarchies, data affinity, numa, thread affinity},
 } 
 
@@ -296,6 +311,21 @@ url="http://dx.doi.org/10.1007/978-3-642-35606-3_24"
   title = {The {GNU} {C} Library},
   howpublished = {"\url{http://www.gnu.org/software/libc/libc.html}"},
   year={1988}
+}
+
+@misc{mimalloc,
+  author = {Daan Leijen},
+  title = {mimalloc},
+  howpublished = {"\url{https://github.com/microsoft/mimalloc}"},
+  year={2020}
+}
+
+@inproceedings{supermalloc,
+  title={SuperMalloc: a super fast multithreaded malloc for 64-bit machines},
+  author={Kuszmaul, Bradley C},
+  booktitle={Proceedings of the 2015 International Symposium on Memory Management},
+  pages={41--55},
+  year={2015}
 }
 
 @article{diener2015automatic,
@@ -1060,24 +1090,6 @@ howpublished={\url{www.youthcodejam.org/}},
     year = {2002}
 }
 
-@inproceedings{Dashti:2013:TMH:2451116.2451157,
- author = {Dashti, Mohammad and Fedorova, Alexandra and Funston, Justin and Gaud, Fabien and Lachaize, Renaud and Lepers, Baptiste and Quema, Vivien and Roth, Mark},
- title = {Traffic Management: A Holistic Approach to Memory Placement on NUMA Systems},
- booktitle = {Proceedings of the Eighteenth International Conference on Architectural Support for Programming Languages and Operating Systems},
- series = {ASPLOS '13},
- year = {2013},
- isbn = {978-1-4503-1870-9},
- location = {Houston, Texas, USA},
- pages = {381--394},
- numpages = {14},
- url = {http://doi.acm.org/10.1145/2451116.2451157},
- doi = {10.1145/2451116.2451157},
- acmid = {2451157},
- publisher = {ACM},
- address = {New York, NY, USA},
- keywords = {multicore, numa, operating systems, scheduling},
-} 
-
 
 @inproceedings{Gawade:2015:NOT:2771937.2771948,
  author = {Gawade, Mrunal and Kersten, Martin},
@@ -1321,7 +1333,6 @@ keywords = {scheduling, data placement, NUMA}
                2019, Providence, RI, USA, April 13-17, 2019},
   pages     = {347--360},
   year      = {2019},
-  crossref  = {DBLP:conf/asplos/2019},
   url       = {https://doi.org/10.1145/3297858.3304064},
   doi       = {10.1145/3297858.3304064},
   timestamp = {Sun, 07 Apr 2019 16:16:15 +0200},
@@ -1338,18 +1349,26 @@ keywords = {scheduling, data placement, NUMA}
                Colin Raffel},
   title     = {Learning-based Memory Allocation for {C++} Server Workloads},
   booktitle = {{ASPLOS} '20: Architectural Support for Programming Languages and
-               Operating Systems, Lausanne, Switzerland, March 16-20, 2020 {[ASPLOS}
-               2020 was canceled because of {COVID-19]}},
+               Operating Systems, Lausanne, Switzerland, March 16-20, 2020},
   pages     = {541--556},
   year      = {2020},
-  crossref  = {DBLP:conf/asplos/2020},
-  url       = {https://doi.org/10.1145/3373376.3378525},
+   url       = {https://doi.org/10.1145/3373376.3378525},
   doi       = {10.1145/3373376.3378525},
   timestamp = {Mon, 16 Mar 2020 11:14:36 +0100},
   biburl    = {https://dblp.org/rec/conf/asplos/MaasAIJMR20.bib},
   bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
+@article{hanson1980portable,
+  title={A portable storage management system for the Icon programming language},
+  author={Hanson, David R},
+  journal={Software: Practice and Experience},
+  volume={10},
+  number={6},
+  pages={489--500},
+  year={1980},
+  publisher={Wiley Online Library}
+}
 
 @misc{hugepages,
   author = {Mel Gorman},
@@ -1358,10 +1377,24 @@ keywords = {scheduling, data placement, NUMA}
   year={2010}
 }
 
+@inproceedings{Cling,
+  author    = {Periklis Akritidis},
+  title     = {Cling: {A} Memory Allocator to Mitigate Dangling Pointers},
+  booktitle = {19th {USENIX} Security Symposium, Washington, DC, USA, August 11-13,
+               2010, Proceedings},
+  pages     = {177--192},
+  year      = {2010},
+  url       = {http://www.usenix.org/events/sec10/tech/full\_papers/Akritidis.pdf},
+  timestamp = {Thu, 12 Mar 2020 11:34:57 +0100},
+  biburl    = {https://dblp.org/rec/conf/uss/Akritidis10.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
+}
+
+
 @misc{AutoNUMA,
  author = {Jonathan Corbet}, 
- title = {AutoNUMA: the other approach to NUMA scheduling}, 
- howpublished = {"\url{https://lwn.net/Articles/488709/}"},
+ title = {AutoNUMA: The Other Approach to NUMA Scheduling}, 
+ howpublished = {\url{https://lwn.net/Articles/488709/}},
  year = {2012}
 }
 
@@ -1773,22 +1806,6 @@ author    = {David Gay and
  keywords = {multicore processors, scheduling, shared resource contention},
 } 
 
-@inproceedings{Lepers:2015:TMP:2813767.2813788,
- author = {Lepers, Baptiste and Qu{\'e}ma, Vivien and Fedorova, Alexandra},
- title = {Thread and Memory Placement on NUMA Systems: Asymmetry Matters},
- booktitle = {Proceedings of the 2015 USENIX Conference on Usenix Annual Technical Conference},
- series = {USENIX ATC '15},
- year = {2015},
- isbn = {978-1-931971-225},
- location = {Santa Clara, CA},
- pages = {277--289},
- numpages = {13},
- url = {http://dl.acm.org/citation.cfm?id=2813767.2813788},
- acmid = {2813788},
- publisher = {USENIX Association},
- address = {Berkeley, CA, USA},
-} 
-
 
 @article{Zhuravlev:2012:SST:2379776.2379780,
  author = {Zhuravlev, Sergey and Saez, Juan Carlos and Blagodurov, Sergey and Fedorova, Alexandra and Prieto, Manuel},
@@ -1854,22 +1871,6 @@ author    = {David Gay and
  publisher = {ACM},
  address = {New York, NY, USA},
 } 
-
-@inproceedings{Blagodurov:2011:CNC:2002181.2002182,
- author = {Blagodurov, Sergey and Zhuravlev, Sergey and Dashti, Mohammad and Fedorova, Alexandra},
- title = {A Case for NUMA-aware Contention Management on Multicore Systems},
- booktitle = {Proceedings of the 2011 USENIX Conference on USENIX Annual Technical Conference},
- series = {USENIXATC'11},
- year = {2011},
- location = {Portland, OR},
- pages = {1--1},
- numpages = {1},
- url = {http://dl.acm.org/citation.cfm?id=2002181.2002182},
- acmid = {2002182},
- publisher = {USENIX Association},
- address = {Berkeley, CA, USA},
-} 
-
 
 @inproceedings{Salomie:2011:DEM:1966445.1966448,
  author = {Salomie, Tudor-Ioan and Subasu, Ionut Emanuel and Giceva, Jana and Alonso, Gustavo},
@@ -2052,12 +2053,19 @@ month={August},}
 } 
 
 @inproceedings{parsec,
-  author = {Christian Bienia and Kai Li},
-  title = {{PARSEC} 2.0: A New Benchmark Suite for Chip-Multiprocessors},
-  booktitle = {Proceedings of the 5th Annual Workshop on Modeling, Benchmarking and Simulation},
-  year = {2009},
-  month = {June}
+author = {Bienia, Christian and Kumar, Sanjeev and Singh, Jaswinder Pal and Li, Kai},
+title = {The PARSEC Benchmark Suite: Characterization and Architectural Implications},
+year = {2008},
+isbn = {9781605582825},
+url = {https://doi.org/10.1145/1454115.1454128},
+doi = {10.1145/1454115.1454128},
+booktitle = {Proceedings of the 17th International Conference on Parallel Architectures and Compilation Techniques},
+pages = {72–81},
+numpages = {10},
+location = {Toronto, Ontario, Canada},
+series = {PACT '08}
 }
+
 
 @inproceedings{phoenix-hpca,
  author = {Ranger, Colby and Raghuraman, Ramanan and Penmetsa, Arun and Bradski, Gary and Kozyrakis, Christos},
@@ -2346,8 +2354,6 @@ month={March},}
  url = {http://doi.acm.org/10.1145/378993.379232},
  doi = {10.1145/378993.379232},
  acmid = {379232},
- publisher = {ACM},
- address = {New York, NY, USA},
 } 
 
 
@@ -3043,8 +3049,6 @@ note = {Poster Paper}
  pages = {117--128},
  location = {Cambridge, Massachusetts, United States},
  doi = {http://doi.acm.org/10.1145/378993.379232},
- publisher = {ACM Press},
- address = {New York, NY, USA},
  }
 
 
