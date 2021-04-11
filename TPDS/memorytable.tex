@@ -1,36 +1,36 @@
 %\renewcommand{\arraystretch}{1.5}
-\begin{table}[tp]
+\begin{table*}[tp]
 \footnotesize
-	\setlength{\tabcolsep}{0.3em}
+%	\setlength{\tabcolsep}{0.3em}
   \centering
-    \begin{tabular}{|l|r|r|r|r|r|r|r|}
+    \begin{tabular}{|l|r|r|r|r|r|r|r|r|}
     \hline
     \multirow{2}{*}{Apps}&
-    \multicolumn{7}{c|}{Memory Usage (MB)}\\
-    \cline{2-8}
-    &Linux&\NM{}&TcM&TcM-N&jem&TBB&Scalloc \\ \hline
+    \multicolumn{8}{c|}{Memory Usage (MB)}\\
+    \cline{2-9}
+    &Glibc&\NM{}&TcMalloc&TcMalloc-NUMA&jemalloc&TBB&Scalloc&mimalloc \\ \hline
     \hline
-    blackscholes&615&509&621&623&633&615&630\\ \hline
-    bodytrack&37&161&45&46&570&37&1994\\ \hline
-    canneal&888&879&774&757&1294&888&36149\\ \hline
-    dedup&912&1236&983&1023&1389&912&8556\\ \hline
-    facesim&560&500&603&601&1133&547&3056\\ \hline
-    ferret&184&493&195&183&596&184&3377\\ \hline
-    fluidanimate&470&392&483&484&481&470&3437\\ \hline
-    raytrace&1288&1472&1092&1543&1287&1288&4398\\ \hline
-    streamcluster&113&105&123&121&127&113&193\\ \hline
-    swaptions&33&268&16&21&540&37&1817\\ \hline
-    vips&228&536&248&269&778&227&3681\\ \hline
-    x264&2859&2721&3047&3064&3719&2859&5402\\ \hline \hline  
-    Aget&8&74&11&10&93&8&80 \\ \hline
-    Apache&8&34&10&9&10&4&42\\ \hline
-    Memcached&16&80&25&24&41&18&263\\ \hline
-    Mysql&277&732&314&315&500&276& N/A \\ \hline
-    Pbzip2&463&747&817&813&1121&454&4881 \\ \hline
-    Pfscan&522&542&528&528&535&522&554\\ \hline
-    Sqlite3&45&284&60&75&139&44&681 \\ \hline
+    blackscholes&617&797&623&623&633&615&629&623\\ \hline
+    bodytrack&68&207&80&82&607&75&2020&87\\ \hline
+    canneal&887&836&774&757&1290&889&36148&891\\ \hline
+    dedup&917&1447&1021&1017&1393&936&11187&1531\\ \hline
+    facesim&2638&3514&2747&2751&3540&2642&9301&3177\\ \hline
+    ferret&160&544&244&238&690&162&3161&770\\ \hline
+    fluidanimate&470&549&481&482&483&470&5374&473\\ \hline
+    raytrace&1287&1673&1093&1531&1289&1288&15820&1392\\ \hline
+    streamcluster&112&144&123&123&128&113&192&141\\ \hline
+    swaptions&28&247&17&21&552&30&1818&14\\ \hline
+    vips&226&543&248&271&778&227&3673&971\\ \hline
+    x264&2861&3865&3059&3064&3718&2858&5435&4060\\ \hline \hline  
+    Aget&8&66&10&10&94&10&80&6\\ \hline
+    Apache&4&4&9&8&7&4&4&4\\ \hline
+    Memcached&15&18&22&22&17&17&18&15\\ \hline
+    Mysql&270&358&315&317&297&269&&281 \\ \hline
+    Pbzip2&450&1272&789&818&1149&445&5366&6253 \\ \hline
+    Pfscan&522&538&528&528&535&522&554&524\\ \hline
+    Sqlite3&45&256&62&78&143&45&684&109 \\ \hline
     \hline
-    Total&{\bf 9527}&{\bf 11763}&{\bf 9993}&{\bf 10510}&{\bf 14986}&{\bf 9502}&{\bf 79190}\cr\hline
+    Total&{\bf 11584}&{\bf 16878}&{\bf 12247}&{\bf 12740}&{\bf 17342}&{\bf 11617}&{\bf 101880}&{\bf 21321}\cr\hline
     \end{tabular}
-  \caption{Memory consumption of different allocators. Here, TcM stands for TcMalloc, TcM-N is TcMalloc-NUMA, and jem is jemalloc. \label{tab:memory_consumption}}
-\end{table}
+  \caption{Memory consumption of different allocators. \label{tab:memory_consumption}}
+\end{table*}
