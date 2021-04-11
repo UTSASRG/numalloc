@@ -1,4 +1,8 @@
-\documentclass[10pt,journal,compsoc]{IEEEtran}
+\documentclass[acmsmall,anonymous,review]{acmart}
+%\documentclass[acmsmall, review]{acmart}
+%\documentclass[acmsmall,screen]{acmart}
+\pdfpagewidth=8.5in
+\pdfpageheight=11in
 
 \usepackage{graphics} % for EPS, load graphicx instead
 %\usepackage[T1]{fontenc}
@@ -20,14 +24,7 @@
 \usepackage{xcolor}
 \usepackage[keeplastbox]{flushend}
 
-\ifCLASSOPTIONcompsoc
-  % The IEEE Computer Society needs nocompress option
-  % requires cite.sty v4.0 or later (November 2003)
-  \usepackage[nocompress]{cite}
-\else
-  % normal IEEE
-  \usepackage{cite}
-\fi
+
 \newcommand{\cmark}{\ding{51}}%
 \newcommand{\xmark}{\ding{55}}%
 
@@ -54,34 +51,17 @@
 
 \begin{document}
 
+\date{}
+
 \title{NUMAlloc: Fine-Grained NUMA Memory Allocator}
 
-\markboth{IEEE Transactions Transactions on Parallel and Distributed Systems}{NUMAlloc: Fine-Grained NUMA Memory Allocator}
+\author{}
 
-\author{
-\IEEEauthorblockN{
-Tongping Liu, Xin Zhao, Wei Wang,
-Bo Wu, Sandip Kundu
-}
-
-\IEEEcompsocitemizethanks{
-\IEEEcompsocthanksitem Tongping Liu, Xin Zhao, and Sandip Kundu is with the Department of Electrical and Computer Engineering, University of Massachusetts Amherst, Amherst, MA 01003.
-\IEEEcompsocthanksitem Wei Wang is with the Department of Computer Science, University of Texas at San Antonio, San Antonio, TX 78249.
-\IEEEcompsocthanksitem Bo Wu is with the Department of Computer Science, Colorado School of Mines, CO 80401.}
-}
-
-%\IEEEdisplaynontitleabstractindextext
-\IEEEtitleabstractindextext{%
-\input{abstract}
-\begin{IEEEkeywords}
-Non-Uniform Memory Access (NUMA); NUMA Memory Allocator; Fine-Grained Memory Management;
-\end{IEEEkeywords}
-}
+\begin{abstract}
+\input{oopsla21/abstract}
+\end{abstract}
 
 \maketitle
-
-\date{}
-%\IEEEpeerreviewmaketitle
 
 \input{intro}
 \input{overview}
@@ -92,33 +72,5 @@ Non-Uniform Memory Access (NUMA); NUMA Memory Allocator; Fine-Grained Memory Man
 \input{conclusion}
 \bibliographystyle{abbrv}
 \bibliography{ref,emery,tongping}
-
-
-\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{fig/tongping}}]{Tongping Liu}
- received the PhD and MS degree from University of Massachusetts Amherst. He is currently an assistant professor at the Department of Electrical and Computer Engineering in the University of Massachusetts Amherst. Prior to that, he worked at University of Texas at San Antonio between 2014 and 2019. His research interests include the performance, reliability and security of software systems. 
-\end{IEEEbiography}
-
-\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{fig/xin.jpeg}}]{Xin Zhao}
-Xin Zhao received the BS degree from Harbin Institute of Technology, China. He is currently a PhD student at the University of Massachusetts Amherst.
-\end{IEEEbiography}
-
-\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{fig/weiwang}}]{Wei Wang}
-Wei  Wang holds  a  Ph.D.  in  computer  science from  University  of  Virginia  in  2015.  He  is  currently  an  Assistant  Professor  at  the  Computer Science Department of the University of Texas at  San  Antonio.  His  research  interests  include system software, computer architecture, cloud computing, and software  engineering. He is a member of the IEEE.
-\end{IEEEbiography}
-
-
-\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{fig/bo-wu}}]{Bo Wu}
-Bo Wu is an associate professor at the Colorado School of Mines, and has a PhD in Computer Science from the College of William and Mary. His research lies in the broad field of compilers and programming systems, with an emphasis on program optimizations for heterogeneous computing and emerging architectures. 
-%He was the recipient of IBM CAS fellowship from 2011 to 2013 and Stephen K. Park award for graduate research from the College of William and Mary.
-\end{IEEEbiography}
-
-
-\begin{IEEEbiography}[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{fig/Sandip_Kundu}}]{Sandip Kundu}
-Sandip Kundu is a professor of electrical and computer engineering at the University of Massachusetts Amherst. Previously, he was a principal engineer at Intel Corporation and a research staff member at IBM Corporation. He has published more than 200 papers in VLSI design and CAD, holds 12 patents, and has co-authored multiple books. 
-%He served as the technical program chair of ICCD in 2000, co-program chair of ATS in2011, ISVLSI in 2012, and 2014, DFT in 2014. 
-He is a fellow of the IEEE and has been a distinguished visitor of the IEEE Computer Society.
-\end{IEEEbiography}
-
-
 
 \end{document}
