@@ -29,6 +29,7 @@
 \newcommand{\xmark}{\ding{55}}%
 
 \newcommand{\todo}[1]{{\color{red}\bfseries [[#1]]}}
+\newcommand{\toconfirm}[1]{{\color{blue}\bfseries #1}}
 \newcommand{\TP}[1]{{\color{red}\bfseries [[#1]]}}
 
 \newcommand{\Watcher}{{Watcher}}
@@ -48,6 +49,8 @@
 \newcommand{\pthreads}{\texttt{pthreads}}
 \newcommand{\specialcell}[2][c]{%
   \begin{tabular}[#1]{@{}c@{}}#2\end{tabular}}
+\citestyle{acmauthoryear}
+
 
 \begin{document}
 
@@ -70,7 +73,7 @@
 \input{discussion}
 \input{relatedwork}
 \input{conclusion}
-\bibliographystyle{abbrv}
+\bibliographystyle{ACM-Reference-Format}
 \bibliography{ref,emery,tongping}
 
 \end{document}
