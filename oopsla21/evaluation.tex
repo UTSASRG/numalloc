@@ -84,9 +84,10 @@ Basically, \NM{} either significantly reduce the number of remote accesses or TL
 \begin{figure}[!h]
     \centering
     \includegraphics[width=4.2in]{figure/remote-access.pdf}
-    \caption{Normalized remote access and TLB miss as well as normalized runtime}
+    \caption{Normalized remote access and TLB miss as well as normalized runtime, where all of them are normalized to \NM{}. }
     \label{fig:remoteAccess}
 \end{figure}
+\todo{Change "Performance" to runtime, also change the the performance/remote accesses" scale to 8, maybe put NUMAlloc to the first, change TcMalloc to TCMalloc. }
 
 Based on our understanding, \NM{}'s big reduction of remote accesses can be attributed to the following factors: (1) region-based memory allocation; (2) (Node-balanced) thread binding; (3) Node-local meta data. The reduction of TLB misses can be possibly attributed to selective huge page support. Further, \NM{} allocates a large chunk of memory initially, then the OS tends to utilize huge pages if possible, although this mechanism may introduce more memory consumption as evaluated in Section~\ref{sec:memory}.  
 
