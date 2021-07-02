@@ -1,0 +1,36 @@
+%\renewcommand{\arraystretch}{1.5}
+\begin{table*}[tp]
+\footnotesize
+%	\setlength{\tabcolsep}{0.3em}
+  \centering
+    \begin{tabular}{|l|r|r|r|r|r|r|r|r|}
+    \hline
+    \multirow{2}{*}{Apps}&
+    \multicolumn{8}{c|}{Memory Usage (MB)}\\
+    \cline{2-9}
+    &Glibc&\NM{}&TcMalloc&TcMalloc-NUMA&jemalloc&TBB&Scalloc&mimalloc \\ \hline
+    \hline
+    blackscholes&614&618&619&621&615&615&615&615\\ \hline
+    bodytrack&35&46&40&43&50&35&64&41\\ \hline
+    canneal&853&925&771&757&779&854&830&761\\ \hline
+    dedup&905&1110&908&949&938&909&1059&1041\\ \hline
+    facesim&2635&2723&2708&2708&2774&2637&2709&2710\\ \hline
+    ferret&181&220&171&167&218&182&206&185\\ \hline
+    fluidanimate&271&342&280&282&271&271&325&270\\ \hline
+    raytrace&1287&2277&1085&1523&1260&1287&1311&1378\\ \hline
+    streamcluster&111&115&116&118&111&111&115&113\\ \hline
+    swaptions&10&19&15&21&20&10&13&13\\ \hline
+    vips&229&279&246&269&270&225&286&330\\ \hline
+    x264&2714&2721&2721&2727&2725&2714&2721&2717\\ \hline \hline  
+    Aget&4&5&9&10&6&5&5&4\\ \hline
+    Apache&4&7&9&10&5&4&5&4\\ \hline
+    Memcached&3&7&9&10&5&4&5&3\\ \hline
+    Mysql&275&328&315&314&298&273&&288\\ \hline
+    Pbzip2&451&453&776&809&624&451&607&3850\\ \hline
+    Pfscan&522&523&526&528&523&522&521&522\\ \hline
+    Sqlite3&42&83&60&76&65&43&49&64\\ \hline
+    \hline
+    Total&{\bf 11146}&{\bf 12801}&{\bf 11384}&{\bf 11942}&{\bf 11557}&{\bf 11152}&{\bf 11446}&{\bf 14909}\cr\hline
+    \end{tabular}
+  \caption{Memory consumption of different allocators. \label{tab:memory_consumption}}
+\end{table*}
