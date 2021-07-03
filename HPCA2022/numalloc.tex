@@ -1,15 +1,15 @@
-\documentclass[acmsmall,anonymous,review]{acmart}
-%\documentclass[acmsmall, review]{acmart}
-%\documentclass[acmsmall,screen]{acmart}
-\pdfpagewidth=8.5in
-\pdfpageheight=11in
+\documentclass[conference]{IEEEtran}
 
-\usepackage{graphics} % for EPS, load graphicx instead
-%\usepackage[T1]{fontenc}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{graphics} 
 \usepackage{url}
 \usepackage{hyperref}
 \usepackage{txfonts}
-\usepackage{pslatex}    
 \usepackage{pifont}
 %\usepackage{bbding}
 \usepackage{multirow}
@@ -23,7 +23,14 @@
 %\usepackage{fancyvrb}
 \usepackage{xcolor}
 \usepackage[keeplastbox]{flushend}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
+% Ensure letter paper
+\pdfpagewidth=8.5in
+\pdfpageheight=11in
+
+\newcommand{\hpcasubmissionnumber}{N69}
 
 \newcommand{\cmark}{\ding{51}}%
 \newcommand{\xmark}{\ding{55}}%
@@ -49,22 +56,22 @@
 \newcommand{\pthreads}{\texttt{pthreads}}
 \newcommand{\specialcell}[2][c]{%
   \begin{tabular}[#1]{@{}c@{}}#2\end{tabular}}
-\citestyle{acmauthoryear}
 
+
+\pagenumbering{arabic}
+
+\title{NUMAlloc: Fine-Grained NUMA Memory Allocator} 
+\author{{\normalsize{HPCA 2022 Submission
+      \textbf{\#\hpcasubmissionnumber} -- Confidential Draft -- Do NOT Distribute!!}}}
 
 \begin{document}
-
-\date{}
-
-\title{NUMAlloc: Fine-Grained NUMA Memory Allocator}
-
-\author{}
+\maketitle
+\thispagestyle{plain}
+\pagestyle{plain}
 
 \begin{abstract}
 \input{oopsla21/abstract}
 \end{abstract}
-
-\maketitle
 
 \input{intro}
 \input{overview}
@@ -73,7 +80,8 @@
 \input{discussion}
 \input{relatedwork}
 \input{conclusion}
-\bibliographystyle{ACM-Reference-Format}
+
+\bibliographystyle{IEEEtranS}
 \bibliography{ref,emery,tongping}
 
 \end{document}
