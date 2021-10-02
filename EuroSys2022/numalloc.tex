@@ -1,0 +1,94 @@
+\documentclass[sigplan,review,anonymous]{acmart}
+\acmSubmissionID{22}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+% Optional: Remove the ACM reference between the abstract and the main text.
+\settopmatter{printfolios=true,printacmref=false}
+% Optional: Comment out the CCS concepts and keywords.
+
+%\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{graphics} 
+\usepackage{subfig}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{txfonts}
+\usepackage{pifont}
+%\usepackage{bbding}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage[justification=centering]{caption}
+\usepackage{xspace}
+\usepackage{comment}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{calc}
+%\usepackage{fancyvrb}
+\usepackage{xcolor}
+\usepackage[keeplastbox]{flushend}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+% Ensure letter paper
+\pdfpagewidth=8.5in
+\pdfpageheight=11in
+
+% \newcommand{\hpcasubmissionnumber}{N69}
+
+\newcommand{\cmark}{\ding{51}}%
+\newcommand{\xmark}{\ding{55}}%
+
+\newcommand{\todo}[1]{{\color{red}\bfseries [[#1]]}}
+\newcommand{\toconfirm}[1]{{\color{blue}\bfseries #1}}
+\newcommand{\TP}[1]{{\color{red}\bfseries [[#1]]}}
+
+\newcommand{\Watcher}{{Watcher}}
+\newcommand{\WA}{{Watcher}}
+\newcommand{\ASAN}{{ASan}}
+\newcommand{\DT}{{DoubleTake}}
+
+\newcommand{\OB}{\texttt{OpenBSD}}
+\newcommand{\DieHarder}{\texttt{DieHarder}}
+\newcommand{\DL}{\texttt{DLmalloc}}
+\newcommand{\JE}{\texttt{jemalloc}}
+\newcommand{\NA}{\texttt{NUMAlloc}}
+\newcommand{\NM}{\texttt{NUMAlloc}}
+\newcommand{\TN}{TCMalloc-NUMA}
+
+\newcommand{\pthread}{\texttt{pthread}}
+\newcommand{\pthreads}{\texttt{pthreads}}
+\newcommand{\specialcell}[2][c]{%
+  \begin{tabular}[#1]{@{}c@{}}#2\end{tabular}}
+
+
+\pagenumbering{arabic}
+
+\title{NUMAlloc: Fine-Grained NUMA  Allocator} 
+
+% \author{{\normalsize{HPCA 2022 Submission
+%       \textbf{\#\hpcasubmissionnumber} -- Confidential Draft -- Do NOT Distribute!!}}}
+
+\begin{document}
+\maketitle
+\thispagestyle{plain}
+\pagestyle{plain}
+
+\begin{abstract}
+\input{EuroSys2022/abstract}
+\end{abstract}
+
+\input{EuroSys2022/intro}
+\input{EuroSys2022/overview}
+\input{EuroSys2022/implementation}
+\input{EuroSys2022/evaluation}
+\input{EuroSys2022/discussion}
+\input{EuroSys2022/relatedwork}
+\input{EuroSys2022/conclusion}
+
+\bibliographystyle{IEEEtranS}
+\bibliography{ref,emery,tongping}
+
+\end{document}
