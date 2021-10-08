@@ -10,14 +10,16 @@ This section aims to answer the following research questions:
 \item \textbf{Impact of Design Choices:} How important every design choice can actually impact performance? (Section~\ref{sec:design})	
 \end{itemize}
 
+\begin{comment}
+
 \begin{table}[!ht]
  \centering
    \caption{Machine specifications for evaluation
    \label{table:Machine}}
   %\setlength{\tabcolsep}{1.0em}
-\begin{tabular}{c | c }
+\begin{tabular}{l | l }
 \hline
-System & \textbf{NUMA Machine} \\ \hline
+Category & Information \\ \hline
 CPUs/Model 	& Xeon(R) Platinum 8153\\ \hline
 CPU Frequency & 2.00GHz\\ \hline
 NUMA Nodes  & 8 \\ \hline
@@ -30,7 +32,9 @@ Compiler &  GCC-8.3.0 \\ \hline
   \end{tabular}
   %\vspace{-0.4in}
 \end{table}
-\textbf{Experimental Setup:}  \NM{} was evaluated on a machine with 8 nodes with 128 cores, as shown in Table~\ref{table:Machine}. Any two nodes are less than or equal to 3 hops, where the latency of two hops and three hops is 2.1 and 3.1 separately if the latency of local accesses is 1.0. The machine is installed with 512GB memory. The underlying OS is Linux Debian 10 and the compiler is GCC-8.3.0. For the evaluation, the hyperthreading was turned off, and transparent page support is enabled. The performance data shown in this paper is the average of 10 runs, in order to avoid any bias caused by unexpected events.  
+\end{comment}
+
+\textbf{Experimental Setup:}  \NM{} was evaluated on a Intel Xeon(R) Platinum 8153 machine with 8 nodes, where each node has 16 cores. Any two nodes are less than or equal to 3 hops, where the latency of two hops and three hops is 2.1 and 3.1 separately if the latency of local accesses is 1.0. The machine is installed with 512GB memory. The underlying OS is Linux Debian 10 and the compiler is GCC-8.3.0. For the evaluation, the hyperthreading was turned off, but both transparent page support and AutoNUMA are  enabled. The performance data shown in this paper is the average of 10 runs, in order to avoid any bias caused by unexpected events.  
 
 \begin{comment}
 \begin{table}[!ht]
@@ -62,12 +66,15 @@ Compiler & GCC-7.5.0 & GCC-8.3.0 \\ \hline
 \begin{figure*}[!ht]
     \centering
 
-    \includegraphics[width=6.5in]{figure/8-node-parsec-perf.pdf}
+    \includegraphics[width=7in]{figure/8-node-parsec-perf.jpg}
     \caption{Performance of different allocators, where all data is normalized to \\ that of the default Linux allocator. Here, a lower bar indicates a better performance.
     \label{fig:perf}}
  \end{figure*}
- We compare \NM{} with multiple popular allocators, such as the default Linux allocator, TCMalloc-2.7~\cite{tcmalloc},  TCMalloc-NUMA~\cite{tcmallocnew}, jemalloc-5.2.1~\cite{jemalloc}, Intel TBB--2020.1~\cite{tbb}, Scalloc-1.0.0~\cite{Scalloc}, and mimalloc~\cite{mimalloc}. Among them, TCMalloc, jemalloc, TBB, and mimalloc are commercial allocators designed and maintained by Industrial Giants, like Google, Facebook, Intel, and Microsoft separately. We do not include Hoard~\cite{Hoard} as it is not a state-of-art~\cite{Scalloc, mimalloc}. Multithreaded applications chosen to evaluate the performance include PARSEC applications~\cite{parsec}, and seven real applications like \texttt{Apache httpd-2.4.35}, \texttt{MySQL-5.7.15}, \texttt{Memcached-1.4.25}, \texttt{SQLite-3.12.0}, \texttt{Aget}, \texttt{Pfscan}, and \texttt{Pbzip2}. Note that we currently have an issue to run freqmine, an openmp application, which is excluded right now. 
-PARSEC applications are using native inputs~\cite{parsec}. For MySQL, we use \texttt{sysbench} with 128 threads separately, each issuing 100,000 requests. The \texttt{python-memcached} script is used to exercise \texttt{Memcached}, with 3000 loops to get the sufficient runtime~\cite{memcached}. The \texttt{ab} is used to test \texttt{Apache} server~\cite{apachetest}, by sending 1,000,000 requests in total. \texttt{Aget} is tested by downloading a 30-MB file, and \texttt{Pfscan} is tested by searching  a keyword in a 500MB data. In terms of \texttt{Pbzip2}, we test it by compressing 10 files with 30MB each. Finally, SQLite is tested through a program called \texttt{threadtest3}~\cite{sqlitetest}. 
+ We compare \NM{} with multiple popular allocators, such as the default Linux allocator, TCMalloc-2.7~\cite{tcmalloc},  TCMalloc-NUMA~\cite{tcmallocnew}, jemalloc-5.2.1~\cite{jemalloc}, Intel TBB--2020.1~\cite{tbb}, Scalloc-1.0.0~\cite{Scalloc}, and mimalloc~\cite{mimalloc}. Among them, TCMalloc, jemalloc, TBB, and mimalloc are commercial allocators designed and maintained by Industrial Giants, like Google, Facebook, Intel, and Microsoft separately. We do not include Hoard~\cite{Hoard} as it is not the state-of-art anymore~\cite{Scalloc, mimalloc}. Multithreaded applications chosen to evaluate the performance include PARSEC applications~\cite{parsec}, and seven real applications like \texttt{Apache httpd-2.4.35}, \texttt{MySQL-5.7.15}, \texttt{Memcached-1.4.25}, \texttt{SQLite-3.12.0}, \texttt{Aget}, \texttt{Pfscan}, and \texttt{Pbzip2}. For the performance evaluation, we utilize 128 threads, which is the same as the number of cores of the evaluated machine. Note that we currently have an issue to run freqmine, an openmp application, which is excluded right now. 
+ 
+PARSEC applications are using native inputs~\cite{parsec}. For \texttt{MySQL}, we use \texttt{sysbench} with 128 threads separately, each issuing 100,000 requests. The \texttt{python-memcached} script is used to exercise \texttt{Memcached}, with 3000 loops to get the sufficient runtime~\cite{memcached}. The \texttt{ab} is used to test \texttt{Apache} server~\cite{apachetest}, by sending 1,000,000 requests in total. \texttt{Aget} is tested by downloading a 30-MB file, and \texttt{Pfscan} is tested by searching  a keyword in a 500MB data. In terms of \texttt{Pbzip2}, we test it by compressing 10 files with 30MB each. Finally, \texttt{SQLite} is tested through a program called \texttt{threadtest3}~\cite{sqlitetest}. 
+
+%\todo{The number of threads of all benchmarks were adjusted according how many cores and nodes in the target machine to make threads could be properly distributed over the nodes and cores, making the number of threads as close as the number of cores. In the test machine, the thread number is 128.}
 
 %In the Hoard~\cite{Hoard} benchmarks, we used 100 iterations and 1,280,000 64-byte objects for threadtest and also we run larson for 10 seconds with 1,000 7-2048 bytes object to cover all size classes in almost all allocators for 10,000 iterations.For false sharing , we used 100,000 inner-loop , 100,000 iterations with 8 bytes objects. 
 
@@ -89,18 +96,22 @@ In contrast, other allocators typically utilize a per-thread cache to store obje
 
 Figure~\ref{fig:perf} shows that \NM{} has a similar or better performance than the default allocator in almost every application. Further, \NM{} has a significant performance improvement (over 20\%) in the following applications, including \texttt{canneal}, \texttt{dedup}, \texttt{fluidanimate}, \texttt{streamcluster}, and \texttt{pbzip2}. Among them, \NM{} has a super performance for \texttt{fluidanimate}, due to the following reasons. First, the interleaved heap contributes to $3.23\times$ performance speedup, as shown in Figure~\ref{fig:interleavedheap}. Second, node-balanced thread binding improves the performance by over $4\times$. 
 
-\textbf{Confirming the number of remote accesses and TLB misses:} We further examine the number of remote accesses and TLB misses to confirm whether \NM{} significantly reduces them due to its design. We utilize the \texttt{perf} to collect the number of remote accesses and TLB misses (both load and store) on these applications when they are running with all allocators. 
+\textbf{Confirming the number of remote accesses:} We further examine the number of remote accesses to confirm whether \NM{} significantly reduces them due to its design. We utilize the \texttt{perf} to collect the number of remote accesses (both load and store) on these applications when they are running with all allocators. 
 %In our machine, we can collect these numbers using the following command: \texttt{perf stat -e node-load-misses,node-store-misses,dTLB-store-misses,dTLB-load-misses} 
 
-The results are shown in Figure~\ref{fig:remoteAccess}. We combine the performance (shown as bars), remote accesses (red lines), and TLB misses (blue lines) together for a better comparison. We only use five applications that \NM{} has significantly better performance than other allocators.  Basically, \NM{} either significantly reduce the number of remote accesses or TLB misses, comparing to other allocators. That is the reason why it has much better performance on these applications. 
+The results are shown in Figure~\ref{fig:remoteAccess}. We combine the performance (shown as bars) and remote accesses (red lines) together for a better comparison. We only use five applications that \NM{} has significantly better performance than other allocators.  For three applications, such as \texttt{dedup}, \texttt{fluidanimate}, and \texttt{streamcluster}, \NM{}  significantly reduces the number of remote accesses, comparing to other allocators. That is the reason why it has much better performance on these applications. Let us utilize \texttt{fluidanimate} as an example. TCMalloc and the default Linux allocator has  $5.2\times$ and $5.4\times$ remote accesses than \NM{}. This explains why \NM{} is running up to $6.4\times$ faster than the default Linux allocator, and  $4.6\times$ than the second-best one--TCMalloc. 
 
-Let us utilize \texttt{fluidanimate} as an example. TCMalloc and the default Linux allocator has  $5.2\times$ and $5.4\times$ remote accesses than \NM{}. This explains why \NM{} is running up to $6.4\times$ faster than the default Linux allocator, and  $4.6\times$ than the second-best one--TCMalloc. We also observe some similar results for other applications. For \texttt{dedup}, the \texttt{glibc} allocator introduces 17850 time more TLB misses than \NM{}. Note that we only collect these two factors here, where the performance of allocators can be caused by other reasons, such as memory management operations.  
+However, there is no much difference on the number of remote accesses for \texttt{canneal} and \texttt{dedup} compared with other allocators. Based on our investigation, \NM{} is running faster than others due to the usage of huge pages. When transparent huge page support is enabled, \NM{} utilizes huge pages instead of small pages. Therefore, \NM{} has much less TLB misses, due to the use of huge pages. For example, for \texttt{canneal}, \NM{}'s TLB misses is 452 $times$ lower than that of \texttt{glibc}.
+
+%data in https://docs.google.com/spreadsheets/d/1WqWH5J7CcQuV8Vs4HnqRSC7TZpgQGPB9Gh2knHPSZPU/edit?usp=sharing
+
+%We also observe some similar results for other applications. For \texttt{dedup}, the \texttt{glibc} allocator introduces 17850 time more TLB misses than \NM{}. Note that we only collect these two factors here, where the performance of allocators can be caused by other reasons, such as memory management operations.  
 
 
 \begin{figure}[!h]
     \centering
-    \includegraphics[width=3.5in]{figure/remote-access-and-tlb-miss.jpg}
-    \caption{Normalized runtime, remote accesses and TLB misses of different allocators, where all of them are normalized to \NM{}. }
+    \includegraphics[width=3.5in]{figure/remote-access.pdf}
+    \caption{Normalized runtime and the number of remote accesses of different allocators, where all of them are normalized to \NM{}. }
     \label{fig:remoteAccess}
 \end{figure}
 %\todo{Change "Performance" to runtime, also change the the performance/remote accesses" scale to 8, maybe put NUMAlloc to the first, change TcMalloc to TCMalloc. }
@@ -159,9 +170,9 @@ For server applications, such as \texttt{MySQL}, \texttt{SQLite}, and \texttt{Me
 Memory overhead is listed in Table~\ref{tab:memory_consumption}. In total, \NM{}'s memory consumption is around 45\% more than that of the default Linux allocator, but it is better than \texttt{jemalloc} and  \texttt{mimalloc}, and is $6\times$ better than \texttt{scalloc}.  Overall, the \texttt{glibc} allocator has the smallest memory consumption, and TCMalloc is the second-best one. 
 %Scalloc is the worst one in terms of memory consumption, which consumes around  $8.3\times$ more memory that that of TBB.  
  
-\NM{}'s more memory consumption is mainly due to the following reasons. \NM{} allocates a large memory block from the OS. When transparent huge page support is enabled, then all memory will be allocated from huge pages. The same reason also applies to Scalloc, which also allocates a continuous huge region of virtual memory from the underlying OS initially. Comparing to Scalloc, \NM{} makes all threads share the same bag for each size class, as described in Section~\ref{sec:others}, which effectively reduces its memory consumption by multiple times. In comparison, Scalloc utilizes $6\times$ more memory when THP is enabled.  
+\NM{}'s more memory consumption is mainly due to the following reasons. \NM{} allocates a large memory block from the OS. When transparent huge page support is enabled, then all memory will be allocated from huge pages. The same reason also applies to Scalloc, which also allocates a continuous huge region of virtual memory from the underlying OS initially. Comparing to Scalloc, \NM{} makes all threads share the same bag for each size class, as described in Section~\ref{sec:others}, which effectively reduces its memory consumption by multiple times. In comparison, Scalloc utilizes $6\times$ more memory when transparent huge page support is enabled.  
 
-We further confirmed the memory consumption when THP is disabled, which can be seen in Table~\ref{tab:memory_consumption}. Comparing to the default glibc allocator, \NM{}'s total memory overhead is around 10\%, with the GEOMEAN of 5.6\% only. The total memory consumption is decreased from 16878 MB to 12801 MB,  when transparent huge pages are disabled. Other allocators will not be affected much by transparent huge pages, since they typically obtain a small chunk from the OS each time, less than the size of a huge page (2MB), then the OS will not allocate physical pages from huge pages by default.  
+We further confirmed the memory consumption when transparent huge page support is disabled, which can be seen in Table~\ref{tab:memory_consumption}. Comparing to the default glibc allocator, \NM{}'s total memory overhead is around 10\%, with the GEOMEAN of 5.6\% only. The total memory consumption is decreased from 16878 MB to 12801 MB,  when transparent huge pages are disabled. Other allocators will not be affected much by transparent huge pages, since they typically obtain a small chunk from the OS each time, less than the size of a huge page (2MB), then the OS will not allocate physical pages from huge pages by default.  
 Therefore, we believe that \NM{}'s memory consumption is acceptable. 
 
 %Second, \NM{} may not return the memory to the OS immediately for large pages. However, we believe that its memory consumption is acceptable. 
@@ -270,9 +281,20 @@ This section further confirms \NM{}'s multiple design choices, and all results s
 \label{binding-pthread-scalibity}
 \end{figure*}
 
+\begin{figure*}[!ht]
+    \centering
+    \includegraphics[width=5.5in]{figure/binding-policy.pdf}
+    \caption{ Node-Balanced vs. Node-Saturate binding for Glibc, where results are normalized to those without binding.}
+    \label{fig:binding-policy}  
+\end{figure*}
+
 %\todo{someone argued that the figure is so small}
 
-Fig.~\ref{binding-pthread-scalibity} shows the performance difference with and without thread binding for two allocators, Glibc and TCMalloc. We did not evaluate \NM{} directly, since \NM{}'s mechanism is tighten to thread binding, such as its origin-based memory management, metadata allocation. For the evaluation, threads are bound to different nodes in a round-bin way, which is the same as \NM{}. We observe that the thread binding improves the performance significantly for some applications. With the thread binding, \texttt{fluidanimate} runs around $4.5\times$ faster on Glibc and $3.66\times$ faster on TCMalloc. \texttt{streamcluster} runs more than 20\% and 30\% faster than the one without the binding. This clearly indicates that the thread binding will benefit the performance overall, which should be included into the memory allocator by default. 
+Fig.~\ref{binding-pthread-scalibity} shows the performance difference with and without thread binding for two allocators, Glibc and TCMalloc. We did not evaluate \NM{} directly, since \NM{}'s mechanism is tighten to thread binding, such as its origin-based memory management, metadata allocation. In particular, threads are bound to different nodes in a round-bin way, called as node-balanced binding, which is the same as \NM{}. We observe that the thread binding improves the performance significantly for some applications. With the thread binding, \texttt{fluidanimate} runs around $4.5\times$ faster on Glibc and $3.66\times$ faster on TCMalloc. \texttt{streamcluster} runs more than 20\% and 30\% faster than the one without the binding. This clearly indicates that the thread binding will benefit the performance overall, which should be included into the memory allocator by default. 
+
+We further  compare the Node-Balanced thread binding with Node-Saturated thread binding, which binds the maximum possible number of threads to a node and then switches to the next node. As shown in Fig.~\ref{fig:binding-policy}, the Node-Balanced thread binding is better than Node-Saturated thread binding. 
+
+% , proving the effectiveness of Node-Balanced thread binding.
 
 %\todo{The first figure should be Glibc}
 
