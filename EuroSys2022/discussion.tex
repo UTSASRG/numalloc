@@ -8,3 +8,12 @@ Second, \NM{}'s interleaved heap cannot always achieve the performance improveme
 %Based on our analysis, the memory consumption is caused by \NM{}'s bag mechanism, especially with transparent huge page support. Currently, \NM{} employs one MB as a bag, which indicates that objects of each size will occupy at least of 1 MB, when transparent huge page support is enabled. Further, \NM{}'s design achieves a fast lookup on the metadata, but will utilize more memory unfortunately. We will investigate whether reducing the size of a bag could help reduce the memory consumption in the future.
 
 %The second limitation is that \NM{} will crash less often by preallocating a huge chunk of memory from the OS in the beginning. If an invalid reference is landed within a pre-allocated range, a program will not crash, different from other allocators. Instead, \NM{} aims to achieve the high performance over the reliability. Therefore, we believe that this limitation is acceptable.  
+
+\todo{NUMAalloc may not suitable for the situation for the system has thousands of threads. But maybe still okay, as these threads are balanced distributed to different nodes.
+
+NUMAlloc can be useful for certain applications and system configurations and appears to be well-crafted. 
+
+Maybe we could say that numa support is a daunting task, but it is actually not. This paper shows how to use and embedded these mechanisms in order to choose a better result. 
+Interleaving shared objects similarly can make sense (e.g. as in the applications used in the evaluation of the paper) but is not easy to accept that it will universally work well or better than other techniques. As a different case from the one above, consider a server where tens-hundreds of different applications are running, possibly in containers/VMs, starting and finishing dynamically. What does interleaving shared objects say for such cases?
+
+}

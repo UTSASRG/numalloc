@@ -2,6 +2,18 @@
 
 %\todo{We need to add the memory difference with and without the transparent memory.} 
 
+\todo{
+1. verify the impact with and without origin-based deallocation (need to change few lines of code).
+
+2. TCMalloc-version. TBB version. 
+
+3. support the change of configurations via environment variables (binding, interleave heap). BTW, we don't need to check the size of objects any more. 
+
+4. Memory overhead (mostly due to huge page, origin-based allocation) 
+deallocations send back to the os when above some threadhold. 
+
+}
+
 \section{Introduction}
 \label{sec:intro}
 
