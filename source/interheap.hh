@@ -153,11 +153,11 @@ class InterHeap {
       }
     };
 
+#if 0
     // CallsiteMap is used to save the callsite and corresponding information (whether it is
     // private or not).
     typedef HashMap<void *, CallsiteInfo, spinlock, localAllocator> CallsiteMap;
     CallsiteMap _callsiteMap;
-
     class ObjectInfo {
     public:
       int            _allocSequence;
@@ -180,8 +180,10 @@ class InterHeap {
     typedef HashMap<void *, ObjectInfo, spinlock, localAllocator> ObjectsHashMap;
     ObjectsHashMap _objectsMap;
 
+#endif
     int   _mhSequence;     // main heap phase sequence number
- public:
+
+  public:
 
    void initialize(int nodeindex, void * begin) {
       size_t heapsize = 2 * SIZE_PER_SPAN;
@@ -201,7 +203,6 @@ class InterHeap {
 
       _nodeIndex = nodeindex; 
       _sequentialPhase = true;
-      _mhSequence = 0;
 
       // Compute the metadata size for PerNodeHeap
       size_t metasize = _bigObjects.computeImplicitSize(heapsize);
@@ -232,9 +233,10 @@ class InterHeap {
       // Initialize the lock
       pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
 
+
       // Call stack map
-      _callsiteMap.initialize(HashFuncs::hashStackAddr, HashFuncs::compareAddr, SIZE_CALL_SITE_MAP);
-      _objectsMap.initialize(HashFuncs::hashAllocAddr, HashFuncs::compareAddr, SIZE_HASHED_OBJECTS_MAP);
+      //_callsiteMap.initialize(HashFuncs::hashStackAddr, HashFuncs::compareAddr, SIZE_CALL_SITE_MAP);
+      //_objectsMap.initialize(HashFuncs::hashAllocAddr, HashFuncs::compareAddr, SIZE_HASHED_OBJECTS_MAP);
    } 
 
    void stopSerialPhase() {
@@ -356,8 +358,6 @@ class InterHeap {
 
         head = bpPointer;
         tail = bpPointer + _smallBags[classIndex].getBatchSize(); 
-   //     if(classSize == 0x80000)
- //fprintf(stderr, "size %lx head %p tail %p batchSize %lx\n", classSize, head, tail, _smallBags[classIndex].getBatchSize());     
         // Push the remaining memory back to the bag.
         _smallBags[classIndex].pushRange(tail, bpPointer + SIZE_ONE_BAG);
       }
@@ -369,7 +369,6 @@ class InterHeap {
     }
     else { 
       ptr = sc->allocate();
-     // fprintf(stderr, "allocate small object with ptr %p\n", ptr);
     }
 
     return ptr;

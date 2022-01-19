@@ -5,6 +5,9 @@ void * InterHeap::allocate(size_t size) {
   unsigned long address = (unsigned long)&size;
   //fprintf(stderr, "user address %lx\n", *((unsigned long *)(address + MALLOC_SITE_OFFSET)));
   address += *((unsigned long *)(address + MALLOC_SITE_OFFSET));
+
+#if 0
+  // No need to check the callsite now
   //fprintf(stderr, "size is at %p address %lx\n", &size, address);
   CallsiteInfo info;
   info.init(); 
@@ -16,6 +19,7 @@ void * InterHeap::allocate(size_t size) {
   if(oinfo && oinfo->isPrivateCallsite()) {
     return ptr; 
   }
+#endif
 
   if(isBigObject(size)) {
     //fprintf(stderr, "Allocate big object with size %lx\n", size);
@@ -30,14 +34,15 @@ void * InterHeap::allocate(size_t size) {
 //  fprintf(stderr, "mainheap allocate size %lx ptr %p\n", size, ptr);
 
   // Now insert this object to the map, so that we could confirm its privateness
-  ObjectInfo objInfo(_mhSequence, oinfo);
-  _objectsMap.insert((void *)ptr, 0, objInfo);
+  //ObjectInfo objInfo(_mhSequence, oinfo);
+  //_objectsMap.insert((void *)ptr, 0, objInfo);
   return ptr;
 }
 
 void InterHeap::deallocate(void * ptr) {
   size_t size = getSize(ptr);
 
+#if 0  
   if(_sequentialPhase) {
     ObjectInfo * info = _objectsMap.find((void *)ptr, 0);
     if(info) {
@@ -58,28 +63,14 @@ void InterHeap::deallocate(void * ptr) {
   else {
     _objectsMap.erase((void *)ptr, 0);
   }
+#endif 
 
   if(!isBigObject(size)) {
     int sc = size2Class(size); 
     
-    if(!_sequentialPhase) { 
-      pthread_spin_lock(&_lock);
-      // Return to the size class
-      _smallClasses[sc].deallocate(ptr);
-      pthread_spin_unlock(&_lock);
-    }
-    else {
-      _smallClasses[sc].deallocate(ptr);
-    }
+    _smallClasses[sc].deallocate(ptr);
   }
   else {
-    if(!_sequentialPhase) { 
-      pthread_spin_lock(&_lock);
-      _bigObjects.deallocate(ptr, size);
-      pthread_spin_unlock(&_lock);
-    }
-    else {
-      _bigObjects.deallocate(ptr, size);
-    }
+    _bigObjects.deallocate(ptr, size);
    }
 }
