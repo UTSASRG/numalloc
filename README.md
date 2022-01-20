@@ -14,8 +14,12 @@ This will call pernodeheap->allocateObjects() to get the heap.
 Inside PerNodeHeap, if no objects in pernodeheap, then we will call _smallBags[sc].allocate().
 Currently, the SIZE_ONE_BAG is 1MB. We should change it to 32KB. Then whenever one bag is allocated, then it will be marked in the shadow memory. 
 
+Right now, getting the size information can be seen at pernodeheap.getSizeFromMbs(). We only need to change this. 
+Basically, we will use 32KB as the basic unit. But if an object has the size of larer than 32KB, we only need to store the size on the starting address, as typically we only need to check the size information upon deallocations. For normal cases (without the bug), the first address will be used to store it. 
 
-For big objects, we could use 
+For big objects, we could use the hashtable to store the size information, as it is more efficient than using the shadow memory. 
+
+
 
 
 # When there are too many objects in the per-thread heap, we should return objects back to the per-node heap. 
