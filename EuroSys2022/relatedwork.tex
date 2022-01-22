@@ -21,7 +21,7 @@ NumaGiC reduces remote accesses in garbage collection phases with a mostly distr
 Majo et al. propose to consider both data locality and cache contention to achieve better performance for the NUMA applications~\cite{Majo:2011:MMN:1993478.1993481}. Wagle observed that dynamic memory allocations, thread placement and scheduling, memory placement policies, OS configurations may help improve the query performance of in-memory databases~\cite{wagle2015numa}.  Majo et al. propose to set task-to-thread affinity, and pin threads to specific cores to achieve a better performance~\cite{Majo:2015:LPC:2688500.2688509}. Diener proposes a new kernel framework to combine task management and memory management together to achieve better performance~\cite{diener2015automatic}. 
 Debes et al. propose the combination of enhanced work-pushing and deferred allocation together to improve the performance for data-parallel tasks, but focusing on special programming models~\cite{DBLP:conf/IEEEpact/DrebesPH0D16}. They inspire \NM{}'s binding-based memory management. But \NM{} is the first work that combines both together inside a memory allocator. 
 
-
+\paragraph{Huge Page Support of Memory Allocators:}
 
 \paragraph{NUMA Libraries:}
 Cantalupo et al. propose multiple APIs that allow users to manage their memory in fine granularity by combining with multiple existing system calls~\cite{cantalupo2015memkind}. However, they are not targeting a general purpose allocator, since it requires programmers to manage the memory explicitly.  Majo et al. propose multiple source-code based  algorithmic changes in order to improve data sharing and memory access patterns for NUMA architectures~\cite{6704666}. Williams et al. propose to group data structures that can be migrated together with arenas~\cite{WilliamsI0L18}. 
@@ -31,7 +31,7 @@ But both of them need significant manual effort to employ this.
 %XPV extends virtualization technique by considering NUMA-topology and extending virtualization to SRLs ~\cite{Bui:2019:EPV:3302424.3303960}.
 
 %\todo{Changing the following two paragraphs}
-\paragraph{Reactive Systems for NUMA Architecture:} Some systems migrate tasks or physical pages reactively based on memory access patterns or other hardware characteristics~\cite{Blagodurov:2011:CNC:2002181.2002182, AutoNUMA, Dashti:2013:TMH:2451116.2451157, Lepers:2015:TMP:2813767.2813788}. 
+\paragraph{Reactive Systems for NUMA Architecture:} Some systems migrate tasks or physical pages reactively based on memory access patterns or other hardware characteristics~\cite{simplenuma, Blagodurov:2011:CNC:2002181.2002182, AutoNUMA, Dashti:2013:TMH:2451116.2451157, Lepers:2015:TMP:2813767.2813788}. 
 %They improve the performance automatically without human involvement. However, these systems impose additional overhead (sometimes unnecessarily)  by migrating tasks or physical pages reactively. Further, a reactive approach cannot reduce remote accesses by the migration, if objects of the same page are concurrently accessed by multiple threads in multiple nodes~\cite{Gaud:2014:LPM:2643634.2643659}. 
 \NM{} belongs to a proactive approach that does not require explicit and page migration, which is complementary to these reactive systems. 
 %It is possible to combine these two together to achieve better performance. 
