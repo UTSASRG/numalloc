@@ -34,8 +34,13 @@ To support the NUMA architecture, a PerNodeHeap is proposed that has one freelis
 Overall, \NM{} includes a novel layout to quickly compute the physical node (with the memory binding) and a per-node heap to support node-aware allocations. This design allows it to perform origin-based memory management efficiently, as discussed in the next section. 
 
 %mechanisms to re and one per-node freelist for each node to track big objects. \NM{} also maintains per-node freelists to track small objects based on size classes. These freelists are singly linked lists, which uses the first word of every freed object as pointers.  Small freed objects may be migrated between per-thread freelists and per-node freelists, as further described in Section~\ref{sec: others}. 
+\subsection{Binding-Based Memory Management} 
+\label{sec:balance}
+As described in Section~\ref{sec:intro}, thread migration will cause multiple performance issues for the NUMA architecture. Therefore, \NM{} binds each thread to a node specifically in order to avoid thread migration across different nodes. To improve the balance, \NM{} currently supports two types of binding, \textit{node-interleaved binding} and \textit{node-saturate binding}. Node-interleaved binding binds continuous threads to different nodes in an interleaved way so that every node will have a similar number of threads. That is, the first thread will be bound to the node that it is scheduled to run by the OS, and the second thread will be bound to its next node, and so on. Instead, node-saturate binding will bind sufficient threads to a node first before binding to a different node. For ode-saturate binding, threads to be assigned will be same as the number of hardware cores.  
 
-\subsection{Origin-Based Memory Management} 
+Note that \NM{} only binds a thread to a node, instead of a core, which still allows the scheduling initiated by the OS. To perform the binding correctly, \NM{} obtains the hardware topology in the initialization phase via the \texttt{numa\_node\_to\_cpus} API, which tells the relationship between each CPU core and each memory node. Then it intercepts all thread creations in order to bind a newly-created thread to a specific node. In the future, we plan to support more user-controlled binding. 
+
+\subsection{Origin-Aware Memory Management} 
 \label{sec:origin}
 
 %\todo{In Section III-B, you talk about satisfying allocations from the "un-allocated region" as the last step. Is this memory that is not part of the interleaved heap? It would help to be more clear about what this is. }
@@ -48,9 +53,6 @@ Second, \NM{} always ensures node-local memory allocations. For small objects, i
 %Since the region is bound to the current node, and objects in the per-thread freelist and the per-node freelist are always originated from the current node, 
 \NM{} ensures local allocations for small objects. For big objects, allocation will be satisfied from per-node freelists or un-allocated region (pointed by bpBig pointer in Figure\ref{fig:overview}) of the current node, indicating local allocations for big objects. 
 
-\subsection{Node-Balanced Thread Binding} 
-\label{sec:balance}
-As described in Section~\ref{sec:intro}, thread migration will cause multiple performance issues for the NUMA architecture. Therefore, \NM{} binds each thread to a node specifically in order to avoid thread migration across different nodes. To improve the balance, \NM{} binds threads to different nodes in an interleaved way so that every node will have a similar number of threads. The first thread will be bound to the node that it is scheduled to run by the OS, and the second thread will be bound to its next node, and so on. Note that \NM{} only binds a thread to a node, instead of a core, which still allows the scheduling initiated by the OS. To perform the binding correctly, \NM{} obtains the hardware topology in the initialization phase via the \texttt{numa\_node\_to\_cpus} API, which tells the relationship between each CPU core and each memory node. Then it intercepts all thread creations in order to bind a newly-created thread to a specific node. In the future, we plan to support user-controlled binding.
 
 %\subsection{Selective Huge Pages} 
 %\label{sec:hugepage}
@@ -65,40 +67,16 @@ As described in Section~\ref{sec:intro}, thread migration will cause multiple pe
 %In addition to large objects that has the size larger than the size of a huge page, huge pages are only utilized for small objects that are predicted to be used a lot.  \NA{} employs the history of memory allocation to predict this. 
 %Each per-node heap is further divided into two parts as illustrated in Figure~\ref{fig:overview}: small objects will be allocated from the first half and will be allocated using small pages, while big objects will be allocated from the second half with huge pages (2MB). When a big object (with the huge page) is utilized for small objects, only frequently-allocated small objects can utilize such an object. We believe that our design balances the performance and memory consumption.   
 
-\subsection{Interleaved Heap} 
 
-%\todo{In Section III-D, the heuristic to learn private objects from shared objects of the main thread may not always work. What if all allocations happen before children threads are forked, but none are deallocated until after children threads are forked? }
-
-\NA{} proposes an interleaved heap that is inspired by existing profilers\cite{XULIU, MemProf}: many NUMA performances issues are related to shared objects allocated in the main thread. Due to the default first-touch policy~\cite{lameter2013numa, diener2015locality}, objects allocated and touched by the main thread are typically allocated in the node that the main thread is running on. However, these objects can be passed to multiple child threads and be accessed by these threads concurrently so that this node's memory controller becomes the performance bottleneck. 
-%causing the load imbalance issue: the memory controller of this node will be concurrently accessed by multiple threads,
-
-To overcome this issue, \NA{} reserves a range of memory for such objects, called ``Interleaved Heap'' as shown in Figure~\ref{fig:overview}. \NA{} utilizes the \texttt{mbind} system call to specify that physical pages of this heap will be allocated from all nodes interleavedly. With this design, when these objects are passed to child threads, these threads may access objects that are allocated from multiple nodes, reducing interconnect congestion and load imbalance of a single node. 
-
-\begin{comment}
-\begin{wrapfigure}{r}{0.6\textwidth}
-\centering
-\includegraphics[width=3in]{figure/blockwise}
-\vspace{-0.1in}
-\caption{Block-wise Memory Allocation\label{fig:blockwise}}
-\vspace{-0.1in}
-\end{wrapfigure}
-\end{comment}
-
-In theory, private objects of the first thread should not be allocated from the interleaved heap, since that will create remote accesses unnecessarily. \NM{} utilizes a simple heuristics to differentiate shared objects from private objects based on allocation callsites: each allocation callsite is treated as a shared one initially, and is allocated from the interleaved heap; Whenever an object is deallocated before creating children threads, indicating such an object is a private one for the main thread, all objects from the corresponding callsite are considered to be private ones, and they are only allocated from the per-node heap afterward. With this heuristics , there is no need to change programs explicitly, although it is more efficient if programmers could provide such information. 
-
-As mentioned above, \NM{} monitors allocation/deallocation pattern of the main thread to identify the share-ability of each callsite. 
-%If an allocation callsite is found to be private, then all allocations from this callsite should not allocate from the interleaved heap, but from the normal heap. 
-A challenge is to obtain and compare the callsite of each allocation so that we could determine the heap based on the share-ability. In fact, this may introduce high overhead for applications with large amount of allocations, if using the \texttt{backtrace}~\cite{DBLP:conf/icse/SumnerZWZ10, DBLP:conf/cgo/ZengR0AJ014}. For the performance reason, \NA{} utilizes the sum of the stack position and the return address of the allocation invocation to identify a callsite, called ``\textit{callsite key}''. This combination is able to differentiate callsites correctly if an application does not have allocation wrappers, since the stack position can be utilized to identify the function in the stack and the return address tells the invocation placement inside the same function. If a callsite is misidentified, it will not cause any correctness issue, but with some performance penalties/losses. \NA{} utilizes a hash table to track the status of every callsite. 
- % which is fortunately not very expensive given the limited amount of different callsites. 
- 
-Note that the interleaved heap cannot be achieved by using existing NUMA utilities like \texttt{numactl}. Although \texttt{numactl} could also specify memory allocations to be interleaved. However, \texttt{numactl} could only set the policy for a whole application. Instead, \NM{} only utilizes the interleaved heap for shared objects that are allocated in the main thread, not for all objects. As we evaluated in Section~\ref{sec:interleavedheap}, the interleaved heap is beneficial to the performance for most applications, but not all applications. Therefore, it is better that the interleaved heap is enabled whenever necessary. 
+\subsection{Threads-Shared Incremental Allocation} 
+When Transparent Huge Page is enabled, the OS will prefer to allocate huge pages if a program touches a continuous memory region with the size larger than a huge page (e.g., 2MB). Since \NM{} allocates a large region initially(as shown in Figure~\ref{fig:overview}), huge pages will be employed by the OS correspondingly. However, it is important to reduce memory fragmentation, as one allocation from a memory block will be assigned to a huge page. \NM{} makes multiple threads (from the same node) share the same memory block, instead of having a separate super-block for each thread as Scalloc~\cite{Scalloc}. That is, when a thread is running out of the memory, it obtains only multiple objects at a time (currently 2 pages for very small objects) from the corresponding memory block, instead of getting a whole block (few megabytes) for each per-thread heap. This is the basic reason that \NM{} has much less memory consumption than Scaller, as evaluated in Section~\ref{sec:memory}.  
 
 \subsection{Other Mechanisms}
 \label{sec:others}
 
 \NM{} also implements the following mechanisms in order to reduce the performance and memory overhead. 
 
-\paragraph{Efficient Object Movement} 
+\subsubsection{Efficient Object Movement} 
 %It is important to reduce memory blowup that freed objects by one thread cannot be utilized by other threads~\cite{Hoard}. 
 \NM{} requires to move freed objects between per-thread and per-node freelists frequently. On the one hand, when a per-thread freelist has too many freed objects, some of them should be moved to the per-node freelist so that other threads could re-utilize these freed objects. On the other hand, each per-thread list needs to obtain freed objects from its per-node heap, when a thread is running out of the memory. 
 
@@ -132,7 +110,7 @@ Third, the traverse of a global freelist may introduce significant lock contenti
 %\vspace{-0.1in}
 \end{figure}
 
-Second, \NM{} also proposes a circular array (``ListArray'' as Figure~\ref{fig:listarray}) that helps move objects from per-node freelist to per-thread freelist. As mentioned above, the per-node freelist could easily become the performance bottleneck, since multiple threads may compete for it concurrently. To address this issue, each per-node freelist is actually consisted of many sub-lists, where a \texttt{Head} pointer and a \texttt{Tail} pointer point to the header and the tail of each sub-list. When a thread is moving multiple objects from the per-node freelist, it could move all objects in a sub-list (pointed by a pair of \texttt{Head} and \texttt{Tail} pointer) at a time. Therefore, there is no need to traverse the whole list to obtain these objects for the movement, which could reduce the contention. 
+Second, \NM{} also proposes a circular array (``ListArray'' as Figure~\ref{fig:listarray}) that helps move objects from per-node freelist to per-thread freelist. As mentioned above, the per-node freelist could easily become the performance bottleneck, since multiple threads may compete for it concurrently. To address this issue, each per-node freelist actually consists of many sub-lists, where a \texttt{Head} pointer and a \texttt{Tail} pointer point to the header and the tail of each sub-list. When a thread is moving multiple objects from the per-node freelist, it could move all objects in a sub-list (pointed by a pair of \texttt{Head} and \texttt{Tail} pointer) at a time. Therefore, there is no need to traverse the whole list to obtain these objects for the movement, which could reduce the contention. 
 %Then whenever a thread is migrated object,
 
 %The performance overhead of three types of operations can be greatly reduced with this data structure. First, a remote thread will put a freed object into the freelist, based on the origin-based deallocation. This operation can be done in a constant time, by putting the object into the entry pointed by a \texttt{toPut} pointer. Second, a local thread maybe put multiple objects into it, which can be finished in constant time as well. All objects will be put to the entry pointed by a \texttt{toPut} pointer, and then the pointer will be updated to the next entry. Third, the operations for getting objects from it can be done efficiently by simply moving all objects in the current entry, since there is no need to traverse the freelist. Therefore, this data structure reduces the synchronization issue of all operations. 
@@ -142,10 +120,40 @@ Second, \NM{} also proposes a circular array (``ListArray'' as Figure~\ref{fig:l
 
 Note that this array does not increase the overhead of putting objects. If a thread puts a freed object to this array, the object can be placed into the current sub-list in a constant time. Similarly, a freelist could be appended to the current sub-list in a constant time. 
 %the object will be placed into the freelist pointed by the \texttt{toPutIndex}, but the index is not updated after the deallocation. Second, when freed objects in a per-thread freelist is above the predefined watermark, the thread will migrate a batch of objects to the freelist pointed by the \texttt{toPutIndex}. After this migration, the current freelist is considered to be full, and will update the index to the next entry in the circular array.
+\subsubsection{Interleaved Heap} 
 
-\paragraph{Node-Local Metadata} \NM{} guarantees that all of the metadata is always allocated in the same node, based on its thread binding as described in Section~\ref{sec:balance}. Note that this is only possible under the thread binding. Such metadata includes per-node and per-thread freelists for different size classes, and freelists for big objects. Similarly, \NM{} utilizes the \texttt{mbind} system call to bind the memory to a specific node.  
+%\todo{In Section III-D, the heuristic to learn private objects from shared objects of the main thread may not always work. What if all allocations happen before children threads are forked, but none are deallocated until after children threads are forked? }
 
-\paragraph{Reducing Memory Fragmentation When Transparent Huge Pages (THP) is Enabled} When THP is enabled, the OS will prefer to allocate huge pages if a program touches a continuous memory region with the size larger than a huge page (e.g., 2MB). Since \NM{} allocates a large region initially(as shown in Figure~\ref{fig:overview}), huge pages will be allocated correspondingly. Therefore, it is important to reduce memory fragmentation. \NM{} makes multiple threads (from  the same node) share the same memory block, instead of having a separate block for each thread as Scalloc~\cite{Scalloc}. That is, when a thread is running out of the memory, it obtains only multiple objects at a time from the corresponding memory block, typically in the granularity of a page (4KB), instead of getting a whole block (few megabytes) for each per-thread heap. This is the basic reason that \NM{} has much less memory consumption than Scaller, as evaluated in Section~\ref{sec:memory}.  
+\NA{} proposes an interleaved heap that is inspired by existing profilers\cite{XuNuma, MemProf}: \textit{many NUMA performances issues are related to shared objects allocated in the main thread}. Due to the default first-touch policy~\cite{lameter2013numa, diener2015locality}, objects allocated and touched by the main thread are typically allocated in the node that the main thread is running on. However, these objects can be passed to multiple child threads and be accessed by these threads concurrently so that this node's memory controller becomes the performance bottleneck. 
+%causing the load imbalance issue: the memory controller of this node will be concurrently accessed by multiple threads,
+
+To overcome this issue, \NA{} reserves a range of memory for such objects, called ``Interleaved Heap'' as shown in Figure~\ref{fig:overview}. \NA{} utilizes the \texttt{mbind} system call to specify that physical pages of this heap will be allocated from all nodes interleavedly. With this design, when these objects are passed to child threads, these threads may access objects that are allocated from multiple nodes, reducing interconnect congestion and load imbalance of a single node. 
+
+\begin{comment}
+\begin{wrapfigure}{r}{0.6\textwidth}
+\centering
+\includegraphics[width=3in]{figure/blockwise}
+\vspace{-0.1in}
+\caption{Block-wise Memory Allocation\label{fig:blockwise}}
+\vspace{-0.1in}
+\end{wrapfigure}
+\end{comment}
+
+In theory, private objects of the first thread should not be allocated from the interleaved heap, since that will create remote accesses unnecessarily. \NM{} utilizes a simple heuristics to differentiate shared objects from private objects based on allocation callsites: each allocation callsite is treated as a shared one initially, and is allocated from the interleaved heap; Whenever an object is deallocated before creating children threads, indicating such an object is a private one for the main thread, all objects from the corresponding callsite are considered to be private ones, and they are only allocated from the per-node heap afterward. With this heuristics , there is no need to change programs explicitly, although it is more efficient if programmers could provide such information. 
+
+As mentioned above, \NM{} monitors the  allocation/deallocation pattern of the main thread to identify the share-ability of each callsite. 
+%If an allocation callsite is found to be private, then all allocations from this callsite should not allocate from the interleaved heap, but from the normal heap. 
+A challenge is to obtain and compare the callsite of each allocation so that we could determine the heap based on the share-ability. In fact, this may introduce high overhead for applications with large amount of allocations, if using the \texttt{backtrace}~\cite{DBLP:conf/icse/SumnerZWZ10, DBLP:conf/cgo/ZengR0AJ014}. For the performance reason, \NA{} utilizes the sum of the stack position and the return address of the allocation invocation to identify a callsite, called ``\textit{callsite key}''. This combination is able to differentiate callsites correctly if an application does not have allocation wrappers, since the stack position can be utilized to identify the function in the stack and the return address tells the invocation placement inside the same function. If a callsite is misidentified, it will not cause any correctness issue, but with some performance penalties/losses. \NA{} utilizes a hash table to track the status of every callsite. 
+ % which is fortunately not very expensive given the limited amount of different callsites. 
+ 
+Note that the interleaved heap cannot be achieved by using existing NUMA utilities like \texttt{numactl}. Although \texttt{numactl} could also specify memory allocations to be interleaved. However, \texttt{numactl} could only set the policy for a whole application. Instead, \NM{} only utilizes the interleaved heap for shared objects that are allocated in the main thread, not for all objects. As we evaluated in Section~\ref{sec:interleavedheap}, the interleaved heap is beneficial to the performance for most applications, but not for all applications. Therefore, it is better that the interleaved heap is enabled whenever necessary. 
+
+\subsubsection{Node-Local Metadata} 
+To further reduce remote accesses, \NM{} ensures that all of the metadata is always allocated in the same node. Such metadata includes the metadata for managing per-node lists, per-thread lists, and size class information. Note that ensuring the node-local metadata for per-thread information is only possible when each thread is bound, which is the reason why \NM{} develops the ``binding-based'' approach. Therefore, \NM{} is able to guarantee that all metadata are always allocated in the same node, based on its thread binding as described in Section~\ref{sec:balance}.  
+%Such metadata includes per-node and per-thread freelists for different size classes, and freelists for big objects. 
+Similarly, \NM{} utilizes the \texttt{mbind} system call to bind the memory to a specific node.  
+
+
 %Based on our evaluation, this mechanism reduces most of the memory consumption, with the transparent huge page support by default.  
 
  %every thread has its own freelists for each size class so that there is no need to acquire the lock when an allocation can be satisfied from its per-thread heap, similar to TCMalloc. That is, two threads will not share the same per-thread heap. However, some applications may create new threads after some threads have exited. \NM{} re-utilizes the memory for these exited threads. Basically, \NM{} intercepts thread joins and cancels so that it can assign heaps of exited threads for newly-created threads, and re-utilize their heaps correspondingly.  

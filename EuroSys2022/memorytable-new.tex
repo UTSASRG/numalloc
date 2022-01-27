@@ -71,3 +71,53 @@
     % \hline
     % Total&{\bf 11146}&{\bf 12801}&{\bf 11384}&{\bf 11942}&{\bf 11557}&{\bf 11152}&{\bf 11446}&{\bf 14909}\cr\hline
     % \end{tabular}
+    
+
+
+
+
+%%%% save previous table
+
+\begin{table*}[tp]
+\footnotesize
+%	\setlength{\tabcolsep}{0.3em}
+  \centering
+    \begin{tabular}{|l|r|rr|rrrrrr|}
+    \hline
+    \multirow{3}{*}{Apps}&
+    \multicolumn{9}{c|}{Memory Usage (MB)}\\
+    \cline{2-10}
+    &\multirow{2}{*}{Glibc}&\multicolumn{2}{c|}{\NM{}}&\multirow{2}{*}{TCMalloc}&\multirow{2}{*}{TCMalloc-NUMA}&\multirow{2}{*}{jemalloc}&\multirow{2}{*}{TBB}&\multirow{2}{*}{Scalloc}&\multirow{2}{*}{mimalloc} \\ \cline{3-4} 
+    && w/ THP & w/o THP &&&&&& \\ \hline
+    \hline
+    \multicolumn{10}{|c|}{Large Footprint ($>$ 100MB)}\\ \hline
+    blackscholes&617&797&618&623&623&633&615&629&623\\ \hline
+canneal&887&836&769&774&757&1290&889&36148&891\\ \hline
+dedup&917&1447&1110&1021&1017&1393&936&11187&1531\\ \hline
+facesim&2638&3514&2723&2747&2751&3540&2642&9301&3177\\ \hline
+ferret&160&544&220&244&238&690&162&3161&770\\ \hline
+fluidanimate&470&549&342&481&482&483&470&5374&473\\ \hline
+MySQL&270&358&328&315&317&297&269&&281\\ \hline
+Pbzip2&450&1272&453&789&818&1149&445&5366&6253\\ \hline
+Pfscan&522&538&523&528&528&535&522&554&524\\ \hline
+raytrace&1287&1673&1627&1093&1531&1289&1288&15820&1392\\ \hline
+streamcluster&112&144&115&123&123&128&113&192&141\\ \hline
+vips&226&543&279&248&271&778&227&3673&971\\ \hline
+x264&2861&3865&2721&3059&3064&3718&2858&5435&4060\\ \hline
+\hline
+Normalized Geomean &{\bf 1}&{\bf 1.51}&{\bf 1.056}&{\bf 1.104}&{\bf 1.14}&{\bf 1.502}&{\bf 1.002}&{\bf 6.215}&{\bf 1.724}\\ \hline
+%\\ \hline
+\multicolumn{10}{|c|}{Small Footprint ($<$ 100MB)}\\ \hline
+Aget&8&66&5&10&10&94&10&80&6\\ \hline
+Apache&4&4&7&9&8&7&4&4&4\\ \hline
+bodytrack&68&207&46&80&82&607&75&2020&87\\ \hline
+Memcached&15&18&7&22&22&17&17&18&15\\ \hline
+SQLite3&45&256&83&62&78&143&45&684&109\\ \hline
+swaptions&28&247&19&17&21&552&30&1818&14\\ \hline
+Normalized Geomean &{\bf 1}&{\bf 3.388}&{\bf 0.87}&{\bf 1.263}&{\bf 1.338}&{\bf 4.851}&{\bf 1.09}&{\bf 8.402}&{\bf 1.025}\\ \hline
+\hline
+Total&{\bf 11585}&{\bf 16878}&{\bf 12801}&{\bf 12245}&{\bf 12741}&{\bf 17343}&{\bf 11617}&{\bf 101464}&{\bf 21322}\cr\hline
+    \end{tabular}
+  \caption{Memory consumption of different allocators. \\Note that \NM{}'s memory overhead is significantly reduced when THP support is disabled. \label{tab:memory_consumption}}
+\end{table*}
+
