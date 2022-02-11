@@ -56,10 +56,10 @@ class InterHeap {
         _batchSize = (PAGE_SIZE/classSize)*classSize;
       }
       else if(classSize < 0x40000) {
-        _batchSize = classSize * 4;
+        _batchSize = classSize * 2;
       }
       else {
-        _batchSize = classSize * 2;
+        _batchSize = classSize;
       }
     }
 
@@ -89,8 +89,10 @@ class InterHeap {
     }
 
     void pushRange(void * head, void * tail) {
-      _bp = (char *)head;
-      _bpEnd = (char *)tail;
+      if (head != tail) {
+        _bp = (char *)head;
+        _bpEnd = (char *)tail;
+      }
     }
   };
 
@@ -287,9 +289,7 @@ class InterHeap {
       size = pages * SIZE_HUGE_PAGE;
       isHugePage = true;
 
-     // fprintf(stderr, "Size is %lx _bpBig %p ptr %p\n", size, _bpBig, ptr);
       ptr = (void *)alignup((uintptr_t)ptr, SIZE_HUGE_PAGE);
-      //fprintf(stderr, "BigObject allocate: size %lx, pages %lx, ptr %p\n", sz, pages, ptr);
       _bpBig = (char *)ptr;
     }
     
@@ -302,6 +302,7 @@ class InterHeap {
     // Now binding the memory to different nodes.
     MM::bindMemoryBlockwise((char *)ptr, pages, _nodeIndex, isHugePage);
 
+    // fprintf(stderr, "interheap: markPerMBInfo from allocateFromBigBumppointer ptr=%p, size=%lx\n", ptr, size);
     // Mark the object size
     markPerMBInfo(ptr, size, size);
  
@@ -317,13 +318,13 @@ class InterHeap {
      return (size >= BIG_OBJECT_SIZE_THRESHOLD) ? true : false;
   }
 
-  inline void * allocateOneBag(size_t classSize) {
+  inline void * allocateOneBag(size_t bagSize, size_t classSize) {
     // There is no need to use the lock, since there is just one thread currently.
     void * ptr = _bpSmall;
-    _bpSmall += SIZE_ONE_BAG;
-
+    _bpSmall += bagSize;
+    // fprintf(stderr, "interheap: markPerMBInfo from allocateOneBag ptr=%p, classSize=%lx, bagSize=%lx\n", ptr, classSize, bagSize);
     // Update the PerMBInfo to mark the size class.
-    markPerMBInfo(ptr, SIZE_ONE_BAG, classSize);
+    markPerMBInfo(ptr, bagSize, classSize);
 
     return ptr;
   }
@@ -352,16 +353,18 @@ class InterHeap {
 
       // If success, then the remaining memory in the bag will be at least larger than batchSize.
       if(!success) {
- 
+        int bagSize = (classSize < SIZE_ONE_BAG) ? SIZE_ONE_BAG : (classSize / SIZE_ONE_BAG) * SIZE_ONE_BAG;
         // No more space left in the bag, then obtain a new block.
-        char * bpPointer = (char *)allocateOneBag(classSize);
+        char * bpPointer = (char *)allocateOneBag(bagSize, classSize);
 
         head = bpPointer;
-        tail = bpPointer + _smallBags[classIndex].getBatchSize(); 
-        // Push the remaining memory back to the bag.
-        _smallBags[classIndex].pushRange(tail, bpPointer + SIZE_ONE_BAG);
-      }
+        tail = bpPointer + bagSize; //_smallBags[classIndex].getBatchSize(); a bug here previously
+        // fprintf(stderr, "Put range (%p~%p) into _smallBags\n", tail, bpPointer + bagSize);
 
+        // Push the remaining memory back to the bag.
+        _smallBags[classIndex].pushRange(tail, bpPointer + bagSize);
+      }
+      // fprintf(stderr, "Put range (%p~%p) into _smallClasses\n", (unsigned long)head + classSize, tail);
       // Now the remaining range to the freelist, except the first one
       sc->pushRange((void *)((unsigned long)head + classSize), tail);
 
@@ -370,7 +373,7 @@ class InterHeap {
     else { 
       ptr = sc->allocate();
     }
-
+    // fprintf(stderr, "Allocate small object with size %lx ptr %p (sc=%d, size=%lx)\n", size, ptr, sc->getClassIndex(), classSize);
     return ptr;
   }
 

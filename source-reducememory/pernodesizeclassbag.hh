@@ -3,6 +3,7 @@
 
 #include <pthread.h>
 #include "xdefines.hh"
+// #include <stdio.h>
 
 // Each node's small size class will have a bag to hold objects that 
 // are never allocated. 
@@ -10,7 +11,8 @@ class PerNodeSizeClassBag {
   public:
     char        * _bp;
     char        * _bpEnd;
-    unsigned int  _bags; // How many bags are allocated in this size class. 
+    unsigned int  _bags; // How many _bagsPerClass are allocated in this size class. 
+    unsigned int  _bagsPerClass; // How many bags are needed for current class size.
     unsigned int  _classSize;
     unsigned int  _nodeIndex;
     pthread_spinlock_t _lock;
@@ -18,6 +20,7 @@ class PerNodeSizeClassBag {
 
   public:
     void initialize(unsigned int nodeindex, unsigned int classSize) {
+      // fprintf(stderr, "pernodesizeclassbag.hh: initialize\n");
       _bp = NULL;
       _bpEnd = NULL;
       _nodeIndex = nodeindex;
@@ -28,27 +31,34 @@ class PerNodeSizeClassBag {
         _batchSize = objects*classSize;
       }
       else if(classSize < 0x40000){
-        _batchSize = classSize * 4;
+        _batchSize = classSize * 2;
       }
       else {
         // Make batchSize less than or equal to bagSize.
-        _batchSize = classSize * 2;
+        _batchSize = classSize;
       }
 
       _bags = 0;
+      if (classSize <= SIZE_ONE_BAG) {
+        _bagsPerClass = 1;
+      } else {
+        _bagsPerClass = classSize / SIZE_ONE_BAG;
+      }
       pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
     }
 
     // This function should be always successful. Therefore, there is no
     // need for the return values. 
     void allocate(void ** head, void ** tail) {
+      // fprintf(stderr, "pernodesizeclassbag.hh: allocate from bumppointer\n");
+      int bagSize = SIZE_ONE_BAG * _bagsPerClass;
       pthread_spin_lock(&_lock);
       if(_bp == _bpEnd) {
         // If the allocation is not successful, then allocateOneBag()
         // should handle the failure.
-        _bp = (char *)allocateOneBagFromNode();
-        _bpEnd = _bp + SIZE_ONE_BAG;
-        _bags++;  
+        _bp = (char *)allocateOneBagFromNode(bagSize);
+        _bpEnd = _bp + bagSize;
+        _bags++;
       }
 
       if((_bp + 2*_batchSize) < _bpEnd) {
@@ -74,7 +84,7 @@ class PerNodeSizeClassBag {
     }
 
     // Implementation is in the cpp file.
-    void *allocateOneBagFromNode();  
+    void *allocateOneBagFromNode(int bagSize);  
 };
 
 #endif

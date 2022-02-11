@@ -167,7 +167,7 @@ void heapinitialize() {
     // Thread initialization, which can be occurred before or after numa heap initialization
 		xthread::getInstance().initialize();
 
-    fprintf(stderr, "heap is initialized now\n");
+    // fprintf(stderr, "heap is initialized now\n");
     heapInitStatus = E_HEAP_INIT_DONE;
 	}
 //    ///Jin
@@ -195,7 +195,7 @@ void heapinitialize() {
       ptr = localPtr; 
       localPtr += size;
       if(localPtr > localPtrEnd) {
-        fprintf(stderr, "Making the temporary buffer larger\n");
+        // fprintf(stderr, "Making the temporary buffer larger\n");
         abort();
       }
     break;
@@ -208,7 +208,7 @@ void heapinitialize() {
 #if GET_TIME
      unsigned long long start = rdtscp(); 
 #endif
-    fprintf(stderr, "allocate right now with size %lx\n", size);
+    // fprintf(stderr, "allocate right now with size %lx\n", size);
       ptr = NumaHeap::getInstance().allocate(size);
 #if GET_TIME
      //if(size != 57) {

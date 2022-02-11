@@ -63,7 +63,7 @@ class PerNodeHeap {
  public:
    size_t computeMetadataSize(size_t heapsize) {
       // Comput the size for _mbsMapping
-      return sizeof(unsigned long) * (heapsize >> SIZE_ONE_MB_SHIFT);
+      return sizeof(unsigned long) * (heapsize >> SIZE_ONE_BAG_SHIFT);
    }
 
    void initialize(int nodeindex, char * start) {
@@ -104,10 +104,12 @@ class PerNodeHeap {
       _bigWatermark = BIG_OBJECTS_WATERMARK;
       _bigTimestamp = 0;
       
+      // fprintf(stderr, "pernodeheap.hh: initialize _smallBags(PerNodeSizeClassBag) and _smallLists(PerNodeSizeClassList)`\n");
       // Initialize the _smallLists 
       int i = 0;
       size_t size = SIZE_CLASS_START_SIZE;
       for(i = 0; i < SMALL_SIZE_CLASSES; i++) {
+        // fprintf(stderr, "i=%d, classSize=%d\n", i, size);
         _smallBags[i].initialize(nodeindex, size);
 
         _smallLists[i].initialize(size);
@@ -126,6 +128,7 @@ class PerNodeHeap {
 
   // allocate a big object with the specified size
   void * bigObjectListAllocate(size_t size, size_t realsize) {
+    // fprintf(stderr, "pernodeheap.hh: bigObjectListAllocate size=%lx, realsize=%lx\n", size, realsize);
     void * ptr = NULL;
 
     // We only allocate if the total size is larger than the request one
@@ -191,14 +194,19 @@ class PerNodeHeap {
     int numb = _smallLists[sc].allocateBatch(head, tail);
 
     if(numb == 0) {
+      // fprintf(stderr, "pernodeheap.hh:: allocate size class %d from _smallBags(PerNodeSizeClassBag)\n", sc);
       // If we can't get objects from the freelist, allocate from the bag (never-allocated ones)
       _smallBags[sc].allocate(head, tail);
     } 
+    // else {
+    //   fprintf(stderr, "pernodeheap.hh:: allocate size class %d from _smallLists(PerNodeSizeClassList)\n", sc);
+    // }
 
     return numb;
   }
 
   void deallocateBatch(int sc, unsigned long num, void *head, void *tail) {
+    // fprintf(stderr, "pernodeheap.hh: deallocate batch from sc=%d\n", sc);
     _smallLists[sc].deallocateBatch(num, head, tail);   
   }
 
@@ -210,6 +218,7 @@ class PerNodeHeap {
 
     // Check the freed bigObjects at first, since they may be still hot in cache.
     if(allocBig) {
+      // fprintf(stderr, "pernodeheap.hh: allocateOneBag allocBig=true, invoke bigObjectListAllocate\n");
       ptr = bigObjectListAllocate(bagSize, classSize);
     }
     //  fprintf(stderr, "get one bag with size %lx from big object with ptr %p\n", size, ptr);
@@ -221,7 +230,7 @@ class PerNodeHeap {
       _bpSmall += bagSize;
 
       unlockSmallHeap();
-
+      // fprintf(stderr, "pernodeheap.hh: allocateOneBag _bpSmall add %lx\n", bagSize);
       // Set the size for the bag, which don't increase the pageHeapSize.
       setUseMbsMapping(ptr, bagSize, classSize);
     }
@@ -231,13 +240,13 @@ class PerNodeHeap {
   // Allocate a big object
   void * allocateBigObject(size_t size) {
     void * ptr = NULL;
-    size = alignup(size, SIZE_ONE_MB);
+    size = alignup(size, SIZE_ONE_MB); //TODO one bag or one mb?
 
-    //fprintf(stderr, "allocateBigObject at node %d: size %lx\n", _nodeindex, size);
+    // fprintf(stderr, "pernodeheap.hh: allocateBigObject at node %d: size %lx\n", _nodeindex, size);
     // Try to allocate from the freelist at first
     ptr = bigObjectListAllocate(size, size);
     if(ptr == NULL) {
-      //fprintf(stderr, "allocateBigObject at node %d: size %lx\n", _nodeindex, size);
+      // fprintf(stderr, "pernodeheap.hh: allocateBigObject from bumppointer\n");
       lockBigHeap();
 
       // Allocate from bumppointer
@@ -249,17 +258,16 @@ class PerNodeHeap {
       // Since we don't check normally  to reduce the overhead, we will use the assertion here
       assert(_bpBig < _bpBigEnd);
       // Mark the size in _mbsMapping
-      // Mark the size in _mbsMapping
       setUseMbsMapping(ptr, size, size);
     }
 
-    //fprintf(stderr, "allocateBigObject %p: size %lx\n", ptr, size);
+    // fprintf(stderr, "pernodeheap.hh:: allocateBigObject size=%lx, ptr=%p\n", size, ptr);
     return ptr;
   }
 
   size_t getSize(void * ptr) {
     size_t offset = ((intptr_t)ptr - (intptr_t)_nodeBegin);
-    unsigned long mbIndex = offset >> SIZE_ONE_MB_SHIFT;
+    unsigned long mbIndex = offset >> SIZE_ONE_BAG_SHIFT;
     // Check the 1MB information in order to find the size. 
     return getSizeFromMbs(mbIndex); 
   }
@@ -284,29 +292,31 @@ class PerNodeHeap {
        int sc = size2Class(size);
       
        if(index == nodeindex) {
+        //  fprintf(stderr, "pernodeheap.hh: deallocate to current per thread heap with ptr=%p and sc=%d\n", ptr, sc);
          // Only return an object to perthread's heap if the object is from the same node
          current->ptheap->deallocate(ptr, sc);
        }
        else {
-      // fprintf(stderr, "return object to node %d. size %lx ptr %p\n", nodeindex, size, &size);
+        //  fprintf(stderr, "pernodeheap.hh: deallocate to _smallLists (node's freelist) with ptr=%p and sc=%d\n", ptr, sc);
         // Return this object to the current node's freelist for different size classes
         // Based on NumaHeap, this address belongs to the current node.
         _smallLists[sc].deallocate(ptr);
        }
      }
      else {
+      //  fprintf(stderr, "pernodeheap.hh: bigObjectsDeallocate ptr=%p and sc=%lx\n", ptr, size);
        bigObjectsDeallocate(ptr, size);
      }
    }
 
-    inline void setFreeMbsMapping(unsigned long index, unsigned long last, size_t size) {
+  inline void setFreeMbsMapping(unsigned long index, unsigned long last, size_t size) {
     _mbsMapping[index] = (size <<1) | 0x1;
     _mbsMapping[last] = (size <<1) | 0x1;
   }
 
   inline void setFreeMbsMapping(void * ptr, size_t size) {
-    unsigned long index = ((intptr_t)ptr - (intptr_t)_nodeBegin) >> SIZE_ONE_MB_SHIFT;
-    unsigned long mbs = size >> SIZE_ONE_MB_SHIFT;
+    unsigned long index = ((intptr_t)ptr - (intptr_t)_nodeBegin) >> SIZE_ONE_BAG_SHIFT;
+    unsigned long mbs = size >> SIZE_ONE_BAG_SHIFT;
     setFreeMbsMapping(index, index + mbs - 1, size);
   }
 
@@ -316,8 +326,8 @@ class PerNodeHeap {
   }
 
   inline void setUseMbsMapping(void * ptr, size_t size, size_t realsize) {
-    unsigned long index = ((intptr_t)ptr - (intptr_t)_nodeBegin) >> SIZE_ONE_MB_SHIFT;
-    unsigned long mbs = size >> SIZE_ONE_MB_SHIFT;
+    unsigned long index = ((intptr_t)ptr - (intptr_t)_nodeBegin) >> SIZE_ONE_BAG_SHIFT;
+    unsigned long mbs = size >> SIZE_ONE_BAG_SHIFT;
     setUseMbsMapping(index, index + mbs - 1, realsize);
   }
 
@@ -335,15 +345,15 @@ class PerNodeHeap {
 
     if(isBigObjectFree(mbIndex - 1)) {
       *size = getSizeFromMbs(mbIndex-1);
-      ret = mbIndex - ((*size) >> SIZE_ONE_MB_SHIFT);
-      //fprintf(stderr, "size is %lx ret %d\n", *size, ret);
+      ret = mbIndex - ((*size) >> SIZE_ONE_BAG_SHIFT);
+      // fprintf(stderr, "mbIndex=%d, size=%lx, ret=%d\n", mbIndex, *size, ret);
     }
 
     return ret;
   }
 
   inline void * getBigObject(unsigned long index) {
-    return _nodeBegin + (index * SIZE_ONE_MB);
+    return _nodeBegin + (index * SIZE_ONE_BAG);
   }
 
   inline void clearFreeMbsMapping(unsigned long index, unsigned long last) {
@@ -353,6 +363,7 @@ class PerNodeHeap {
 
 
   void * removeBigObject(unsigned long index, unsigned long last) {
+    // fprintf(stderr, "pernodeheap.hh: removeBigObject from _bigList\n");
     // Turn the index into the address
     void * ptr = getBigObject(index);
 
@@ -366,6 +377,7 @@ class PerNodeHeap {
   }
 
   void insertFreeBigObject(BigObject * object) {
+    // fprintf(stderr, "pernodeheap.hh: insertFreeBigObject to _bigList\n");
     size_t size = object->size;
 
     // Insert this object to the freelist based on the size and timestamp
@@ -395,8 +407,9 @@ class PerNodeHeap {
   }
 
   void bigObjectsDeallocate(void * ptr, unsigned long mysize) {
+    // fprintf(stderr, "pernodeheap.hh: bigObjectsDeallocate size=%lx\n", mysize);
     BigObject * object;
-    unsigned long mbIndex = ((intptr_t)ptr - (intptr_t)_nodeBegin) >> SIZE_ONE_MB_SHIFT;;
+    unsigned long mbIndex = ((intptr_t)ptr - (intptr_t)_nodeBegin) >> SIZE_ONE_BAG_SHIFT;;
     unsigned long findex = mbIndex;
 
     lockBigHeap();
@@ -426,10 +439,10 @@ class PerNodeHeap {
       object->timestamp = _bigTimestamp++;
 
       // Try to merge with its next object
-      index = mbIndex + (mysize >> SIZE_ONE_MB_SHIFT);
+      index = mbIndex + (mysize >> SIZE_ONE_BAG_SHIFT);
       if(isBigObjectFree(index)) {
         size = getSizeFromMbs(index);
-        removeBigObject(index, index + (size >> SIZE_ONE_MB_SHIFT) -1);
+        removeBigObject(index, index + (size >> SIZE_ONE_BAG_SHIFT) -1);
         object->size += size;
       }
     }

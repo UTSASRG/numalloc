@@ -66,10 +66,10 @@ public:
       _batch = PAGE_SIZE/classSize;
     }
     else if(classSize < 0x40000){
-      _batch = 4; 
+      _batch = 2; 
     }
     else {
-      _batch = 2;
+      _batch = 1;
     }
 
     _donationWatermark = _batch * 2;
@@ -102,10 +102,10 @@ public:
   void * allocate() {
     void * ptr = NULL;
 
-    //fprintf(stderr, "allocate in perthreadsizeclass _items %d\n", _items);
     if(_items > 0) {
+      // fprintf(stderr, "perthreadsizeclasslist.hh: allocate from perthreadsizeclass, remaining _items=%d\n", _items);
       if(_classSize == 0x800000)
-      fprintf(stderr, "size %lx: last pointer %p\n", _classSize, _listHead);
+        fprintf(stderr, "perthreadsizeclasslist.hh: size=%lx, last pointer=%p\n", _classSize, _listHead);
       ptr = SLL_Pop(&_listHead);
       _items--;
     }
@@ -117,7 +117,7 @@ public:
   // Therefore, we should change all pointers if necessary.  
   void pushRangeList(int numb, void * head, void * tail) {
     assert(_items == 0); 
-
+    // fprintf(stderr, "perthreadsizeclasslist.hh: putRangeList\n");
     if(numb > 0) {
     //  fprintf(stderr, "push numb %d head %p tail %p\n", numb, head, tail);
       SLL_PushRange(&_listHead, head, tail);
@@ -139,7 +139,7 @@ public:
     unsigned int numb; 
 
     numb = ((uintptr_t)tail - (uintptr_t)head)/_classSize;
-
+    // fprintf(stderr, "perthreadsizeclasslist.hh: putRange head=%p, tail=%p, numb=%d, _batch=%d\n", head, tail, numb, _batch);
     if(numb == 0) {
       return;
     }
@@ -196,6 +196,7 @@ public:
 
   // Always donate _batch objects at a time. 
   int getDonateObjects(void ** head, void ** tail) {
+    // fprintf(stderr, "perthreadsizeclasslist.hh: getDonateObjects\n");
     assert(_items == _donationWatermark);
 
     // If _listNthItem is not set, which is a bug since we will always set this
@@ -220,6 +221,7 @@ public:
   // The function will return true, when the number freed objects reaches the _donationWatermark
   bool deallocate(void *ptr) {
     assert(ptr != NULL);
+    // fprintf(stderr, "perthreadsizeclasslist.hh: deallocate ptr %p, _items=%d, _donationWatermark=%d\n", ptr, _items, _donationWatermark);
 
     SLL_Push(&_listHead, ptr);
 

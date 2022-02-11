@@ -124,10 +124,11 @@ public:
 
     // Check the size information. 
     if(size <= BIG_OBJECT_SIZE_THRESHOLD) {
-     // fprintf(stderr, "allocate from numaheap size %lx\n", size);
+      // fprintf(stderr, "numaheap.hh: allocate size %lx\n", size);
       // Small objects will be always allocated via PerThreadSizeClass
       // although PerThreadSizeClass may get objects from PerNodeHeap as well 
       ptr = current->ptheap->allocate(size);
+      // fprintf(stderr, "numaheap.hh: allocate size %lx ptr %p\n", size, ptr);
     }
     else { 
       // Getting the node index that the current thread is running on
@@ -136,28 +137,28 @@ public:
       // Always allocate a large object from PerNodeHeap directly 
       ptr = _nodes[index]->allocateBigObject(size);
     }
-    
-     //fprintf(stderr, "allocate size %lx ptr %p\n", size, ptr);
-
     return ptr;
   } 
   
   void * allocateOneBagFromNode(int nindex, size_t classSize, size_t bagSize, bool allocBig) {
+    // fprintf(stderr, "numaheap.hh: allocate one bag from _nodes[%d](PerNodeHeap) with size=%lx and bagSize=%lx\n", nindex, classSize, bagSize);
     return _nodes[nindex]->allocateOneBag(classSize, bagSize, allocBig);
   }
 
   // Allocate the specified number of freed objects from the specified node(nindex)'s size class (sc).
   int getObjectsFromNode(unsigned int nindex, unsigned int classIndex, void ** head, void ** tail) {
+    // fprintf(stderr, "numaheap.hh: get objects from _nodes[%d](PerNodeHeap) with sc=%d\n", nindex, classIndex);
     return _nodes[nindex]->allocateObjects(classIndex, head, tail);
   }
 
   // Contribure some objects to the node's freelist
   void donateObjectsToNode(int nindex, int sc, unsigned long num, void * head, void *tail) {
+    // fprintf(stderr, "numaheap.hh: donate objects to _nodes[%d](PerNodeHeap) with sc=%d and num=%d\n", nindex, sc, num);
     _nodes[nindex]->deallocateBatch(sc, num, head, tail);
   }
 
   void deallocate(void * ptr) {
- //   fprintf(stderr, "deallocate ptr %p\n", ptr);
+    // fprintf(stderr, "numaheap.hh: deallocate ptr=%p\n", ptr);
 #ifdef INTERHEAP_SUPPORT
     if(((uintptr_t)ptr >= _mainHeapBegin) && ((uintptr_t)ptr < _heapBegin)) {
       return _interHeap.deallocate(ptr);
@@ -175,13 +176,14 @@ public:
     
     // Return it to the PerNodeHeap, since we will have to check PerOnembInfo to get the actual size. 
     // After that, the object  may return to the PerThreadHeap or PerNodeHeap
+    // fprintf(stderr, "numaheap.hh: deallocate ptr %p from _node[%d]\n", ptr, index);
     _nodes[index]->deallocate(index, ptr);
   }
 
   size_t getSize(void *ptr) {
 #ifdef INTERHEAP_SUPPORT
     if(((uintptr_t)ptr >= _mainHeapBegin) && ((uintptr_t)ptr < _heapBegin)) {
-      return _interHeap.getSize(ptr);      
+      return _interHeap.getSize(ptr);
     }
 #endif
     // Check the address range of this ptr
@@ -194,7 +196,7 @@ public:
     if(_nodes[index] == nullptr) {
         return -1;
     }
-
+    // fprintf(stderr, "numaheap.hh: get size of ptr %p from _node[%d]\n", ptr, index);
     return _nodes[index]->getSize(ptr);
   }
 

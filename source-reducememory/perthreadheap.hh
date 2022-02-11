@@ -17,6 +17,7 @@ public:
     _nodeIndex = nindex; 
     _threadIndex = tindex;
 
+    // fprintf(stderr, "perthreadheap.hh: initialize _sclass(PerThreadSizeClassList )\n");
     unsigned long classSize = SIZE_CLASS_START_SIZE;
     for(int i = 0; i < SMALL_SIZE_CLASSES; i++) {
 
@@ -57,6 +58,7 @@ public:
       void * tail = NULL;
      
       // Get objects from Node. 
+      // fprintf(stderr, "perthreadheap.hh:: allocate size %lx (sc=%d) from PerNodeHeap\n", size, sc->getClassIndex());
       numb = getObjectsFromNode(sc->getClassIndex(), &head, &tail);
 
       //fprintf(stderr, "Getting size %ld objects %d\n", sc->getClassSize(), numb);
@@ -79,18 +81,16 @@ public:
       ptr = head; 
     }
     else {
-      //if(sc->getClassSize() == 2048)
-      //fprintf(stderr, "if items call allocate size %d class %d\n", size, sc->getClassSize());
+      // fprintf(stderr, "perthreadheap.hh:: allocate size %lx (sc=%d) from PerThreadSizeClassList(_sclass)\n", size, sc->getClassIndex());
       ptr = sc->allocate();
-      //if(sc->getClassSize() == 2048)
-      //fprintf(stderr, "allocate size %d ptr %p\n", size, ptr);
     }
- 
+    // fprintf(stderr, "perthreadheap.hh:: givenSize=%lx, allocatedSize=%lx, sizeClass=%d, ptr=%p\n\n", size, sc->getClassSize(), sc->getClassIndex(), ptr);
     return ptr;
   }
 
   // Deallocate an object to this thread's freelist 
   void deallocate(void * ptr, int classIndex) {
+    // fprintf(stderr, "perthreadheap.hh: deallocate ptr %p with sc=%d \n", ptr, classIndex);
     PerThreadSizeClassList * sc = getPerThreadSizeClassListByIndex(classIndex);
 
     bool toDonate = sc->deallocate(ptr);
@@ -101,7 +101,7 @@ public:
       void * head, * tail;
      
       int numb = sc->getDonateObjects(&head, &tail);
-    //  fprintf(stderr, "donating Size %ld objects numb %d\n", sc->getClassSize(), numb); 
+      // fprintf(stderr, "perthreadheap.hh: donating Size %ld objects numb %d\n", sc->getClassSize(), numb);
       donateObjectsToNode(classIndex, numb, head, tail);
     }
 

@@ -100,9 +100,6 @@ public:
 
       pointer += size;
       nindex++;
-      if(nindex == NUMA_NODES) {
-        nindex = 0;
-      }
     }
 #endif   
   }
@@ -115,7 +112,6 @@ public:
     if(sz >= SIZE_ONE_MB) {
       size = alignup(sz, SIZE_HUGE_PAGE);
       ptr = mmapAllocatePrivate(size, startaddr, isHugePage);
-      //ptr = mmapAllocatePrivate(sz);
     }
     else {
       size = sz;

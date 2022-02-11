@@ -44,7 +44,6 @@ private:
   // it sounds better, but it is very hard for the class to access it (or invoking unnecessary overhead) 
   // Maintaining a per-mb array for each PerNodeHeap.
   PerMBInfo *   _info;
-  unsigned long _mbs;
 
 public:
   void initialize(char * ptr, void * heapBegin, size_t heapsize) {
@@ -58,18 +57,15 @@ public:
     _objects = (PerBigObject *) ptr;
     memset(ptr, 0, PER_NODE_MAX_BIG_OBJECTS * sizeof(PerBigObject));
 
-    _mbs = heapsize >> SIZE_ONE_MB_SHIFT;
     // Initialize PerMBInfo
     ptr += PER_NODE_MAX_BIG_OBJECTS * sizeof(PerBigObject);
 
     // confirm why _info has been corrupted. 
     _info = (PerMBInfo *)ptr;
-    //memset(ptr, 0, (heapsize>>SIZE_ONE_MB_SHIFT)*sizeof(PerMBInfo));
-  
   }
 
   size_t computeImplicitSize(size_t heapsize) {
-    return PER_NODE_MAX_BIG_OBJECTS * sizeof(PerBigObject) + (heapsize>>SIZE_ONE_MB_SHIFT)*sizeof(PerMBInfo);
+    return PER_NODE_MAX_BIG_OBJECTS * sizeof(PerBigObject) + (heapsize>>SIZE_ONE_BAG_SHIFT)*sizeof(PerMBInfo);
   }
 
   void * allocate(size_t size) {
@@ -152,9 +148,9 @@ public:
   // Mark the object size in PerMBInfo array
   void changePerMBInfoSize(void * ptr, size_t size, size_t objSize) {
     unsigned long mbIndex = getMBIndex(ptr);
-    unsigned long mbs = size >> SIZE_ONE_MB_SHIFT;
+    unsigned long mbs = size >> SIZE_ONE_BAG_SHIFT;
   
-    assert((size & SIZE_ONE_MB_MASK) == 0);
+    assert((size & SIZE_ONE_BAG_MASK) == 0);
 
 //   fprintf(stderr, "CHANGE ptr %p size %lx: mbindex %ld\n", ptr, size, mbIndex);
     for(int i = 0; i < mbs; i++) {
@@ -165,11 +161,10 @@ public:
   // Mark the object size in PerMBInfo array
   void markPerMBInfo(void * ptr, size_t size, size_t objsize) {
     unsigned long mbIndex = getMBIndex(ptr);
-    unsigned long mbs = size >> SIZE_ONE_MB_SHIFT;
+    unsigned long mbs = size >> SIZE_ONE_BAG_SHIFT;
  
    // fprintf(stderr, "ptr %p size %lx objsize %lx\n", ptr, size, objsize);  
-  //  assert(size & SIZE_ONE_MB_MASK == 0);
-   if((size & SIZE_ONE_MB_MASK) != 0) {
+   if((size & SIZE_ONE_BAG_MASK) != 0) {
       fprintf(stderr, "markPerMBInfo markPerMBInfo size is not aligned. size %lx\n", size);
       abort();
     }
@@ -184,10 +179,9 @@ public:
 
   void clearPerMBInfo(void * ptr, size_t size) {
     unsigned long mbIndex = getMBIndex(ptr);
-    unsigned long mbs = size >> SIZE_ONE_MB_SHIFT;
+    unsigned long mbs = size >> SIZE_ONE_BAG_SHIFT;
   
-   // assert(size & SIZE_ONE_MB_MASK == 0);
-    if((size & SIZE_ONE_MB_MASK) != 0) {
+    if((size & SIZE_ONE_BAG_MASK) != 0) {
       fprintf(stderr, "clearPerMBInfo markPerMBInfo size is not aligned. size %lx\n", size);
       abort();
     }
@@ -205,7 +199,7 @@ public:
   } 
 
   inline unsigned long getMBIndex(void * ptr) {
-    unsigned long index = ((uintptr_t)ptr - (uintptr_t)_heapBegin) >> SIZE_ONE_MB_SHIFT;
+    unsigned long index = ((uintptr_t)ptr - (uintptr_t)_heapBegin) >> SIZE_ONE_BAG_SHIFT;
 
   //  fprintf(stderr, "ptr %p heapBegin %p index %lx\n", ptr, _heapBegin, index);
     return index;
@@ -213,7 +207,7 @@ public:
 
   size_t getSize(void * ptr) {
     //unsigned long mbIndex = getMBIndex(ptr); 
-    unsigned long mbIndex = ((uintptr_t)ptr - (uintptr_t)_heapBegin) >> SIZE_ONE_MB_SHIFT;
+    unsigned long mbIndex = ((uintptr_t)ptr - (uintptr_t)_heapBegin) >> SIZE_ONE_BAG_SHIFT;
  // fprintf(stderr, "getSize with ptr %p, mbIndex %lx, _heapBegin %p, getsize %lx\n", ptr, mbIndex, _heapBegin, getSize(mbIndex));
     return getSize(mbIndex);
  }
