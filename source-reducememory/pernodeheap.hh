@@ -30,19 +30,19 @@ class PerNodeHeap {
   private:
     char * _nodeBegin;
     char * _nodeEnd;
-    
+
     // _bpSmall points to the beginning of available objects. 
     // Each allocation will be aligned to 1 MB (either for big objects and small objects).
     // So that the big objects can be used for small objects, and vice versa.
-    // The lock is to protect the updates of _bpSmall
-    pthread_spinlock_t _lockSmall;
-    pthread_spinlock_t _lockBig;
     char * _bpSmall;
     char * _bpSmallEnd;
     char * _bpBig;
-    char * _bpBigEnd;
+    char * _bpBigEnd;   
 
-    size_t _scMagicValue; 
+    // The lock is to protect the updates of _bpSmall
+    pthread_spinlock_t _lockSmall;
+    pthread_spinlock_t _lockBig;
+
     int   _nodeindex;
 
     // Currently, size class is from 2^4 to 2^19 (512 KB), with 16 sizes in total.
@@ -58,7 +58,10 @@ class PerNodeHeap {
     size_t _bigWatermark; 
     unsigned long  _bigTimestamp; 
 
+    // Store the size info of small objects
     unsigned long * _mbsMapping;
+
+    // TODO: Hash map to store the size info of big objects
 
  public:
    size_t computeMetadataSize(size_t heapsize) {
@@ -80,13 +83,13 @@ class PerNodeHeap {
       // Initialize the heap for big objects, which will be allocated using huge pages.
       _bpBig = (char *)MM::mmapFromNode(SIZE_PER_SPAN, nodeindex, _bpSmallEnd, true); 
       _bpBigEnd = _bpBig + SIZE_PER_SPAN;
-      _scMagicValue = 32 - LOG2(SIZE_CLASS_START_SIZE);
       
       _bigSize = 0;
       _bigWatermark = BIG_OBJECTS_WATERMARK;
       _bigTimestamp = 0;
 
       // Compute the metadata size for PerNodeHeap
+      // TODO: divide 2
       size_t metasize = computeMetadataSize(heapsize);
 
       // Binding the memory to the specified node.
@@ -95,17 +98,20 @@ class PerNodeHeap {
       // Set the starting address of _mbsMapping
       _mbsMapping = (unsigned long *)ptr;
 
+      // TODO: initialize the hashmap for big object size info
+
       // Initialization right now.
       pthread_spin_init(&_lockBig, PTHREAD_PROCESS_PRIVATE);
       pthread_spin_init(&_lockSmall, PTHREAD_PROCESS_PRIVATE);
 
       listInit(&_bigList);
+
       _bigSize = 0;
       _bigWatermark = BIG_OBJECTS_WATERMARK;
       _bigTimestamp = 0;
       
       // fprintf(stderr, "pernodeheap.hh: initialize _smallBags(PerNodeSizeClassBag) and _smallLists(PerNodeSizeClassList)`\n");
-      // Initialize the _smallLists 
+      // Initialize the _smallLists and _smallBags
       int i = 0;
       size_t size = SIZE_CLASS_START_SIZE;
       for(i = 0; i < SMALL_SIZE_CLASSES; i++) {
@@ -127,8 +133,8 @@ class PerNodeHeap {
   }
 
   // allocate a big object with the specified size
-  void * bigObjectListAllocate(size_t size, size_t realsize) {
-    // fprintf(stderr, "pernodeheap.hh: bigObjectListAllocate size=%lx, realsize=%lx\n", size, realsize);
+  void * allocateFromBigFreeList(size_t size, size_t realsize) {
+    // fprintf(stderr, "pernodeheap.hh: allocateFromBigFreeList size=%lx, realsize=%lx\n", size, realsize);
     void * ptr = NULL;
 
     // We only allocate if the total size is larger than the request one
@@ -138,7 +144,7 @@ class PerNodeHeap {
 
     // _bigList is not empty (at least with one element), since _bigSize is not 0
     BigObject * object = NULL;
-    bool    isFound = false;
+    bool isFound = false;
     
     lockBigHeap();
 
@@ -180,6 +186,7 @@ class PerNodeHeap {
       _bigSize -= size;
 
       // Set the current object to be used
+      // TODO use hash map instead of shadow memory
       setUseMbsMapping(ptr, size, realsize);
     }
 
@@ -188,7 +195,7 @@ class PerNodeHeap {
     return ptr;
   }
 
-  int allocateObjects(unsigned int sc, void ** head, void ** tail) {
+  int allocateFromSmallFreeList(unsigned int sc, void ** head, void ** tail) {
     // Get freed objects in the freelist at first.
     // If successful, we will just return the numb. 
     int numb = _smallLists[sc].allocateBatch(head, tail);
@@ -218,8 +225,9 @@ class PerNodeHeap {
 
     // Check the freed bigObjects at first, since they may be still hot in cache.
     if(allocBig) {
-      // fprintf(stderr, "pernodeheap.hh: allocateOneBag allocBig=true, invoke bigObjectListAllocate\n");
-      ptr = bigObjectListAllocate(bagSize, classSize);
+      // fprintf(stderr, "pernodeheap.hh: allocateOneBag allocBig=true, invoke allocateFromBigFreeList\n");
+      //TODO: Be careful!!
+      ptr = allocateFromBigFreeList(bagSize, classSize);
     }
     //  fprintf(stderr, "get one bag with size %lx from big object with ptr %p\n", size, ptr);
     // If there is no freed bigObjects, getting one bag from the bump pointer
@@ -244,7 +252,7 @@ class PerNodeHeap {
 
     // fprintf(stderr, "pernodeheap.hh: allocateBigObject at node %d: size %lx\n", _nodeindex, size);
     // Try to allocate from the freelist at first
-    ptr = bigObjectListAllocate(size, size);
+    ptr = allocateFromBigFreeList(size, size);
     if(ptr == NULL) {
       // fprintf(stderr, "pernodeheap.hh: allocateBigObject from bumppointer\n");
       lockBigHeap();
@@ -258,6 +266,7 @@ class PerNodeHeap {
       // Since we don't check normally  to reduce the overhead, we will use the assertion here
       assert(_bpBig < _bpBigEnd);
       // Mark the size in _mbsMapping
+      // TODO use hash map instead of shadow memory
       setUseMbsMapping(ptr, size, size);
     }
 
@@ -266,6 +275,11 @@ class PerNodeHeap {
   }
 
   size_t getSize(void * ptr) {
+
+    //TODO
+    //1. Check if ptr is under big object range
+    //2. If so check the hashmap and return
+
     size_t offset = ((intptr_t)ptr - (intptr_t)_nodeBegin);
     unsigned long mbIndex = offset >> SIZE_ONE_BAG_SHIFT;
     // Check the 1MB information in order to find the size. 
@@ -275,17 +289,13 @@ class PerNodeHeap {
   inline size_t getSizeFromMbs(unsigned long index) {
     return (_mbsMapping[index] >> 1);
   }
-
-  bool isSmallObject(size_t size) {
-    return (size <= BIG_OBJECT_SIZE_THRESHOLD) ? true : false;
-  }
   
   void deallocate(int nodeindex, void * ptr) {
      // Get the size of this object
      size_t size = getSize(ptr);
 
      // For a small object, 
-     if(isSmallObject(size)) {
+     if(size <= BIG_OBJECT_SIZE_THRESHOLD) {
        // If the node index is the same as the current thread, 
        // Return this object to per-thread's cache
        int index = getNodeIndex(); 
@@ -309,6 +319,7 @@ class PerNodeHeap {
      }
    }
 
+  //TODO I will remove setFreeMbsMapping if I use hashmap to store the size info
   inline void setFreeMbsMapping(unsigned long index, unsigned long last, size_t size) {
     _mbsMapping[index] = (size <<1) | 0x1;
     _mbsMapping[last] = (size <<1) | 0x1;
@@ -331,15 +342,12 @@ class PerNodeHeap {
     setUseMbsMapping(index, index + mbs - 1, realsize);
   }
 
-  inline void markFreeMbsMapping(unsigned long index) {
-    // When setting the index, we will set the first one and the last one
-    _mbsMapping[index] |= 0x1;
-  }
-
+  //TODO isBigObjectFree is also removed
   inline bool isBigObjectFree(unsigned long index) {
     return ((_mbsMapping[index] & 0x1) != 0);
   }
 
+  //TODO I need to store previous ptr if I use hashmap
   inline unsigned long getPrevFreeMbs(unsigned long mbIndex, size_t * size) {
     unsigned long ret = -1;
 
@@ -352,10 +360,12 @@ class PerNodeHeap {
     return ret;
   }
 
+  //TODO find the ptr of the big object, I will remove it
   inline void * getBigObject(unsigned long index) {
     return _nodeBegin + (index * SIZE_ONE_BAG);
   }
 
+  //TODO remove
   inline void clearFreeMbsMapping(unsigned long index, unsigned long last) {
     _mbsMapping[index] = 0;
     _mbsMapping[last] = 0;
@@ -364,6 +374,11 @@ class PerNodeHeap {
 
   void * removeBigObject(unsigned long index, unsigned long last) {
     // fprintf(stderr, "pernodeheap.hh: removeBigObject from _bigList\n");
+    //TODO
+    //1. Get big object ptr from the argument
+    //2. Add the object to the bigList
+    //3. Mark the big object is free
+
     // Turn the index into the address
     void * ptr = getBigObject(index);
 
@@ -402,6 +417,7 @@ class PerNodeHeap {
     else {
       insertListEnd(&_bigList, (dlist *)object);
     }
+    //TODO Update the hash map
     // Set the free status and size of the big object
     setFreeMbsMapping((void *)object, size);
   }
@@ -420,11 +436,11 @@ class PerNodeHeap {
       size_t size;
 
       // Try to merger with its previous mbs.
-      index = getPrevFreeMbs(mbIndex, &size);
+      index = getPrevFreeMbs(mbIndex, &size); //TODO
       if(index != -1) {
       //  fprintf(stderr, "bigobject deallocate ptr %p. mbIndex %d index %d\n", ptr, mbIndex, index);
         // Let's remove the previous object from the freelist.
-        object = (BigObject *)removeBigObject(index, mbIndex-1);
+        object = (BigObject *)removeBigObject(index, mbIndex-1); //TODO pass the pointer
                // Now let's combine with the current object.
         object->size = size + mysize;
         findex = index;
@@ -438,7 +454,7 @@ class PerNodeHeap {
       // Should we compute the timestamp based on the ratio
       object->timestamp = _bigTimestamp++;
 
-      // Try to merge with its next object
+      // Try to merge with its next object TODO easy to find the next big object
       index = mbIndex + (mysize >> SIZE_ONE_BAG_SHIFT);
       if(isBigObjectFree(index)) {
         size = getSizeFromMbs(index);
@@ -447,7 +463,7 @@ class PerNodeHeap {
       }
     }
     else {
-      // Make the current ptt as the starting address
+      // Make the current ptr as the starting address
       object = (BigObject *)ptr;
       object->size = mysize;
       object->timestamp = _bigTimestamp++;
@@ -466,21 +482,21 @@ class PerNodeHeap {
     unlockBigHeap();
   }
 
-   void lockSmallHeap() {
-      pthread_spin_lock(&_lockSmall);
-   }
+  inline void lockSmallHeap() {
+    pthread_spin_lock(&_lockSmall);
+  }
 
-    void unlockSmallHeap() {
-      pthread_spin_unlock(&_lockSmall);
-    }
+  inline void unlockSmallHeap() {
+    pthread_spin_unlock(&_lockSmall);
+  }
    
-    void lockBigHeap() {
-      pthread_spin_lock(&_lockBig);
-   }
+  inline void lockBigHeap() {
+    pthread_spin_lock(&_lockBig);
+  }
 
-    void unlockBigHeap() {
-      pthread_spin_unlock(&_lockBig);
-    }
+  inline void unlockBigHeap() {
+    pthread_spin_unlock(&_lockBig);
+  }
 
 
 };

@@ -56,7 +56,7 @@ class PerNodeSizeClassBag {
       if(_bp == _bpEnd) {
         // If the allocation is not successful, then allocateOneBag()
         // should handle the failure.
-        _bp = (char *)allocateOneBagFromNode(bagSize);
+        _bp = (char *)allocateBagFromPerNodeHeap(bagSize);
         _bpEnd = _bp + bagSize;
         _bags++;
       }
@@ -84,7 +84,7 @@ class PerNodeSizeClassBag {
     }
 
     // Implementation is in the cpp file.
-    void *allocateOneBagFromNode(int bagSize);  
+    void *allocateBagFromPerNodeHeap(int bagSize);  
 };
 
 #endif

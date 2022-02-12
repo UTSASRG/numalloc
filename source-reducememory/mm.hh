@@ -101,7 +101,7 @@ public:
       pointer += size;
       nindex = (nindex + 1) % NUMA_NODES; //fix the mbind bug
     }
-#endif   
+#endif
   }
 
   static void * mmapFromNode(size_t sz, int nodeindex, void * startaddr = NULL, bool isHugePage = false) {

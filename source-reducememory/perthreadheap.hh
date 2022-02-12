@@ -59,7 +59,7 @@ public:
      
       // Get objects from Node. 
       // fprintf(stderr, "perthreadheap.hh:: allocate size %lx (sc=%d) from PerNodeHeap\n", size, sc->getClassIndex());
-      numb = getObjectsFromNode(sc->getClassIndex(), &head, &tail);
+      numb = allocateFromPerNodeSmallFreeList(sc->getClassIndex(), &head, &tail);
 
       //fprintf(stderr, "Getting size %ld objects %d\n", sc->getClassSize(), numb);
       if(numb == 0) {
@@ -114,7 +114,7 @@ public:
    * However, if Node does not have freed objects in its freelist, it will simply return a range of memory, which is also brought back by the head and tail pointer. At the same time, the returned number will be 0. 
    * If Node do not have freed objects, and it also cannot allocate, it will fail. There is no need to handle in this function.
    */
-  int getObjectsFromNode(unsigned int classIndex, void ** head, void ** tail);
+  int allocateFromPerNodeSmallFreeList(unsigned int classIndex, void ** head, void ** tail);
 
   void donateObjectsToNode(int classIndex, unsigned long batch, void * head, void * tail); 
 };
