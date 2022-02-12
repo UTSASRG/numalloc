@@ -99,7 +99,7 @@ public:
       bindMemoryToNode(pointer, size, nindex);
 
       pointer += size;
-      nindex++;
+      nindex = (nindex + 1) % NUMA_NODES; //fix the mbind bug
     }
 #endif   
   }
