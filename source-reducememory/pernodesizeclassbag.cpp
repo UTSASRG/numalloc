@@ -2,5 +2,5 @@
 #include "numaheap.hh"
 
 void* PerNodeSizeClassBag::allocateBagFromPerNodeHeap(int bagSize) {
-  return NumaHeap::getInstance().allocateBagFromPerNodeHeap(_nodeIndex, _classSize, bagSize, _bags>0); 
+  return NumaHeap::getInstance().allocateBagFromPerNodeHeap(_nodeIndex, _classSize, bagSize); 
 }

@@ -135,9 +135,9 @@ public:
     return ptr;
   } 
   
-  void * allocateBagFromPerNodeHeap(int nindex, size_t classSize, size_t bagSize, bool allocBig) {
+  void * allocateBagFromPerNodeHeap(int nindex, size_t classSize, size_t bagSize) {
     // fprintf(stderr, "numaheap.hh: allocate bags from _nodes[%d](PerNodeHeap) with size=%lx and bagSize=%lx\n", nindex, classSize, bagSize);
-    return _nodes[nindex]->allocateOneBag(classSize, bagSize, allocBig);
+    return _nodes[nindex]->allocateOneBag(classSize, bagSize);
   }
 
   // Allocate the specified number of freed objects from the specified node(nindex)'s size class (sc).

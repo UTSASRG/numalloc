@@ -62,7 +62,8 @@ int xthread::thread_create(pthread_t * thread, const pthread_attr_t * attr, thre
 	int result = Real::pthread_create(thread, &_tattrs[children->nindex], xthread::startThread, (void *)children);
 
 	if(result) {
-		FATAL("thread_create failure");
+    fprintf(stderr, "pthread_create failed with error code %d\n", result);
+    exit(-1);
 	}
 
 	// Setting up this in the creater thread so that

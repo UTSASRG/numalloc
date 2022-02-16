@@ -26,6 +26,13 @@ class PerNodeHeap {
     unsigned long timestamp;
   };
 
+  // To store the size info for big objects
+  class BigObjectPtrSizeMapping {
+  public:
+    dlist   list;
+    void * ptr;
+    size_t  size;
+  };
 
   private:
     char * _nodeBegin;
@@ -50,7 +57,7 @@ class PerNodeHeap {
     PerNodeSizeClassList  _smallLists[SMALL_SIZE_CLASSES];
     
     // Larger than 1MB will be located in the MB list
-    dlistHead _bigList; // the doubly linklist 
+    dlistHead _bigList; // the doubly linklist (for freed big objects)
     size_t    _bigSize; // total size
     
     // If the total size is larger than this watermark, then we will start to freed some memory
@@ -61,7 +68,9 @@ class PerNodeHeap {
     // Store the size info of small objects
     unsigned long * _mbsMapping;
 
-    // TODO: Hash map to store the size info of big objects
+    // Use linked list to store the size info of big objects
+    dlistHead _bigObjectSizeInfo;
+    dlistHead _reusedBigObjectSizeInfo;
 
  public:
    size_t computeMetadataSize(size_t heapsize) {
@@ -89,8 +98,7 @@ class PerNodeHeap {
       _bigTimestamp = 0;
 
       // Compute the metadata size for PerNodeHeap
-      // TODO: divide 2
-      size_t metasize = computeMetadataSize(heapsize);
+      size_t metasize = computeMetadataSize(SIZE_PER_SPAN);
 
       // Binding the memory to the specified node.
       char * ptr = (char *)MM::mmapFromNode(alignup(metasize, PAGE_SIZE), nodeindex);
@@ -98,7 +106,9 @@ class PerNodeHeap {
       // Set the starting address of _mbsMapping
       _mbsMapping = (unsigned long *)ptr;
 
-      // TODO: initialize the hashmap for big object size info
+      // Initialize the list for big object size info
+      listInit(&_bigObjectSizeInfo);
+      listInit(&_reusedBigObjectSizeInfo);
 
       // Initialization right now.
       pthread_spin_init(&_lockBig, PTHREAD_PROCESS_PRIVATE);
@@ -152,7 +162,7 @@ class PerNodeHeap {
     // TODO: use skiplist instead of doubly linked list for efficiency
     while(entry != NULL) {
       object = (BigObject *)entry;
-      //fprintf(stderr, "search biglist with object %p size %lx request size %lx\n", object, object->size, size);
+      // fprintf(stderr, "search biglist with object %p size %lx request size %lx\n", object, object->size, size);
       if(object->size >= size) {
         isFound = true;
         // Find one available object, which will be allocated from.
@@ -164,9 +174,11 @@ class PerNodeHeap {
 
     // Allocate only if the object has been found
     if(isFound) {
+      BigObjectPtrSizeMapping * curEntry = getBigObjectSizeInfo((void *)object);
       if(object->size > size) {
         object->size -= size;
 
+        // fprintf(stderr, "pernodeheap.hh:: Remove %p from _bigList (with not the exact size)\n", &object->list);
         // Remove it from the list, since it may be inserted into a different place (due to the changed size)
         listRemoveNode(&_bigList, &object->list);
 
@@ -175,24 +187,45 @@ class PerNodeHeap {
 
         // Use the second part as the new object.
         ptr = (char *)object + object->size;
+
+        // Update the allocated big object size info (still freed for this chrunk)
+        curEntry->size -= size << 1;
+
+        // Add the new big object size info
+        BigObjectPtrSizeMapping * ptrSizeMapping = setBigObjectPtrSizeMapping(ptr, size);
+        listInsertAfter(&_bigObjectSizeInfo, (dlist *)curEntry, (dlist *)ptrSizeMapping);
       }
       else {
         // Remove the object from the freed list (with the exact size)
+        // fprintf(stderr, "pernodeheap.hh:: Remove %p from _bigList (with the exact size)\n", &object->list);
         listRemoveNode(&_bigList, &object->list);
         ptr = (void *)object;
+
+        // Update the allocated big object size info (not freed anymore)
+        curEntry->size = size << 1;
       }
 
       // Change the total size
       _bigSize -= size;
-
-      // Set the current object to be used
-      // TODO use hash map instead of shadow memory
-      setUseMbsMapping(ptr, size, realsize);
     }
+    // fprintf(stderr, "pernodeheap.hh:: allocateBigObject size=%lx, ptr=%p (bump)\n", size, ptr);
 
     unlockBigHeap();
 
     return ptr;
+  }
+
+  // Create a object to store big object size information
+  BigObjectPtrSizeMapping * setBigObjectPtrSizeMapping(void * ptr, size_t size) {
+    BigObjectPtrSizeMapping * ptrSizeMapping = (BigObjectPtrSizeMapping *)_reusedBigObjectSizeInfo.first;
+    if (ptrSizeMapping == NULL) {
+      ptrSizeMapping = (BigObjectPtrSizeMapping *)MM::mmapFromNode(alignup(sizeof(BigObjectPtrSizeMapping), PAGE_SIZE), _nodeindex);
+    } else {
+      listRemoveNode(&_reusedBigObjectSizeInfo, &ptrSizeMapping->list);
+    }
+    ptrSizeMapping->ptr = ptr;
+    ptrSizeMapping->size = size << 1;
+    return ptrSizeMapping;
   }
 
   int allocateFromSmallFreeList(unsigned int sc, void ** head, void ** tail) {
@@ -220,15 +253,9 @@ class PerNodeHeap {
   // Allocate one bag for small objects with the specified classSize.
   // If allocBig is set, we will try to allocate from one of freed big objects (with huge pages)
   // Currently, only the corresponding size class that has allocated one bag before can use big objects 
-  void * allocateOneBag(size_t classSize, size_t bagSize, bool allocBig) {
+  void * allocateOneBag(size_t classSize, size_t bagSize) {
     void * ptr = NULL;
 
-    // Check the freed bigObjects at first, since they may be still hot in cache.
-    if(allocBig) {
-      // fprintf(stderr, "pernodeheap.hh: allocateOneBag allocBig=true, invoke allocateFromBigFreeList\n");
-      //TODO: Be careful!!
-      ptr = allocateFromBigFreeList(bagSize, classSize);
-    }
     //  fprintf(stderr, "get one bag with size %lx from big object with ptr %p\n", size, ptr);
     // If there is no freed bigObjects, getting one bag from the bump pointer
     if(ptr == NULL) {
@@ -248,7 +275,7 @@ class PerNodeHeap {
   // Allocate a big object
   void * allocateBigObject(size_t size) {
     void * ptr = NULL;
-    size = alignup(size, SIZE_ONE_MB); //TODO one bag or one mb?
+    size = alignup(size, SIZE_ONE_BAG);
 
     // fprintf(stderr, "pernodeheap.hh: allocateBigObject at node %d: size %lx\n", _nodeindex, size);
     // Try to allocate from the freelist at first
@@ -265,9 +292,11 @@ class PerNodeHeap {
       // We should not consume all memory. If yes, then we should make the heap bigger.
       // Since we don't check normally  to reduce the overhead, we will use the assertion here
       assert(_bpBig < _bpBigEnd);
-      // Mark the size in _mbsMapping
-      // TODO use hash map instead of shadow memory
-      setUseMbsMapping(ptr, size, size);
+
+      // Store big object size info
+      BigObjectPtrSizeMapping * ptrSizeMapping = setBigObjectPtrSizeMapping(ptr, size);
+      insertListEnd(&_bigObjectSizeInfo, (dlist *)ptrSizeMapping);
+      // fprintf(stderr, "pernodeheap.hh:: allocateBigObject size=%lx, ptr=%p (bump)\n", size, ptr);
     }
 
     // fprintf(stderr, "pernodeheap.hh:: allocateBigObject size=%lx, ptr=%p\n", size, ptr);
@@ -276,14 +305,32 @@ class PerNodeHeap {
 
   size_t getSize(void * ptr) {
 
-    //TODO
-    //1. Check if ptr is under big object range
-    //2. If so check the hashmap and return
-
     size_t offset = ((intptr_t)ptr - (intptr_t)_nodeBegin);
+
+    if (offset >= SIZE_PER_SPAN) {
+      BigObjectPtrSizeMapping * currentObjectSizeInfo = getBigObjectSizeInfo(ptr);
+      return currentObjectSizeInfo->size >> 1;
+    }
+
     unsigned long mbIndex = offset >> SIZE_ONE_BAG_SHIFT;
     // Check the 1MB information in order to find the size. 
     return getSizeFromMbs(mbIndex); 
+  }
+
+  BigObjectPtrSizeMapping * getBigObjectSizeInfo(void * ptr) {
+
+    dlist * entry = _bigObjectSizeInfo.first;
+    while(entry != NULL) {
+      BigObjectPtrSizeMapping * object = (BigObjectPtrSizeMapping *)entry;
+      // fprintf(stderr, "getBigObjectSizeInfo: prt=%p\n", object->ptr);
+      if(object->ptr == ptr) {
+        return object;
+      }
+      entry = entry->next;
+    }
+
+    fprintf(stderr, "Can't find the big object %p size info\n", ptr);
+    abort();
   }
 
   inline size_t getSizeFromMbs(unsigned long index) {
@@ -319,18 +366,6 @@ class PerNodeHeap {
      }
    }
 
-  //TODO I will remove setFreeMbsMapping if I use hashmap to store the size info
-  inline void setFreeMbsMapping(unsigned long index, unsigned long last, size_t size) {
-    _mbsMapping[index] = (size <<1) | 0x1;
-    _mbsMapping[last] = (size <<1) | 0x1;
-  }
-
-  inline void setFreeMbsMapping(void * ptr, size_t size) {
-    unsigned long index = ((intptr_t)ptr - (intptr_t)_nodeBegin) >> SIZE_ONE_BAG_SHIFT;
-    unsigned long mbs = size >> SIZE_ONE_BAG_SHIFT;
-    setFreeMbsMapping(index, index + mbs - 1, size);
-  }
-
   inline void setUseMbsMapping(unsigned long index, unsigned long last, size_t size) {
     _mbsMapping[index] = (size <<1);
     _mbsMapping[last] = (size <<1);
@@ -340,55 +375,6 @@ class PerNodeHeap {
     unsigned long index = ((intptr_t)ptr - (intptr_t)_nodeBegin) >> SIZE_ONE_BAG_SHIFT;
     unsigned long mbs = size >> SIZE_ONE_BAG_SHIFT;
     setUseMbsMapping(index, index + mbs - 1, realsize);
-  }
-
-  //TODO isBigObjectFree is also removed
-  inline bool isBigObjectFree(unsigned long index) {
-    return ((_mbsMapping[index] & 0x1) != 0);
-  }
-
-  //TODO I need to store previous ptr if I use hashmap
-  inline unsigned long getPrevFreeMbs(unsigned long mbIndex, size_t * size) {
-    unsigned long ret = -1;
-
-    if(isBigObjectFree(mbIndex - 1)) {
-      *size = getSizeFromMbs(mbIndex-1);
-      ret = mbIndex - ((*size) >> SIZE_ONE_BAG_SHIFT);
-      // fprintf(stderr, "mbIndex=%d, size=%lx, ret=%d\n", mbIndex, *size, ret);
-    }
-
-    return ret;
-  }
-
-  //TODO find the ptr of the big object, I will remove it
-  inline void * getBigObject(unsigned long index) {
-    return _nodeBegin + (index * SIZE_ONE_BAG);
-  }
-
-  //TODO remove
-  inline void clearFreeMbsMapping(unsigned long index, unsigned long last) {
-    _mbsMapping[index] = 0;
-    _mbsMapping[last] = 0;
-  }
-
-
-  void * removeBigObject(unsigned long index, unsigned long last) {
-    // fprintf(stderr, "pernodeheap.hh: removeBigObject from _bigList\n");
-    //TODO
-    //1. Get big object ptr from the argument
-    //2. Add the object to the bigList
-    //3. Mark the big object is free
-
-    // Turn the index into the address
-    void * ptr = getBigObject(index);
-
-    // Remove this object from the freelist
-    listRemoveNode(&_bigList, (dlist *)ptr);
-
-    // Cleanup the size information
-    clearFreeMbsMapping(index, last);
-
-    return ptr;
   }
 
   void insertFreeBigObject(BigObject * object) {
@@ -417,68 +403,131 @@ class PerNodeHeap {
     else {
       insertListEnd(&_bigList, (dlist *)object);
     }
-    //TODO Update the hash map
-    // Set the free status and size of the big object
-    setFreeMbsMapping((void *)object, size);
+  }
+
+  // Remove object size info from sizelist and insert it into reusedSizelist
+  inline void removeBigObjectFromSizeList(BigObjectPtrSizeMapping * item) {
+    listRemoveNode(&_bigObjectSizeInfo, &item->list);
+    // fprintf(stderr, "reused item previous %p, next %p\n", ((dlist *)item)->prev, ((dlist *)item)->next);
+    insertListEnd(&_reusedBigObjectSizeInfo, (dlist *)item);
   }
 
   void bigObjectsDeallocate(void * ptr, unsigned long mysize) {
-    // fprintf(stderr, "pernodeheap.hh: bigObjectsDeallocate size=%lx\n", mysize);
+    // fprintf(stderr, "pernodeheap.hh: bigObjectsDeallocate size=%lx, ptr=%p\n", mysize, ptr);
     BigObject * object;
-    unsigned long mbIndex = ((intptr_t)ptr - (intptr_t)_nodeBegin) >> SIZE_ONE_BAG_SHIFT;;
-    unsigned long findex = mbIndex;
-
+    BigObjectPtrSizeMapping * beginNode;
+    
     lockBigHeap();
+    
+    // fprintf(stderr, "BigObject before: \n");
+    // dlist * entry = _bigList.first;
+    // while(entry != NULL) {
+    //   object = (BigObject *)entry;
+    //   fprintf(stderr, "%p ", object);
+    //   entry = entry->next;
+    // }
 
+    // fprintf(stderr, "\nBigObjectSize before: \n");
+    // entry = _bigObjectSizeInfo.first;
+    // while(entry != NULL) {
+    //   beginNode = (BigObjectPtrSizeMapping *)entry;
+    //   size_t size2 = ((beginNode->size & 0x1) == 0)? beginNode->size >> 1: (beginNode->size-1) >> 1; 
+    //   fprintf(stderr, "%p %p %lx %lx\n",beginNode, beginNode->ptr, beginNode->size, size2);
+    //   entry = entry->next;
+    // }
+    // fprintf(stderr, "\n\n");
+
+    BigObjectPtrSizeMapping * curNode = getBigObjectSizeInfo(ptr);
     // We only merge one object if it is larger than one mb.
     if(mysize > SIZE_ONE_MB) {
-      unsigned long index;
-      size_t size;
+      // fprintf(stderr, "plan to merge\n");
+      // printf("curNode=%p\n", curNode);
+      // Try to merge with its previous freed big object.
+      BigObjectPtrSizeMapping * preNode = (BigObjectPtrSizeMapping *)((dlist *)curNode)->prev;
+      BigObjectPtrSizeMapping * nextNode = (BigObjectPtrSizeMapping *)((dlist *)curNode)->next; // Get it first in case the current node is removed during merging
 
-      // Try to merger with its previous mbs.
-      index = getPrevFreeMbs(mbIndex, &size); //TODO
-      if(index != -1) {
-      //  fprintf(stderr, "bigobject deallocate ptr %p. mbIndex %d index %d\n", ptr, mbIndex, index);
-        // Let's remove the previous object from the freelist.
-        object = (BigObject *)removeBigObject(index, mbIndex-1); //TODO pass the pointer
-               // Now let's combine with the current object.
-        object->size = size + mysize;
-        findex = index;
-      }
-      else {
-        // Make the current prt as the starting address
+      // printf("preNode=%p\n", preNode);
+      if (preNode != NULL && ((preNode->size & 0x1) != 0)) {
+        // fprintf(stderr, "merge with previous object ptr=%p\n", preNode->ptr);
+        object = (BigObject *)preNode->ptr;
+        // fprintf(stderr, "pernodeheap.hh:: Remove %p from _bigList (merge)\n", &object->list);
+        // Remove previous object from the freelist (will add again in the end)
+        listRemoveNode(&_bigList, &object->list);
+        // Remove current object size info from sizelist
+        removeBigObjectFromSizeList(curNode);
+        // fprintf(stderr, "end removeBigObjectFromSizeList\n");
+
+        // Update the size information
+        object->size += mysize;
+        preNode->size += mysize << 1;
+        beginNode = preNode;
+      } else {
+        // fprintf(stderr, "don't merge with previous object\n");
+        // Make the current ptr as the starting address
         object = (BigObject *)ptr;
         object->size = mysize;
+        // Mark the current object freed
+        curNode->size |= 0x1;
+        beginNode = curNode;
       }
-
       // Should we compute the timestamp based on the ratio
       object->timestamp = _bigTimestamp++;
 
-      // Try to merge with its next object TODO easy to find the next big object
-      index = mbIndex + (mysize >> SIZE_ONE_BAG_SHIFT);
-      if(isBigObjectFree(index)) {
-        size = getSizeFromMbs(index);
-        removeBigObject(index, index + (size >> SIZE_ONE_BAG_SHIFT) -1);
-        object->size += size;
+      // Try to merge with its next freed big object.
+      // printf("nextNode=%p\n", nextNode);
+      // printf("nextnextNode=%p\n", ((dlist *)nextNode)->next);
+      if (nextNode != NULL && ((nextNode->size & 0x1) != 0)) {
+        // fprintf(stderr, "merge with next object ptr=%p\n", nextNode->ptr);
+        BigObject * nextObject = (BigObject *)nextNode->ptr;
+        // Remove this object from the freelist
+        listRemoveNode(&_bigList, &nextObject->list);
+        // Remove next object size info from sizelist
+        removeBigObjectFromSizeList(nextNode);
+
+        // Update the size information
+        object->size += nextObject->size;
+        beginNode->size += nextObject->size << 1;
       }
     }
     else {
+      // fprintf(stderr, "don't merge\n");
+
       // Make the current ptr as the starting address
       object = (BigObject *)ptr;
       object->size = mysize;
       object->timestamp = _bigTimestamp++;
+      curNode->size |= 0x1;
     }
 
     // Insert the object to the freelist.
     // The freelist will be sorted first as the size, and then timestamp
     // Therefore, we will always get the first one with the specified size
     insertFreeBigObject(object);
-
     // Update the size information right now
     _bigSize += mysize;
 
     //fprintf(stderr, "_bigSize %lx\n", _bigSize);
     // TODO: return some objects back to the OS if necessary
+
+    // fprintf(stderr, "success pernodeheap.hh: bigObjectsDeallocate size=%lx, ptr=%p\n\n", mysize, ptr);
+    // fprintf(stderr, "BigObject after: \n");
+    // entry = _bigList.first;
+    // while(entry != NULL) {
+    //   object = (BigObject *)entry;
+    //   fprintf(stderr, "%p ", object);
+    //   entry = entry->next;
+    // }
+
+    // fprintf(stderr, "\nBigObjectSize after: \n");
+    // entry = _bigObjectSizeInfo.first;
+    // while(entry != NULL) {
+    //   beginNode = (BigObjectPtrSizeMapping *)entry;
+    //   size_t size2 = ((beginNode->size & 0x1) == 0)? beginNode->size >> 1: (beginNode->size-1) >> 1; 
+    //   fprintf(stderr, "%p %p %lx %lx\n",beginNode, beginNode->ptr, beginNode->size, size2);
+    //   entry = entry->next;
+    // }
+    // fprintf(stderr, "\n\n");
+
     unlockBigHeap();
   }
 
