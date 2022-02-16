@@ -305,7 +305,7 @@ class PerNodeHeap {
 
   size_t getSize(void * ptr) {
 
-    size_t offset = ((intptr_t)ptr - (intptr_t)_nodeBegin);
+    size_t offset = (intptr_t)ptr - (intptr_t)_nodeBegin;
 
     if (offset >= SIZE_PER_SPAN) {
       BigObjectPtrSizeMapping * currentObjectSizeInfo = getBigObjectSizeInfo(ptr);

@@ -116,73 +116,8 @@ class InterHeap {
     // _bigObjects will also maintain the PerMBINfo
     PerNodeBigObjects _bigObjects;
 
-    typedef enum {
-        E_CS_STATUS_INIT_SHARED = 0, // initial
-        E_CS_STATUS_CHECKED_PRIVATE, // 2
-        E_CS_STATUS_CHECKED_SHARED, // 3
-    }eCallsiteStatus;
-
-    class CallsiteInfo {
-      eCallsiteStatus _status;
-      
-      public:
-        CallsiteInfo() {
-        }
-
-        void init() {
-          _status = E_CS_STATUS_INIT_SHARED;
-        }
-
-        inline bool isPrivateCallsite() {
-          return _status == E_CS_STATUS_CHECKED_PRIVATE;
-        }
-
-        inline void setPrivateCallsite() {
-          _status = E_CS_STATUS_CHECKED_PRIVATE;
-        }
-    };
-
     // We should get a big chunk at first and do our allocation. 
     // Typically, there is no need to do the deallocation in the main thread.
-    class localAllocator {
-      public:
-      static void * allocate(size_t size) {
-        return Real::malloc(size);
-      }
-
-      static void free(void *ptr) {
-        return Real::free(ptr);
-      }
-    };
-
-#if 0
-    // CallsiteMap is used to save the callsite and corresponding information (whether it is
-    // private or not).
-    typedef HashMap<void *, CallsiteInfo, spinlock, localAllocator> CallsiteMap;
-    CallsiteMap _callsiteMap;
-    class ObjectInfo {
-    public:
-      int            _allocSequence;
-      CallsiteInfo * _callsiteInfo;
-
-      ObjectInfo(int sequence, CallsiteInfo * info) {
-        _allocSequence = sequence;
-        _callsiteInfo = info;
-      }
-
-      int getSequence() {
-        return _allocSequence;
-      }
-
-      CallsiteInfo * getCallsiteInfo() {
-        return _callsiteInfo;
-      }
-    };
-    // ObjectsMap will save the mapping between the object address and its callsite
-    typedef HashMap<void *, ObjectInfo, spinlock, localAllocator> ObjectsHashMap;
-    ObjectsHashMap _objectsMap;
-
-#endif
     int   _mhSequence;     // main heap phase sequence number
 
   public:
@@ -207,11 +142,11 @@ class InterHeap {
       _sequentialPhase = true;
 
       // Compute the metadata size for PerNodeHeap
-      size_t metasize = _bigObjects.computeImplicitSize(heapsize);
+      size_t metasize = _bigObjects.computeImplicitSize(SIZE_PER_SPAN);
 
       // Binding the memory to the specified node.
       char * ptr = (char *)MM::mmapFromNode(alignup(metasize, PAGE_SIZE), nodeindex);
-      _bigObjects.initialize(ptr, _bpSmall, SIZE_PER_SPAN*2);
+      _bigObjects.initialize(ptr, _bpSmall);
 
       // Initialize all size classes. 
       unsigned long classSize = 16;
@@ -234,11 +169,6 @@ class InterHeap {
 
       // Initialize the lock
       pthread_spin_init(&_lock, PTHREAD_PROCESS_PRIVATE);
-
-
-      // Call stack map
-      //_callsiteMap.initialize(HashFuncs::hashStackAddr, HashFuncs::compareAddr, SIZE_CALL_SITE_MAP);
-      //_objectsMap.initialize(HashFuncs::hashAllocAddr, HashFuncs::compareAddr, SIZE_HASHED_OBJECTS_MAP);
    } 
 
    void stopSerialPhase() {
@@ -257,14 +187,10 @@ class InterHeap {
   // allocate a big object with the specified size
   void * allocateBigObject(size_t size) {
     void * ptr = NULL;
-    size = alignup(size, SIZE_ONE_MB);
+    size = alignup(size, SIZE_ONE_BAG);
 
-    // Allocate from the free list at first
-    ptr = _bigObjects.allocate(size);
-    if(ptr == NULL) {
-      // Now allocate from the bump pointer
-      ptr = allocateFromBigBumppointer(size);
-    }
+    // Don't allocate from the freelist since we return the memory back to OS immedidately
+    ptr = allocateFromBigBumppointer(size);
     return ptr;
   }
 

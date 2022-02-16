@@ -5,12 +5,9 @@
 #include "xdefines.hh"
 #include "perthread.hh"
 
-// We should support the transfer between big objects and small objects 
-// We will maintain a freelist for big objects, with array 
 class PerNodeBigObjects {
 
-  // Each available object will have address and size, and will be inserted into 
-  // the freelist that is ordered by the deallocation order.
+  // Each big object will have address and size
   class PerBigObject {
   public:
     void *  address;
@@ -27,17 +24,11 @@ class PerNodeBigObjects {
   };
 
 private:
-  // A circular array with the maximum of 1024 objects;
-  // When an object is used, it will be removed from the list. 
-  // Also, the corresponding BigObjectInfo will be erased. 
   PerBigObject * _objects;
   void * _heapBegin;
 
   unsigned long _next;
   unsigned long _max;
-
-  // The size of total freed objects of this node
-  unsigned long _totalSize; 
 
   // Place the PerMBInfo in this object, since everytime when the information will be changed
   // by each allocation and deallocation. If the information is placed in pernodeheap, although
@@ -46,8 +37,7 @@ private:
   PerMBInfo *   _info;
 
 public:
-  void initialize(char * ptr, void * heapBegin, size_t heapsize) {
-    _totalSize = 0;
+  void initialize(char * ptr, void * heapBegin) {
     _next = 0; 
     _max = PER_NODE_MAX_BIG_OBJECTS - 1;
     
@@ -68,99 +58,24 @@ public:
     return PER_NODE_MAX_BIG_OBJECTS * sizeof(PerBigObject) + (heapsize>>SIZE_ONE_BAG_SHIFT)*sizeof(PerMBInfo);
   }
 
-  void * allocate(size_t size) {
-    void * ptr = NULL;
-
-    if(_totalSize < size) {
-      return NULL;
-    }
-
-    //fprintf(stderr, "Allocate big object size %lx, _totalSize %lx\n", size, _totalSize);
-
-    for(int i = _next - 1; i>= 0; i--) {
-      PerBigObject * object = &_objects[i];   
-    // Now search the objects to find an entry that satisfies the request
-      if(object->size < size) {
-#if 0
-        // Merge with its neighbor if possible.
-        unsigned long mbIndex = getMBIndex((void *)object->address);
-        unsigned long mbs = object->size >> SIZE_ONE_MB_SHIFT;
-
-        PerMBInfo * info = &_info[mbIndex];
-        PerMBInfo * prev = info--;
-        PerMBInfo * next = &_info[mbIndex+mbs];
-        bool mergedWithLeft = false; 
-        // Check whether its left neighbour is available.
-        if(prev->u.usedStatus == false) {
-          mergeBigObjects(prev, info);
-          mergedWithLeft = true;
-        }
-       
-        if(next->u.usedStatus == false) {
-          // The next object possibly includes the never-allocated ones. But their status will be false as always
-          mergeBigObjects(prev);
-        }
-#endif
-        // We should at least merge the last one with never-allocated ones.
-      }
-
-      // After merge, confirm whether this entry is big enough to satisfy the current request
-      if(object->size >= size) {
-        ptr = object->address;
-        object->size -= size; 
-        _totalSize -= size;
-
-        // Unusual case: the object size is the requested size, then we should change the freelist
-        if (object->size == 0) {
-            
-          object->size = _objects[_next - 1].size;
-          object->address = _objects[_next -1].address;
-
-          // Freed an entry
-          _next--;
-        }
-        else {
-          // Split this object to two parts, and always use the first part to satisfy the request.
-          // For the remaining part, we will update its pointer and size information (already did above).
-          // There is no need to update the freelist, since another half is still in the list
-          object->address = (void *)((intptr_t)object->address + size);
-       
-         // fprintf(stderr, "********** dividing original size %lx this size %lx\n", object->size + size, size); 
-          // Change the PerMBInfo information for the remaining part.
-          // That is, we should change the size to the new size
-          size_t newSize = object->size;
-
-          // Change the allocated one
-          changePerMBInfoSize(ptr, size, size);
-
-          // Change the remainning one
-          changePerMBInfoSize(object->address, newSize, newSize);
-        }
-        break;
-      }
-    } 
-    
-  //  fprintf(stderr, "Allocate big object ptr %p size %lx, _totalSize %lx\n", ptr, size, _totalSize);
-
-    return ptr; 
-  }
-  
-  // Mark the object size in PerMBInfo array
-  void changePerMBInfoSize(void * ptr, size_t size, size_t objSize) {
-    unsigned long mbIndex = getMBIndex(ptr);
-    unsigned long mbs = size >> SIZE_ONE_BAG_SHIFT;
-  
-    assert((size & SIZE_ONE_BAG_MASK) == 0);
-
-//   fprintf(stderr, "CHANGE ptr %p size %lx: mbindex %ld\n", ptr, size, mbIndex);
-    for(int i = 0; i < mbs; i++) {
-      _info[mbIndex+i].size = size;
-    }
-  }
-
-  // Mark the object size in PerMBInfo array
+  // Mark the object size in PerMBInfo array for small objects; store the size info in the PerBigObject array for big objects
   void markPerMBInfo(void * ptr, size_t size, size_t objsize) {
-    unsigned long mbIndex = getMBIndex(ptr);
+    // Big objects
+    if (objsize >= BIG_OBJECT_SIZE_THRESHOLD && size == objsize) {
+      PerBigObject * object = &_objects[_next];
+      
+      object->size = size;
+      object->address = ptr;
+
+      _next++;
+    
+      assert(_next != _max);
+      return;      
+    }
+
+
+    // Small objects
+    unsigned long mbIndex = ((uintptr_t)ptr - (uintptr_t)_heapBegin) >> SIZE_ONE_BAG_SHIFT;
     unsigned long mbs = size >> SIZE_ONE_BAG_SHIFT;
  
    // fprintf(stderr, "ptr %p size %lx objsize %lx\n", ptr, size, objsize);  
@@ -177,56 +92,36 @@ public:
     }
   }
 
-  void clearPerMBInfo(void * ptr, size_t size) {
-    unsigned long mbIndex = getMBIndex(ptr);
-    unsigned long mbs = size >> SIZE_ONE_BAG_SHIFT;
-  
-    if((size & SIZE_ONE_BAG_MASK) != 0) {
-      fprintf(stderr, "clearPerMBInfo markPerMBInfo size is not aligned. size %lx\n", size);
-      abort();
-    }
-    
-    // We don't clear the starting address for the merge operation
-    //fprintf(stderr, "clear ptr %p size %lx: mbindex %ld\n", ptr, size, mbIndex);
-    for(int i = 0; i < mbs; i++) {
-      // Mark all corresponding mbs as free right now
-      _info[mbIndex+i].u.usedStatus = false;
-    }
-  }
-
   inline size_t getSize(unsigned long mbIndex) {
     return _info[mbIndex].size;
-  } 
-
-  inline unsigned long getMBIndex(void * ptr) {
-    unsigned long index = ((uintptr_t)ptr - (uintptr_t)_heapBegin) >> SIZE_ONE_BAG_SHIFT;
-
-  //  fprintf(stderr, "ptr %p heapBegin %p index %lx\n", ptr, _heapBegin, index);
-    return index;
   }
 
+  // Only for small object (checked before invoked)
   size_t getSize(void * ptr) {
-    //unsigned long mbIndex = getMBIndex(ptr); 
     unsigned long mbIndex = ((uintptr_t)ptr - (uintptr_t)_heapBegin) >> SIZE_ONE_BAG_SHIFT;
  // fprintf(stderr, "getSize with ptr %p, mbIndex %lx, _heapBegin %p, getsize %lx\n", ptr, mbIndex, _heapBegin, getSize(mbIndex));
     return getSize(mbIndex);
- }
+  }
 
-  // Place the objects to the list
-  void deallocate(void * ptr, size_t size) {
-    PerBigObject * object = &_objects[_next];
-    
-    object->size = size; 
-    object->address = ptr;
-
-    _next++;
-    
-    _totalSize += size;
-  
-    assert(_next != _max); 
-  
-    // Change PerMBInfo in order to encourage the coalesce TODO:  
-    clearPerMBInfo(ptr, size);
+  // Deallocate big object and return the memory back to OS
+  void deallocate(void * ptr) {
+    PerBigObject * object;
+    size_t size = -1;
+    for(int i = _next - 1; i >= 0; i--) {
+      object = &_objects[i];
+      // fprintf(stderr, "addr=%p, size=%lx\n", object->address, object->size);
+      if(object->address == ptr) {
+        size = object->size;
+        break;
+      }
+    }
+    assert(size != -1);
+    if (_next > 1) {
+      object->address = _objects[_next-1].address;
+      object->size = _objects[_next-1].size;
+    }
+    _next--;
+    MM::returnMemoryBackToOS(ptr, size);
   }
 };
 #endif

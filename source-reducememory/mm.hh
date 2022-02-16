@@ -124,6 +124,13 @@ public:
     return ptr; 
   }
 
+  static void returnMemoryBackToOS(void * addr, size_t size) {
+    int success = madvise(addr, size, MADV_FREE);
+    if (success != 0) {
+      fprintf(stderr, "Return memory to OS failed with addr=%p and size=%lx\n", addr, size);
+    }
+  }
+
 private:
   static void* allocate(bool isShared, bool isHugePage, size_t sz, int fd, void* startaddr) {
     int protInfo = PROT_READ | PROT_WRITE;
