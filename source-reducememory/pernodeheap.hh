@@ -288,7 +288,6 @@ class PerNodeHeap {
       ptr = (char *)_bpBig;
       _bpBig += size;
 
-      unlockBigHeap();
       // We should not consume all memory. If yes, then we should make the heap bigger.
       // Since we don't check normally  to reduce the overhead, we will use the assertion here
       assert(_bpBig < _bpBigEnd);
@@ -297,6 +296,8 @@ class PerNodeHeap {
       BigObjectPtrSizeMapping * ptrSizeMapping = setBigObjectPtrSizeMapping(ptr, size);
       insertListEnd(&_bigObjectSizeInfo, (dlist *)ptrSizeMapping);
       // fprintf(stderr, "pernodeheap.hh:: allocateBigObject size=%lx, ptr=%p (bump)\n", size, ptr);
+
+      unlockBigHeap();
     }
 
     // fprintf(stderr, "pernodeheap.hh:: allocateBigObject size=%lx, ptr=%p\n", size, ptr);

@@ -145,6 +145,7 @@ private:
     }
 #endif
 
+
     void* ptr = mmap(startaddr, sz, protInfo, sharedInfo, fd, 0);
     if(ptr == MAP_FAILED) {
       fprintf(stderr, "Couldn't do mmap (%s) : startaddr %p, sz %lx, protInfo=%d, sharedInfo=%d\n",
@@ -153,6 +154,10 @@ private:
     }
 //      if(isHugePage)
 //    fprintf(stderr, "huge addr = %p, sz = %lu\n", ptr, sz);
+
+        if(!isHugePage) {
+      madvise(ptr, sz, MADV_NOHUGEPAGE);
+    }
     return ptr;
   }
 };

@@ -27,7 +27,7 @@ CXX = clang++
 #DNDEBUG
 #CFLAGS = -g -O2 -std=c++14 -Wno-unused-result -DNUMA_NODES=8 -DUSE_HUGE_PAGE
 #CFLAGS = -g -O2 -std=c++14 -Wno-unused-result -DNUMA_NODES=8 -DINTERHEAP_SUPPORT -DUSE_HUGE_PAGE
-CFLAGS = -g -O2 -std=c++14 -Wno-unused-result -DNUMA_NODES=8 -DINTERHEAP_SUPPORT
+CFLAGS = -g -O2 -std=c++14 -Wno-unused-result -DNUMA_NODES=8
 #CFLAGS = -g -O2 -std=c++14 -Wno-unused-result -DNUMA_NODES=8 -DINTERHEAP_SUPPORT
 #CFLAGS += -DTEST_SWAPTIONS
 #CFLAGS += -DUSE_HUGE_PAGE
