@@ -1,0 +1,42 @@
+\section{Background}
+\label{sec:background}
+
+%This section introduces some background that is necessary for \NM{}. 
+This section discusses the NUMA architecture, existing OS support and common design of memory allocators.
+%for the NUMA architecture, and then discusses some common designs of existing memory allocators that are adopted by \NM{}.  
+
+\subsection{NUMA Architecture}
+
+\label{sec:numa}
+
+%Traditional computers are using the Uniform Memory Access (UMA) model that all CPU cores are sharing a single memory controller, where any core can access the memory with the same latency (uniformly). However, the UMA architecture cannot accommodate the hardware trend with the increasing number of cores, since all cores may compete for the same memory controller. 
+%Therefore, the performance bottleneck is the memory controller in many-core machines, since 
+%A task cannot proceed without getting its necessary data from the memory. 
+
+The Non-Uniform Memory Access (NUMA) architecture is to solve the scalability issue, due to its decentralized nature. Instead of making all cores wait for the same memory controller, the NUMA architecture typically is installed with multiple memory controllers, where a group of CPU cores has its memory controller (called a node). Due to multiple memory controllers, the contention for the memory controller could be largely reduced and therefore the scalability could be improved correspondingly. However, the NUMA architecture also has multiple sources of performance degradations~\cite{Blagodurov:2011:CNC:2002181.2002182}, including \textit{Cache Contention}, \textit{Node Imbalance}, \textit{Interconnect Congestion}, and \textit{Remote Accesses}.  
+
+%\textit{Cache Contention:} the NUMA architecture is prone to cache contention that multiple tasks may compete for the shared cache. Cache contention will introduce more serious performance issue if the data has to be loaded from a remote node. 
+ 
+%\textit{Node Imbalance:} When some memory controllers have much more memory accesses than others, it may cause the node imbalance issue. Therefore, some tasks may wait more time for memory accesses, thwarting the whole progress of a multithreaded application.  
+
+%\textit{Interconnect Congestion:} Interconnect congestion occurs if some tasks are placed in remote nodes that may use the inter-node interconnection to access their memory. 
+
+%\textit{Remote Accesses:} In NUMA architecture, local nodes can be accessed with less latency than remote accesses. Therefore, it is important to reduce remote accesses to improve the performance.\\
+
+
+Based on the study~\cite{Blagodurov:2011:CNC:2002181.2002182}, node imbalance and interconnect congestion may have a larger performance impact than cache contention and remote accesses. These performance issues cannot be solved by the hardware automatically. Software support is required to control the placement of tasks, physical pages, and objects to achieve the optimal performance for multithreaded applications.  
+
+\subsection{NUMA Support Inside OS} 
+
+Operating System already supports the NUMA architecture, especially on task scheduling and physical memory allocation. For task scheduling support, the OS provides some system calls that allow users to bind a task to a specific node. For memory allocation, the OS provides system calls (e.g., \texttt{mbind}) to change memory allocation policy for a range of memory or for the whole process~\cite{lameter2013numa, diener2015locality}. However, those system calls still require programmers to specify the policy explicitly, which cannot, therefore, automatically provide the performance improvements. \NM{} relies on these existing system calls to manage memory allocations explicitly, as further described in Section~\ref{sec:implement}, but without changing the user program explicitly. Linux also supports Automatic NUMA balancing (AutoNUMA)~\cite{AutoNUMA1}, which migrates the tasks closer to the memory they are accessing. 
+
+\subsection{Common Designs of Memory Allocators}
+\label{sec:commondesign}
+
+Memory allocators share some common designs. First, most allocators manage objects differently based on the size of objects. For big objects, allocators may request objects from the OS directly and return them to the OS directly upon deallocation~\cite{Hoard}. On the other hand, small objects will be tracked in freelists based on size classes. Managing small objects can be further classified into multiple categories, such as sequential and BiBOP, where region-based allocators do not belong to general-purpose allocators~\cite{DieHarder, Gay:1998:MME:277650.277748}. 
+%For region-based allocators, all objects within the same region are deallocated together~\cite{Gay:1998:MME:277650.277748}.  But region-based allocators do not belong to general-purpose allocators. 
+For sequential allocators, subsequent memory allocations are satisfied in a continuous memory block~\cite{Cling}. BiBOP-style allocators, which stands for ''Big Bag of Pages''~\cite{hanson1980portable}, utilize one or multiple continuous pages as a ``bag'' that holds objects of the same size class. 
+Now many performance-oriented allocators~\cite{tcmalloc, jemalloc, Scalloc}, and most secure allocators~\cite{openbsd, DieHarder, FreeGuard, Guarder}, belong to this category. Second, to support multithreaded applications, modern allocators (e.g., TCMalloc) often implement the ``per-thread heap'' that tracks deallocated objects from the current thread~\cite{tcmallocnew}, where allocating objects from per-thread heaps do not need to acquire locks. Therefore, the per-thread heap is expected to reduce the contention between threads. A per-thread heap returns objects to a common heap shared by multiple threads, when the number of objects or the size of freed objects is larger than a threshold. \NM{} borrows these common designs in its implementation. 
+
+%\NA{} only tracks the size information of each page, which helps reduce its memory overhead for the metadata. Third, \NA{} utilizes freelist to manage freed objects. Every freed object will be added into a corresponding freelist, and objects in the freelist will be allocated first in order to reduce possible cache misses. Further,  This mechanism helps to reduce the memory overhead, but is prone to memory vulnerabilities, such as buffer overflows and double-frees~\cite{DieHarder, Guarder}.     
+ 
