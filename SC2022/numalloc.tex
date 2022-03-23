@@ -1,22 +1,20 @@
-\documentclass[sigconf, review,anonymous]{acmart}
-%\acmSubmissionID{22}
-%\renewcommand\footnotetextcopyrightpermission[1]{}
-% Optional: Remove the ACM reference between the abstract and the main text.
-\settopmatter{printfolios=true,printacmref=false}
-% Optional: Comment out the CCS concepts and keywords.
-
-%\usepackage{cite}
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
 \usepackage{graphicx}
 \usepackage{textcomp}
-\usepackage{xcolor}
-\usepackage{graphics} 
+
 \usepackage{subfig}
 \usepackage{url}
-\usepackage{hyperref}
+% \usepackage{hyperref}
+% I don't want the borders of hyper links
+\usepackage[hidelinks]{hyperref} 
+\usepackage{xcolor}
 \usepackage{txfonts}
 \usepackage{pifont}
+
 %\usepackage{bbding}
 \usepackage{multirow}
 \usepackage{makecell}
@@ -27,8 +25,8 @@
 \usepackage{tikz}
 \usepackage{calc}
 %\usepackage{fancyvrb}
-\usepackage{xcolor}
 \usepackage[keeplastbox]{flushend}
+
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 
@@ -66,28 +64,35 @@
 
 \pagenumbering{arabic}
 
+\begin{document}
+
 \title{NUMAlloc: A Faster NUMA Memory Allocator} 
 
 % \author{{\normalsize{HPCA 2022 Submission
 %       \textbf{\#\hpcasubmissionnumber} -- Confidential Draft -- Do NOT Distribute!!}}}
 
-\begin{document}
+\maketitle
 
 \begin{abstract}
-\input{EuroSys2022/abstract}
+\input{SC2022/abstract}
 \end{abstract}
 
-\maketitle
+\begin{IEEEkeywords}
+Memory management, NUMA architecture, Memory allocator, Scalability
+\end{IEEEkeywords}
+
 \thispagestyle{plain}
 \pagestyle{plain}
 
-\input{EuroSys2022/intro}
-\input{EuroSys2022/overview}
-\input{EuroSys2022/implementation}
-\input{EuroSys2022/evaluation}
-\input{EuroSys2022/discussion}
-\input{EuroSys2022/relatedwork}
-\input{EuroSys2022/conclusion}
+\input{SC2022/intro}
+\input{SC2022/overview}
+\input{SC2022/implementation}
+\input{SC2022/evaluation}
+\input{SC2022/discussion}
+\input{SC2022/relatedwork}
+\input{SC2022/conclusion}
+
+\todo{the number order of reference has a issue, check 49, 50 later}
 
 \bibliographystyle{IEEEtranS}
 \bibliography{ref,emery,tongping}

@@ -12,33 +12,34 @@
     && w/ THP & w/o THP &&&&&& \\ \hline
     \hline
     \multicolumn{10}{|c|}{Large Footprint ($>$ 500MB)}\\ \hline
-blackscholes&617&797&618&637&623&633&616&629&623\\ \hline
-canneal&887&836&769&834&757&1290&888&36148&891\\ \hline
-dedup&917&1447&1110&1074&1017&1393&907&11187&1531\\ \hline
-facesim&2638&3514&2723&2910&2751&3540&2630&9301&3177\\ \hline
-Pbzip2&450&1272&453&924&818&1149&556&5366&6253\\ \hline
-Pfscan&522&538&523&537&528&535&522&554&524\\ \hline
-raytrace&1287&1673&1627&1113&1531&1289&1288&15820&1392\\ \hline
-x264&2861&3865&2721&3416&3064&3718&2857&5435&4060\\ \hline
+blackscholes&615&780&615&635&622&633&615&629&624\\ \hline
+canneal&888&863&770&841&757&1286&888&36148&891\\ \hline
+dedup&907&1163&1097&1081&971&1397&909&12300&1587\\ \hline
+facesim&2625&2776&2726&2911&2753&3539&2628&9294&3178\\ \hline
+freqmine&1883&1475&1342&1896&2574&1885&1890&1918&3085\\ \hline
+Pbzip2&544&867&823&920&841&1168&542&5464&7187\\ \hline
+Pfscan&522&523&523&536&529&535&522&554&524\\ \hline
+raytrace&1287&1443&1429&1112&1446&1266&1288&15821&1392\\ \hline
+x264&2860&3229&2721&3417&3067&3722&2859&5445&4086\\ \hline
 \hline
-Normalized Geomean &{\bf 1}&{\bf 1.38}&{\bf 1.03}&{\bf 1.13}&{\bf 1.11}&{\bf 1.34}&{\bf 1.02}&{\bf 5.19}&{\bf 1.60}\\ \hline
+Normalized Geomean &{\bf 1}&{\bf 1.1}&{\bf 1.03}&{\bf 1.11}&{\bf 1.12}&{\bf 1.31}&{\bf 1}&{\bf 5.15}&{\bf 1.7}\\ \hline
 
 %\\ \hline
 \multicolumn{10}{|c|}{Small Footprint ($<$ 500MB)}\\ \hline
-Aget&8&66&5&24&10&94&8&80&6\\ \hline
-Apache&4&4&7&17&8&7&4&4&4\\ \hline
-bodytrack&68&207&46&94&82&607&35&2020&87\\ \hline
-ferret&160&544&220&300&238&690&182&3161&770\\ \hline
-fluidanimate&470&549&342&491&482&483&470&5374&473\\ \hline
-Memcached&15&18&7&46&22&17&18&18&15\\ \hline
-Mysql&270&358&328&325&317&297&284&&281\\ \hline
-Sqlite3&45&256&83&109&78&143&45&684&109\\ \hline
-streamcluster&112&144&115&159&123&128&113&192&141\\ \hline
-swaptions&28&247&19&77&21&552&41&1818&14\\ \hline
-vips&226&543&279&402&271&778&223&3673&971\\ \hline \hline
-Normalized Geomean &{\bf 1}&{\bf 2.50}&{\bf 0.96}&{\bf 2.01}&{\bf 1.27}&{\bf 3.10}&{\bf 1.01}&{\bf 8.60}&{\bf 1.37}\\ \hline
+Aget&8&38&4&25&10&92&9&80&6\\ \hline
+Apache&&&&&&&&&\\ \hline
+bodytrack&34&62&42&98&43&567&35&2022&47\\ \hline
+ferret&182&299&217&301&194&668&184&3381&647\\ \hline
+fluidanimate&470&546&325&490&486&482&469&5372&474\\ \hline
+Memcached&&&&&&&&&\\ \hline
+Mysql&&&&&&&&&\\ \hline
+Sqlite3&45&95&81&110&75&143&45&685&109\\ \hline
+streamcluster&112&132&111&157&121&127&112&193&140\\ \hline
+swaptions&40&162&13&76&21&541&41&1817&14\\ \hline
+vips&225&307&287&407&264&772&225&3677&969\\ \hline \hline
+Normalized Geomean &{\bf 1}&{\bf 1.97}&{\bf 0.89}&{\bf 1.92}&{\bf 1.09}&{\bf 4.32}&{\bf 1.02}&{\bf 14.92}&{\bf 1.42}\\ \hline
 \hline
-Total&{\bf 11585}&{\bf 16878}&{\bf 11995}&{\bf 13489}&{\bf 12741}&{\bf 17343}&{\bf 11687}&{\bf 101464}&{\bf 21322}\cr \hline
+Total&{\bf 13247}&{\bf 14762}&{\bf 13128}&{\bf 15012}&{\bf 14774}&{\bf 18822}&{\bf 13261}&{\bf 104801}&{\bf 24959}\cr \hline
     \end{tabular}
   \caption{Memory consumption of different allocators. \\Note that \NM{}'s memory overhead is significantly reduced when THP support is disabled. \label{tab:memory_consumption}}
 \end{table*}
