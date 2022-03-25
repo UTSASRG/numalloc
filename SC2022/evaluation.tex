@@ -34,9 +34,9 @@ Compiler &  GCC-8.3.0 \\ \hline
 \end{table}
 \end{comment}
 
-\textbf{Experimental Setup:}  \NM{} was evaluated on an Intel Xeon(R) Platinum 8153 machine with 8 nodes, where each node has 16 cores. Any two nodes are less than or equal to 3 hops, where the latency of two hops and three hops is 2.1 and 3.1 separately if the latency of local accesses is 1.0. The machine is installed with 512GB memory. The underlying OS is Linux Debian 10 and the compiler is GCC-8.3.0. For the evaluation, the hyperthreading was turned off, but both transparent page support and AutoNUMA are  enabled. The performance data shown in this paper is the average of 10 runs, in order to avoid any bias caused by unexpected events.  
+\textbf{Experimental Setup:}  \NM{} was evaluated on an Intel Xeon(R) Platinum 8153 machine with 8 nodes, where each node has 16 cores. Any two nodes are less than or equal to 3 hops, where the latency of two hops and three hops is 2.1 and 3.1 separately if the latency of local accesses is 1.0. The machine is installed with 512GB memory. The underlying OS is Linux Debian 10 and the compiler is GCC-8.3.0. For the evaluation, the hyperthreading was turned off, but both transparent huge page support and AutoNUMA are  enabled. The performance data shown in this paper is the average of 30 runs, in order to avoid any bias caused by unexpected events.  
 
-\textbf{Compared Baseline and Evaluated Applications: }  We compare \NM{} with multiple popular allocators, such as the default Linux allocator, TCMalloc~\cite{tcmalloc2},  TCMalloc-NUMA~\cite{tcmallocnew}, jemalloc-5.2.1~\cite{jemalloc}, Intel TBB-2021.5~\cite{tbb2}, Scalloc-1.0.0~\cite{Scalloc}, and mimalloc~\cite{mimalloc}. Note that we are comparing against the TCMalloc's NUMA awareness version (released on July 2021), and the newest version of TBB (with numa support, released on December 2021). 
+\textbf{Compared Allocators and Evaluated Applications: }  We compare \NM{} with multiple popular allocators, such as the default Linux allocator, TCMalloc~\cite{tcmalloc2},  TCMalloc-NUMA~\cite{tcmallocnew}, jemalloc-5.2.1~\cite{jemalloc}, Intel TBB-2021.5~\cite{tbb2}, Scalloc-1.0.0~\cite{Scalloc}, and mimalloc~\cite{mimalloc}. Note that we are comparing against the TCMalloc's NUMA awareness version (released on July 2021), and the newest version of TBB (with numa support) released on December 2021. Also, \textit{the evaluated TCMalloc already includes TEMERAIRE~\cite{TEMERAIRE}'s huge page support}.  
 %Among them, TCMalloc, jemalloc, TBB, and mimalloc are commercial allocators designed and maintained by Industrial Giants, like Google, Facebook, Intel, and Microsoft separately. 
 We do not include Hoard~\cite{Hoard} as it is not the state-of-art anymore~\cite{Scalloc, mimalloc}. Multithreaded applications chosen to evaluate the performance include PARSEC applications~\cite{parsec}, and real applications like \texttt{Apache httpd-2.4.35}, \texttt{MySQL-5.7.15}, \texttt{Memcached-1.4.25}, \texttt{SQLite-3.12.0}, \texttt{Aget}, \texttt{Pfscan}, and \texttt{Pbzip2}. 
 %For the performance evaluation, we utilize 128 threads, which is the same as the number of cores of the evaluated machine. 
@@ -88,8 +88,7 @@ Compiler & GCC-7.5.0 & GCC-8.3.0 \\ \hline
 
 %The number of threads of all benchmarks were adjusted according how many cores and nodes in the target machine to make threads could be properly distributed over the nodes and cores, making the number of threads as close as the number of cores. Mostly, thread number was 40 in the Machine A and 128 in the Machine B, and I will give the specific number below if it is not this default value. 
 
-The performance results are shown in Figure~\ref{fig:perf}, where the runtime of each allocator is normalized to that of Linux's default one. \NM{} is configured without the interleaved heap support for most applications, except for \texttt{aget}, \texttt{fluidanimate}, \texttt{streamcluster} and \texttt{swaptions}. 
-% \todo{change, we use interleaved heap mainly for fluidanimate.} 
+The performance results are shown in Fig.~\ref{fig:perf}, where the runtime of each allocator is normalized to that of Linux's default one. \NM{} is configured without the interleaved heap support for most applications, except for \texttt{fluidanimate} and \texttt{streamcluster}. 
 
 %As further discussed in Section~\ref{sec:interleavedheap}, the interleaved heap may have a harmful performance impact for the serial phases, as it turns some local accesses to remote ones. %Therefore, the data of \texttt{canneal} and \texttt{raytrace} are collected without the interleaved heap. 
 %We believe that this option is acceptable, since users could determine easily whether they should disable the interleaved heap: if an application has a large portion in the serial phase, then the interleaved heap should be disabled. 
@@ -97,8 +96,9 @@ The performance results are shown in Figure~\ref{fig:perf}, where the runtime of
  %With the interleaved heap,  allocations from the main thread can be satisfied in remote NUMA nodes, this design may lead to a large number of remote accesses for the serial phase. since both of them spend a large portion of their time (over 62\% and 82\%) in the serial phase (before creating any child thread),
  %These two figures show the best data for these two applications, without the support of the interleaved heap.    
 
-Overall, \NM{} has the best performance among these allocators. In particular, \NM{} is 16\% faster than the second-best allocator (mimalloc) and 19\% faster than the default allocator. \todo{explain why mimalloc is good? why other allocators are not good} For the best case (e.g., \texttt{fluidanimate}), \NM{} is running up to 65\% faster than the default Linux allocator.
-Comparing with the NUMA-aware allocator -- TCMalloc-NUMA~\cite{tcmallocnew}, \NM{} runs 17\% faster. TCMalloc and TBB are allocators that are claimed to support the NUMA architecture~\cite{tcmalloc2, tbb3}, but \NM{} is 19\% and 17\% faster than them respectively.
+Overall, \NM{} has the best performance among these allocators. In particular, \NM{} is 14.8\% faster than the second-best allocator (mimalloc) and 17.1\% faster than the default allocator. %\todo{explain why mimalloc is good? why other allocators are not good}
+For the best case (e.g., \texttt{fluidanimate}), \NM{} is running up to 65\% faster than the default Linux allocator.
+Comparing with the NUMA-aware allocator -- TCMalloc-NUMA~\cite{tcmallocnew}, \NM{} runs 15.0\% faster. TCMalloc and TBB are allocators that are claimed to support the NUMA architecture~\cite{tcmalloc2, tbb3}, but \NM{} is 17.2\% and 15.2\% faster than them respectively.
 
 %\NM{} is running \todo{19\%} faster than the default allocator, but does not run significantly slower than other allocators in almost all evaluated applications. For the best case (e.g., \texttt{fluidanimate}), \NM{} is running up to \todo{$6.4\times$} faster than the default Linux allocator.
 %The default Linux allocator achieves good performance on the NUMA architecture due to its arena-based design, where each freed object will be returned back to its original arena. This design is integrating well with Linux's first-touch allocation policy~\cite{Lameter:2013:NO:2508834.2513149} to ensure most thread-local allocations. 
@@ -108,19 +108,21 @@ Comparing with the NUMA-aware allocator -- TCMalloc-NUMA~\cite{tcmallocnew}, \NM
 %But TCMalloc-NUMA's performance is even worse than that of TCMalloc. Based on our understanding, TCMalloc-NUMA is based on TCMalloc-0.97 (released in 2008), which does not have new features of TCMalloc-2.7 (the version for our evaluation). 
 % mimalloc only has the very basic NUMA support, which is the reason why it is not performing as well as \NM{}. TCMalloc and TBB are allocators that are claimed to support the NUMA architecture~\cite{tcmalloc2, tbb3}, but \NM{} is \todo{21\%} faster than both of them.
 
-Looking into Fig.~\ref{fig:perf}, \NM{} has a significant performance improvement (over 25\%) in the following applications, including \texttt{dedup}, \texttt{fluidanimate}, \texttt{pbzip2}, \texttt{streamcluster}, and \texttt{swaptions}. We further examine the number of remote accesses to confirm whether \NM{} significantly reduces them due to its design based on these applications. We utilize the \texttt{perf} to collect the number of remote accesses (both load and store) on these applications when they are running with all allocators. 
+Looking into Fig.~\ref{fig:perf}, \NM{} has a significant performance improvement (over 25\%) in the following applications, including \texttt{dedup}, \texttt{fluidanimate}, \texttt{pbzip2}, \texttt{streamcluster}, and \texttt{swaptions}. Based on these applications, we further examine the number of remote accesses to confirm whether \NM{} significantly reduces them due to its design. 
+% We utilize the \texttt{perf} to collect the number of remote accesses (both load and store) on these applications when they are running with all allocators. 
 % Figure~\ref{fig:perf} shows that \NM{} has a similar or better performance than the default allocator in almost all applications. Further, it has a significant performance improvement (over 20\%) in the following applications, including \texttt{canneal}, \texttt{dedup}, \texttt{fluidanimate}, \texttt{streamcluster}, and \texttt{pbzip2}. Among them, \NM{} has a better performance for \texttt{fluidanimate}, due to the following reasons. First, the interleaved heap contributes to $3.23\times$ performance speedup, as shown in Figure~\ref{fig:interleavedheap}. Second, node-balanced thread binding improves the performance by over $4\times$. 
 % \textbf{Confirming the number of remote accesses:} We further examine the number of remote accesses to confirm whether \NM{} significantly reduces them due to its design. We utilize the \texttt{perf} to collect the number of remote accesses (both load and store) on these applications when they are running with all allocators. 
 %In our machine, we can collect these numbers using the following command: \texttt{perf stat -e node-load-misses,node-store-misses,dTLB-store-misses,dTLB-load-misses} 
 The results are shown in Fig.~\ref{fig:remoteAccess}. We combine the performance (shown as bars) and remote accesses (red lines) together for a better comparison. 
 %We only use five applications that \NM{} has significantly better performance than other allocators.
-For three applications, such as \texttt{fluidanimate}, \texttt{pbzip2}, and \texttt{streamcluster}, \NM{}  significantly reduces the number of remote accesses, comparing to other allocators. That is the reason why it has much better performance on these applications. Let us utilize \texttt{fluidanimate} as an example. The default Linux allocator and Scalloc 
+For three applications, \texttt{fluidanimate}, \texttt{pbzip2}, and \texttt{streamcluster}, \NM{}  significantly reduces the number of remote accesses, comparing to other allocators. That is the reason why it has much better performance on these applications. Let us utilize \texttt{fluidanimate} as an example. The default Linux allocator and Scalloc 
 have $3.57\times$ and $3.8\times$ remote accesses than \NM{}. This explains why \NM{} is running up to $2.8\times$ faster than the default Linux allocator, and $6.5\times$ than the Scalloc. 
+Based on our understanding, \NM{}'s big reduction of remote accesses can be attributed to the following factors: (1) Origin-aware memory allocation that ensures local allocation; (2) (Node-balanced) thread binding; (3) Node-local metadata. 
 
 However, there is no much difference in the number of remote accesses for \texttt{dedup} and \texttt{swaptions} compared with some allocators. Based on our investigation, \NM{} is running faster than others due to the usage of huge pages. When transparent huge page support is enabled, \NM{} utilizes huge pages instead of small pages, leading to fewer TLB misses. For example, for \texttt{dedup}, \NM{}'s TLB misses is $2.82\times$ lower than that of TCMalloc-NUMA, under the similar number of remote accesses.
 %data in https://docs.google.com/spreadsheets/d/1WqWH5J7CcQuV8Vs4HnqRSC7TZpgQGPB9Gh2knHPSZPU/edit?usp=sharing
 %We also observe some similar results for other applications. For \texttt{dedup}, the \texttt{glibc} allocator introduces 17850 time more TLB misses than \NM{}. Note that we only collect these two factors here, where the performance of allocators can be caused by other reasons, such as memory management operations.
-Based on our understanding, \NM{}'s big reduction of remote accesses can be attributed to the following factors: (1) region-based memory allocation that ensures local allocation; (2) (Node-balanced) thread binding; (3) Node-local metadata. 
+
 %Further, \NM{} allocates a large chunk of memory initially, then the OS tends to utilize huge pages if possible, although this mechanism may introduce more memory consumption as evaluated in Section~\ref{sec:memory}.  
 
 \begin{figure}[!h]
@@ -172,17 +174,18 @@ Based on our understanding, \NM{}'s big reduction of remote accesses can be attr
 
 \input{memorytable}
 
-We also measure the maximum memory consumption of these allocators.
+We also measure the memory consumption of these allocators, as shown in Table~\ref{tab:memory_consumption}.
 %For non-server applications, such as \texttt{Aget}, \texttt{Pbscanf}, \texttt{Pbzip2} and all PARSEC applications, we utilized the sum of the \texttt{maxresident} output from the \texttt{time} utility and the size of huge pages, since the \texttt{time }output does not include huge pages. 
 %To determine the size of huge pages, a script is used to periodically collect the number of huge pages by reading from \texttt{/proc/meminfo} file, and then the maximum value of huge pages is used. \todo{removed. This is for mmap's huge page, THP usage is counted}
 %For server applications, such as \texttt{MySQL}, \texttt{SQLite}, and \texttt{Memcached}, \texttt{Apache}, the maximum memory is collected by the sum of both \texttt{VmHWM} and \texttt{HugetlbPages} fields from \texttt{/proc/PID/status} file, after the corresponding client exits. 
 %We always reboot server applications for each single test. 
-Memory overhead is listed in Table~\ref{tab:memory_consumption}. Overall, the Glibc allocator has the smallest memory consumption, and TBB is the second-best one. \NM{}'s memory consumption is around \todo{11\%} more than that of the default Linux allocator, but it is better than jemalloc and mimalloc, and is far better than scalloc. 
+% Memory overhead is listed in Table~\ref{tab:memory_consumption}.
+Overall, the Glibc allocator has the smallest memory consumption, and TBB is the second-best one. \NM{}'s memory consumption is around 12\% more than that of the default Linux allocator, but it is similar to TCMalloc and is better than jemalloc and mimalloc. It is far better than scalloc when THP is enabled. 
 %Scalloc is the worst one in terms of memory consumption, which consumes around  $8.3\times$ more memory that that of TBB.  
 
-\NM{}'s more memory consumption is mainly due to the following reasons. It allocates a large memory block from the OS. When transparent huge page support is enabled, then all memory will be allocated from huge pages. The same reason also applies to Scalloc, which also allocates a continuous huge region of virtual memory from the underlying OS initially. Comparing to Scalloc, \NM{} makes all threads share the same bag for each size class, as described in Section~\ref{sec:others}, which effectively reduces its memory consumption by multiple times. In total, Scalloc utilizes $7\times$ more memory when transparent huge page support is enabled.  
+\NM{}'s more memory consumption is mainly due to the following reasons. It allocates a large memory block from the OS. When transparent huge page support is enabled, all memory will be allocated from huge pages. The same reason also applies to Scalloc, which also allocates a continuous huge region of virtual memory from the underlying OS initially. Comparing to Scalloc, \NM{} makes all threads in the same node share the same block, as described in Section~\ref{sec:hugepages}, which effectively reduces its memory consumption. In total, Scalloc utilizes $7\times$ more memory when transparent huge page support is enabled.  
 
-We further confirmed the memory consumption when transparent huge page support is disabled, which can be seen in Table~\ref{tab:memory_consumption}. The total memory consumption is decreased from \todo{14762} MB to \todo{13128} MB, when transparent huge pages are disabled. In this case, \NM{}'s total memory overhead is comparable to the default Linux allocator. Other allocators will not be affected much by transparent huge pages, since they typically obtain a small chunk from the OS each time, less than the size of a huge page (2MB), then the OS will not allocate physical pages from huge pages by default. \todo{I doubt it} Therefore, we believe that \NM{}'s memory consumption is acceptable. 
+We further confirmed the memory consumption when transparent huge page support is disabled, which can be seen in Table~\ref{tab:memory_consumption}. The total memory consumption is decreased from 15210 MB to 13364 MB, when transparent huge pages are disabled. In this case, \NM{}'s total memory overhead is comparable to the default Linux allocator. Other allocators will not be affected much by transparent huge pages, since they typically obtain a small chunk from the OS each time, less than the size of a huge page (2MB), then the OS will not allocate physical pages from huge pages by default. Therefore, we believe that \NM{}'s memory consumption is acceptable. 
 
 %Second, \NM{} may not return the memory to the OS immediately for large pages. However, we believe that its memory consumption is acceptable. 
   %which actually shows the worst case for \NM{}. The OS will utilize huge pages if a memory area is larger than the size of a huge page (2MB). Since \NM{} utilizes \texttt{mmap} to allocate a huge chunk of virtual memory, this makes all heap memory for real objects will be allocated from huge pages. Currently, \NM{} also utilizes 1MB as the superblock for each size class, making objects of a size class that will occupy at least 1MB even if it only uses an object inside. 
@@ -225,7 +228,7 @@ Fig.\ref{sythentic-scalability} illustrates different allocators' performance sp
 \NM{} only performs worse than mimalloc for larson with 128 threads, but it performs better for other applications. All of these data indicate that \NM{} is scalable to 128 cores. 
 %We don't know the exact reason for this.
 
-\todo{Previous we have analysis of TCMalloc on two cache applications, but I think it's not representative as larson and thread-test}
+% \todo{Previous we have analysis of TCMalloc on two cache applications, but I think it's not representative as larson and thread-test}
 
 %Among these applications, \texttt{cache-scratch} tests passive false sharing, and \texttt{cache-thrash} tests active false sharing. False sharing occurs when multiple threads are concurrently accessing different words in the same cache line. 
 %Passive false sharing is introduced upon deallocations, where a freed object can be utilized by another thread. In contrast, active false sharing is introduced during the initial allocations, where multiple continuous objects sharing the same cache line are allocated to different threads. 
@@ -292,44 +295,49 @@ This section further confirms \NM{}'s multiple design choices, and all results s
 %     \label{fig:binding-policy}  
 % \end{figure*}
 
-\begin{figure*}[!h]
+\begin{figure}[!h]
 \centering
 \subfloat[Normalized runtime with and without node-balanced thread binding for Glibc and TCMalloc.]{
-  \includegraphics[width=5.5in]{figure/WO-pthread-binding3.pdf}
+  \includegraphics[width=3.2in]{SC2022/figure/threadbinding1.jpg}
 }
 
 \subfloat[Normalized runtime with node-interleaved binding and node-saturate binding for Glibc.]{
-  \includegraphics[width=5.5in]{figure/binding-policy.pdf}
+  \includegraphics[width=3.2in]{SC2022/figure/threadbinding2.jpg}
 }
 \caption{Performance results with the impact of Thread Binding.}
 \label{binding-pthread-scalibity}
-\end{figure*}
+\end{figure}
 
-Fig.\ref{binding-pthread-scalibity}(a) shows the performance difference with and without thread binding for two allocators, Glibc and TCMalloc. Here node-balanced binding strategy is adopted. We do not evaluate \NM{} directly, since its mechanism is tightened to thread binding, such as its origin-based memory management, metadata allocation. We observe that the thread binding improves the performance significantly for some applications. As shown in Fig.\ref{binding-pthread-scalibity}(a), with the thread binding, \texttt{fluidanimate} runs around $4.45\times$ faster on Glibc and $3.66\times$ faster on TCMalloc. \texttt{streamcluster} runs more than 20\% and 30\% faster than the one without the binding. This clearly indicates that the thread binding will benefit the performance overall, which should be included in the memory allocator by default. 
+Fig.\ref{binding-pthread-scalibity}(a) shows the performance difference with and without thread binding for two allocators, Glibc and TCMalloc. Here node-interleaved binding strategy is adopted. We do not evaluate \NM{} directly, since its mechanism is tightened to thread binding, such as its origin-aware memory management, metadata allocation. From Fig.\ref{binding-pthread-scalibity}(a), we observe that the thread binding improves the performance significantly for some applications. For instance, \texttt{fluidanimate} runs around $4.45\times$ faster on Glibc and $3.66\times$ faster on TCMalloc with the thread binding and \texttt{streamcluster} runs more than 20\% and 30\% faster than the one without the binding on Glibc and TCMalloc. This clearly indicates that the thread binding will benefit the performance overall, which should be included in the memory allocator by default. 
 
 % In particular, threads are bound to different nodes in a round-bin way, called node-balanced binding, which is the same as \NM{}.
 
-We further compare the node-interleaved thread binding with node-saturate thread binding. For node-saturate binding, we bind the maximum possible number of threads (same as the number of cores) to a node and then switch to the next node. As shown in Fig.\ref{binding-pthread-scalibity}(b), the node-interleaved thread binding is almost always better than node-saturate thread binding, except for \texttt{bodytrack}. On average, node-interleaved binding is around 19\% faster than node-saturate one. This indicates that people should use node-interleaved binding, if they would like to employ all hardware cores. However, if they only want to use partial cores to run one application, then node-saturate binding could be a better choice. \NM{} allows users to adjust the binding option.  
+We further compare the node-interleaved thread binding with node-saturate thread binding. For node-saturate binding, we bind the maximum possible number of threads (same as the number of cores) to a node and then switch to the next node. As shown in Fig.\ref{binding-pthread-scalibity}(b), the node-interleaved thread binding is almost always better than node-saturate thread binding, except for \texttt{bodytrack}. On average, node-interleaved binding is around 15\% faster than node-saturate one. This indicates that people should use node-interleaved binding, if they would like to employ all hardware cores. However, if they only want to use partial cores to run one application, then node-saturate binding could be a better choice. \NM{} allows users to adjust the binding option based on their needs.
 
 % , proving the effectiveness of Node-Balanced thread binding.
 
 \subsubsection{Interleaved Heap} 
 \label{sec:interleavedheap}
-
-\begin{figure*}[!ht]
+% \todo{Maybe we could make the font size bigger}
+\begin{figure}[!ht]
     \centering
-    \includegraphics[width=5.5in]{figure/interleavedheap.pdf}
+    \includegraphics[width=3.2in]{SC2022/figure/interleavedheap.jpg}
     \caption{Normalized runtime with and without the interleaved heap for \NM{}.  \label{fig:interleavedheap}}
-\end{figure*}
+\end{figure}
 
 We also evaluate the potential benefit of the interleaved heap. The performance data is shown in Fig.\ref{fig:interleavedheap}. 
 % Note that we have evaluated all PARSEC applications listed in Section~\ref{sec:performance}.
-Based on the figure, we have the following conclusion: the interleaved heap will benefit (or at least has no harmful impact on) the performance for most applications. Some applications, such as \texttt{fluidanimate}, will have the performance speedup of $3.23\times$ with the interleaved heap. However, applications having a large portion of time spent in the serial phase, such as \texttt{canneal} and \texttt{raytrace}, may not have good performance with the interleaved heap support. 
-We investigated the underlying reason for this. With the interleaved heap, \NM{} allocates the memory from all nodes in an interleaved way, instead of from the local node (based on the default first-touch policy). Therefore, some private objects that are allocated in a remote node may introduce unnecessary overhead due to remote access. Further, upon each allocation, \NM{}  checks the callstack to confirm whether an allocation is from a potentially shared heap, which also introduces some overhead. Therefore, the interleaved heap will be enabled by default, unless programmers know that it will not benefit the performance.
+Based on the figure, we have the following conclusion: the interleaved heap will benefit (or at least has no harmful impact on) the performance for most applications. Some applications, such as \texttt{fluidanimate}, will have the performance speedup of $3\times$ with the interleaved heap. However, applications having a large portion of time spent in the serial phase, such as \texttt{canneal} and \texttt{raytrace}, may not have good performance with the interleaved heap support. 
+We investigated the underlying reason for this. With the interleaved heap, \NM{} allocates the memory from all nodes in an interleaved way, instead of from the local node (based on the default first-touch policy). Therefore, some private objects that are allocated in a remote node may introduce unnecessary overhead due to remote access. 
+%Further, upon each allocation, \NM{} checks the callstack to confirm whether an allocation is from a potentially shared heap, which also introduces some overhead. Therefore, the interleaved heap will be enabled by default, unless programmers know that it will not benefit the performance.
 
-A simple metric is to use the portion of the serial phase inside multithreaded applications.  Programmers may turn off the interleaved heap for applications that are mostly running in serial phases. That is, the interleaved heap will harm the serial execution, but may benefit the parallel execution because of its load balance. It is easy to turn on/off the interleaved heap via a compilation flag or the environment variable.  
+Programmers can choose to enable or disable interleaved heap based on the applications. A simple metric is to use the portion of the serial phase inside multithreaded applications. For applications that are mostly running in serial phases, turning off the interleaved heap support may be a better choice. That is, the interleaved heap will harm the serial execution, but may benefit the parallel execution because of its load balance. It is easy to turn on/off the interleaved heap via a compilation flag or the environment variable.  
 
-\todo{other design choices: THP's impact on performance, origin-based deallocation, autonuma's impact...}
+\subsubsection{Others}
+
+\NM{} adopts a origin-aware deallocation that always return the object to its original thread's or node's heap. We also evaluate the performance impact of this design. Based on our experiment, \NM{} runs 1.7\% slower if we don't consider the origin of freed objects. On the other hand, we further verified the effect of transparent huge pages and the results show that embracing the THP improves \NM{}'s performance by 2.58\%.
+
+% \todo{other design choices: THP's impact on performance, origin-based deallocation, autonuma's impact...}
 
 %, except applications with a large portion of serial phase (e.g., \texttt{canneal} and \texttt{raytrace})
 

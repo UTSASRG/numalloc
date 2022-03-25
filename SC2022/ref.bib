@@ -332,6 +332,32 @@ url="http://dx.doi.org/10.1007/978-3-642-35606-3_24"
   year={1988}
 }
 
+@misc{hugepage,
+  author = {William Cohen},
+  title = {Examining Huge Pages or Transparent Huge Pages performance},
+  howpublished = {\url{https://developers.redhat.com/blog/2014/03/10/examining-huge-pages-or-transparent-huge-pages-performance#}},
+  year={2014}
+}
+
+@misc{scallochugepage,
+  author = {Aigner, Martin and Kirsch, Christoph M. and Lippautz, Michael and Sokolova, Ana},
+  title = {scalloc},
+  howpublished = {\url{https://github.com/cksystemsgroup/scalloc}},
+  year={2016}
+}
+
+@inproceedings {TEMERAIRE,
+author = {A.H. Hunter and Chris Kennelly and Paul Turner and Darryl Gove and Tipp Moseley and Parthasarathy Ranganathan},
+title = {Beyond malloc efficiency to fleet efficiency: a hugepage-aware memory allocator},
+booktitle = {15th {USENIX} Symposium on Operating Systems Design and Implementation ({OSDI} 21)},
+year = {2021},
+isbn = {978-1-939133-22-9},
+pages = {257--273},
+url = {https://www.usenix.org/conference/osdi21/presentation/hunter},
+publisher = {{USENIX} Association},
+month = jul,
+}
+
 @misc{mimalloc,
   author = {Daan Leijen},
   title = {mimalloc},
@@ -1149,7 +1175,7 @@ howpublished={\url{www.youthcodejam.org/}},
  keywords = {NUMA, memory mapped IO, multi-socket CPUs},
 } 
 
-@inproceedings{Ogasawara:2009:NMM:1640089.1640117,
+@inproceedings{Ogasawara,
  author = {Ogasawara, Takeshi},
  title = {NUMA-aware Memory Manager with Dominant-thread-based Copying GC},
  booktitle = {Proceedings of the 24th ACM SIGPLAN Conference on Object Oriented Programming Systems Languages and Applications},
@@ -1159,7 +1185,7 @@ howpublished={\url{www.youthcodejam.org/}},
  location = {Orlando, Florida, USA},
  pages = {377--390},
  numpages = {14},
- url = {http://doi.acm.org/10.1145/1640089.1640117},
+ url = \url{http://doi.acm.org/10.1145/1640089.1640117},
  doi = {10.1145/1640089.1640117},
  acmid = {1640117},
  publisher = {ACM},
@@ -1205,17 +1231,14 @@ howpublished={\url{www.youthcodejam.org/}},
 } 
 
 @INPROCEEDINGS{6704666,
-author={Z. Majo and T. R. Gross},
-booktitle={2013 IEEE International Symposium on Workload Characterization (IISWC)},
-title={(Mis)understanding the NUMA memory system performance of multithreaded workloads},
-year={2013},
-volume={},
-number={},
-pages={11-22},
-keywords={multi-threading;multiprocessing systems;operating systems (computers);parallel architectures;NUMA memory system performance;NUMA-multicores;OS functionality;PARSEC parallel benchmarks;computation distribution;data distribution;memory access patterns;multithreaded programs;multithreaded workloads;nonuniform memory architecture;workload characterization;Benchmark testing;Computer architecture;Microarchitecture;Prefetching;Process control;System performance},
-doi={10.1109/IISWC.2013.6704666},
-ISSN={},
-month={Sept},}
+  author={Majo, Zoltan and Gross, Thomas R.},
+  booktitle={2013 IEEE International Symposium on Workload Characterization (IISWC)}, 
+  title={(Mis)understanding the NUMA memory system performance of multithreaded workloads}, 
+  year={2013},
+  volume={},
+  number={},
+  pages={11-22},
+  doi={10.1109/IISWC.2013.6704666}}
 
 @INPROCEEDINGS{1419934,
 author={M. M. Tikir and J. K. Hollingsworth},
@@ -1379,7 +1402,7 @@ keywords = {scheduling, data placement, NUMA}
   bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
-@inproceedings{DBLP:conf/asplos/MaasAIJMR20,
+@inproceedings{LLAMA,
   author    = {Martin Maas and
                David G. Andersen and
                Michael Isard and
@@ -2155,7 +2178,6 @@ booktitle={2007 IEEE 10th International Symposium on Workload Characterization},
 title={On the Effects of Memory Latency and Bandwidth on Supercomputer Application Performance},
 year={2007},
 pages={35-43},
-keywords={computer architecture;floating point arithmetic;multiprocessing systems;parallel machines;storage management;bandwidth;combinatorial applications;floating point oriented computation;integer oriented applications;irregular applications;memory latency;memory system performance;problem decomposition;supercomputer application performance;supercomputer architecture;Application software;Bandwidth;Clocks;Computational modeling;Computer architecture;Computer simulation;Delay;Laboratories;Physics computing;Supercomputers},
 doi={10.1109/IISWC.2007.4362179},
 month={Sept},}
 
