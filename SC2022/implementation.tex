@@ -1,7 +1,7 @@
 \section{Design and Implementation}
 \label{sec:implement}
 
-\NM{} is designed as a replacement memory allocator. It intercepts all memory allocation/deallocation invocations via the preloading mechanism, and redirects them to \NM{}'s implementation. Therefore, there is no need to change the source code of applications, and there is no need to use a custom OS or hardware. In the following, we first discuss \NM{}'s overall design, and then discuss multiple components that separate it from existing allocators.
+\NM{} is designed as a replacement memory allocator. It intercepts all memory allocation/deallocation invocations via the preloading mechanism, and redirects them to \NM{}'s implementation. Therefore, there is no need to change the source code of applications, and there is no need to use a custom OS or hardware. In the following, we first discuss \NM{}'s basic heap layout, and then discuss multiple components that separate it from existing allocators.
 
 \subsection{Basic Heap Layout}
 \label{sec:overview}
@@ -25,82 +25,69 @@
 In particular, the first region is bound to the first node, the second one is bound to the second node, and so on. This design enables us to compute the physical node quickly from a memory address: we could compute the index of the physical node by dividing the heap offset by the region size. 
 %This layout is different from existing allocators, based on our knowledge. 
 % \todo{Numalloc's reviewer said TCMalloc also use the same mechanism. I check the code and it's true that TCMalloc use the memory tag for numa partition id}
-
 %\NM{} borrows some of these existing mechanisms. First, it uses different mechanisms to manage small and big objects. Second, small objects are also managed by size classes using the BiBOP-style. Third, similar to existing work, such as Linux and TCMalloc~\cite{tcmalloc}, \NA{} utilizes different freelists to track freed objects, and uses the first word of freed objects to link different objects. But the difference of \NM{} is further described in Section~\ref{sec:implement}.
-
-From Fig.~\ref{fig:overview}, we see that each node's memory region will be further divided into two sub-regions, one for small objects, and the other one for big objects. The \texttt{bpSmall} pointer is utilized to track never-allocated memory for small objects, and big ones are tracked with \texttt{bpBig} pointer. Similar to existing allocators, \NM{} manages small and big objects differently. In \NM{}'s design, small objects are those with a size less than 512K, which are organized by size classes and each request will be satisfied from a particular size class. \NA{} utilizes fine-grained size classes for small objects, such as 16 bytes apart for objects less than 128 bytes, and 32 bytes apart for objects between 128 bytes and 256 bytes, then power-of-2 sizes afterward. For small objects, \NM{} utilizes the well-known ``\textbf{Bi}g-\textbf{B}ag-\textbf{o}f-\textbf{P}ages'' (BiBOP) style that all objects in the same bag (32 KB by default) will have the same size class. 
-Big object allocation will be satisfied in a sequential manner and their sizes are aligned to the size of one bag (32 KB).
+% From Fig.~\ref{fig:overview}, we see that 
+Each node's memory region will be further divided into two sub-regions, one for small objects, and the other one for big objects. The \texttt{bpSmall} pointer is utilized to track never-allocated memory for small objects, and the \texttt{bpBig} pointer tracks the position of big objects. Similar to existing allocators, \NM{} manages small and big objects differently. 
+% In \NM{}'s design, small objects are those with a size less than 512K, which are organized by size classes and each request will be satisfied from a particular size class. 
+For small objects ($<$ 512KB), each request will be satisfied from a particular size class
+% \NA{} utilizes fine-grained size classes, such as 16 bytes apart for objects less than 128 bytes, and 32 bytes apart for objects between 128 bytes and 256 bytes, then power-of-2 sizes afterward. 
+and \NM{} utilizes the well-known ``\textbf{Bi}g-\textbf{B}ag-\textbf{o}f-\textbf{P}ages'' (BiBOP) style that all objects in the same bag (32KB by default) will have the same size class. 
+Big object allocation will be satisfied in a sequential manner and their sizes are aligned to the size of one bag.
 
 To support the NUMA architecture, a per-node heap (PerNodeHeap in Fig.~\ref{fig:overview}) is proposed that has one freelist for each size class and one common freelist for all big objects from the current node. 
 %We will talk about the relationship between per-thread freelist and per-node freelist in Section~\ref{sec:origin}. 
 %For small objects, freed objects of the same size class will be tracked with a freelist.
 In order to reduce the contention, \NM{} adopts a per-thread heap (PerThreadHeap in Fig.~\ref{fig:overview}) that maintains a freelist for each size class, which requires no lock protection since each thread has its own per-thread heap. However, this may introduce memory blowup~\cite{Hoard} that freed objects of a per-thread heap cannot be utilized for future allocations from other threads, which will be addressed in Section~\ref{sec:others}. 
-\NM{} tracks the small objects' size information in a separate area called PerBagSizeInfo, while the big objects utilize a linked list called PerBigObjectSizeInfo to store the size and availability information, which allows coalescing multiple continuous big objects into a bigger object upon deallocations.
+\NM{} tracks the small objects' size information in a separate area called PerBagSizeInfo, while the big objects utilize a linked list called PerBigObjectSizeInfo to store the size and availability information, which allows coalescing multiple continuous big objects into a bigger one upon deallocations.
 
 % \NM{} tracks the size information and availability information in a separate area:  ``PerBagSizeInfo'' of Figure~\ref{fig:overview} is used for tracking the size of each size class for small objects.
 
 %(shown as ``PerMBInfo'' of Figure~\ref{fig:overview}): it tracks the size of each size class for small objects, and the size of the big object (aligned to 1 MB) for big objects. This data structure also includes the used/free information for big objects, which allows coalescing multiple continuous big objects into a bigger object upon deallocations. To save space, \NM{} utilizes the lowest significant bit of ``PerMBInfo'' to encode the availability information.
 
-Overall, \NM{} includes a layout to quickly compute the physical node (with the memory binding) and a per-node heap to support node-aware allocations. This design allows it to perform origin-aware memory management efficiently, as discussed in the next section. 
+Overall, \NM{} includes a layout that can quickly compute the physical node (with the memory binding) and a per-node heap to support node-aware allocations. This design allows it to perform incremental share and origin-aware memory management efficiently, as discussed in the following sections.
 
 %mechanisms to re and one per-node freelist for each node to track big objects. \NM{} also maintains per-node freelists to track small objects based on size classes. These freelists are singly linked lists, which uses the first word of every freed object as pointers.  Small freed objects may be migrated between per-thread freelists and per-node freelists, as further described in Section~\ref{sec: others}. 
 \subsection{Binding-Based Memory Management} 
 \label{sec:balance}
-As described in Section~\ref{sec:intro}, thread migration will cause multiple performance issues for the NUMA architecture. Therefore, \NM{} binds each thread to a node specifically in order to avoid thread migration across different nodes. Currently \NM{} currently supports two types of binding, \textbf{node-interleaved binding} and \textbf{node-saturate binding}, where users could provide their customized binding as well. Node-interleaved binding binds continuous threads to different nodes in an interleaved way so that every node will have a similar number of threads. That is, the first thread will be bound to the node that it is scheduled to run by the OS, and the second thread will be bound to its next node, and so on. Instead, the node-saturate binding will bind sufficient threads to a node first before binding to a different node. For node-saturate binding, threads to be assigned will be the same as the number of hardware cores.  
+As described in Section~\ref{sec:intro}, thread migration will cause multiple performance issues for the NUMA architecture. Therefore, \NM{} binds each thread to a node specifically to avoid thread migration across different nodes.  \NM{} currently supports two types of binding, \textbf{node-interleaved binding} and \textbf{node-saturate binding}. Node-interleaved binding binds continuous threads to different nodes in an interleaved way so that every node will have a similar number of threads. That is, the first thread will be bound to the node that it is scheduled to run by the OS, and the second thread will be bound to its next node, and so on. Instead, the node-saturate binding will bind sufficient threads to a node first before binding to a different node. For node-saturate binding, threads to be assigned will be the same as the number of hardware cores.  \NM{} will use node-interleaved binding by default, as it has a better performance based on our evaluation. But users could switch to the node-saturate binding by controlling the environment variable. Further, users could provide their customized binding via a file, which will be supported in the future. 
 
-Note that \NM{} only binds a thread to a node, instead of a core, which still allows the scheduling initiated by the OS. To perform the binding correctly, \NM{} obtains the hardware topology in the initialization phase via the \texttt{numa\_node\_to\_cpus} API, which tells the relationship between each CPU core and each memory node. Then it intercepts all thread creations in order to bind a newly-created thread to a specific node.
-%In the future, we plan to support more user-controlled binding. 
+Note that \NM{} only binds a thread to a node, instead of a core, which still allows the scheduling initiated by the OS. To perform the binding correctly, \NM{} obtains the hardware topology in the initialization phase via the \texttt{numa\_node\_to\_cpus} API, which tells the relationship between each CPU core and each 
+% memory 
+node. Then it intercepts all thread creations in order to bind a newly-created thread to a specific node.
 
-%\subsection{Selective Huge Pages} 
-%\label{sec:hugepage}
+\subsection{Origin-Aware Memory Management} 
+\label{sec:origin}
 
-%Based on the existing study~\cite{hugepages}, huge pages can reduce Translation Look-aside Buffer (TLB) misses, since the same size of TLB entries will cover a larger space of memory. However, existing transparent huge page support is not good for the performance~\cite{Gaud:2014:LPM:2643634.2643659, DBLP:conf/asplos/PanwarBG19}, due to hot page effect, page-level false sharing, and increased memory footprint~\cite{DBLP:conf/asplos/MaasAIJMR20}.
- 
-%\NM{} proposes explicit huge pages to avoid these issues that could always benefit the performance based on our evaluation in Section~\ref{sec:hugepage}. The basic idea of \NM{} is to carefully choose which objects that should be allocated from huge pages: first, shared objects should not be allocated from huge pages, which may introduce page-level false sharing that multiple threads are accessing the same huge page. This will cause unnecessary load imbalance due to concurrent accesses, and remote accesses. Second, if we only utilize partial memory in the same huge pages, then we may waste the remaining memory on the same page. This problem will become more serious for \NM{}'s design, since it is using a big bag (1MB) to hold objects of the same size. 
+%\todo{In Section III-B, you talk about satisfying allocations from the "un-allocated region" as the last step. Is this memory that is not part of the interleaved heap? It would help to be more clear about what this is. }
 
-%If huge pages are only utilized for private objects for threads running on the node, then there is no hot page effect and page-level false sharing. Also, if huge pages are only utilized for big objects that are larger than the page size, then there is no need to worry about unnecessary memory consumption. 
-%Based on these observations,  \NM{} only employs huge pages for large objects, with a size larger than 512KB. This design will reduce unnecessary memory waste that only partial pages are actually allocated. Also, \NM{} only employs huge pages for small objects that are predicted to be allocated frequently. For the latter one, \NM{} employs the history information to predict, and only uses huge pages for a size class that has used at least one bag before. Based on our evaluation in Section~\ref{sec:hugepage}, this design balances the performance and memory consumption, which always benefiting the performance. 
+As described in Section~\ref{sec:overview}, \NM{} includes an origin-computable design that could quickly determine the origin of each heap object via the computation. 
+%On top of it, we further discuss other aspects of \NM{}'s origin-based memory management as follows.
+On top of it, \NM{} proposes an origin-aware deallocation that will always return a freed object to a freelist with the same origin. In particular, if a freed object is originated from a different node, it is returned to its original node's  freelist. Otherwise, a small object is returned to the current thread's freelist and a big object is returned to the current node's freelist. Comparing to node-based freelists, there is no need to acquire a lock when operating on the per-thread freelist. Different from all existing work, \NM{} may return a freed object into the per-thread list or its original node's freelist, instead of simply putting it into the per-thread list. That is, \NM{} considers the originality of objects for deallocations. 
 
-%In addition to large objects that has the size larger than the size of a huge page, huge pages are only utilized for small objects that are predicted to be used a lot.  \NA{} employs the history of memory allocation to predict this. 
-%Each per-node heap is further divided into two parts as illustrated in Figure~\ref{fig:overview}: small objects will be allocated from the first half and will be allocated using small pages, while big objects will be allocated from the second half with huge pages (2MB). When a big object (with the huge page) is utilized for small objects, only frequently-allocated small objects can utilize such an object. We believe that our design balances the performance and memory consumption.   
-
-
-\subsection{Threads-shared Incremental Allocation}
+\NM{} always ensures node-local memory allocations. For small objects, it follows this order: (1) The per-thread's freelist will be checked first, since there is no need to acquire any lock and objects may be still hit in the cache (as they are just accessed by the thread). (2) If the per-thread freelist does not have available objects, \NM{} tries to allocate from the current node's freelist. As mentioned above, a node's freelist holds objects originated from this node. (3) If the previous two steps fail,  we will allocate the memory from the current node's un-allocated region, as shown by \textit{bpSmall} in Fig.~\ref{fig:overview}. 
+%Since the region is bound to the current node, and objects in the per-thread freelist and the per-node freelist are always originated from the current node, 
+%\NM{} ensures local allocations for small objects. 
+For big objects, allocation will be satisfied from per-node freelists or un-allocated region (pointed by \textit{bpBig} pointer in Fig.~\ref{fig:overview}) of the current node, indicating the allocation locality. 
+\subsection{Incremental Share}
 \label{sec:hugepages}
-When Transparent Huge Page (THP) is enabled, the OS will prefer to allocate huge pages if a program touches a continuous memory region with the size larger than a huge page (e.g., 2MB). Since \NM{} allocates a large region initially (as shown in Fig.~\ref{fig:overview}), huge pages will be employed by the OS correspondingly. However, it is important to reduce memory fragmentation, as one allocation from a memory block will be assigned to a huge page. \NM{} makes multiple threads (from the same node) share the same memory block, instead of having a separate super-block for each thread as Scalloc~\cite{Scalloc}. That is, when a thread is running out of memory, it obtains only multiple objects at a time (currently 32K) from the corresponding memory block, instead of getting few megabytes for each per-thread heap. To get rid of the unnecessary memory overhead on metadata, such as ``PerBagSizeInfo'' used internally by \NM{}, we leverage \texttt{madvise} system call to make it allocated from normal pages. These are the basic reasons that \NM{} has much less memory consumption than Scalloc, as evaluated in Section~\ref{sec:memory}. 
+When Transparent Huge Page (THP) is enabled, the OS will prefer to allocate huge pages if a program touches a continuous memory region with a size larger than a huge page (e.g., 2MB). Since \NM{} allocates a large region initially (as shown in Fig.~\ref{fig:overview}), huge pages will be employed by the OS correspondingly. However, it is important to reduce memory fragmentation, as one allocation from a memory block will be assigned to a huge page.
+\NM{} makes multiple threads (from the same node) share the same huge page, instead of having a separate superblock for each thread as Scalloc~\cite{Scalloc} and TEMERAIRE~\cite{TEMERAIRE}. That is, when a thread is running out of memory, it obtains only multiple objects at a time (currently 32KB) from the corresponding memory block, instead of getting few megabytes for each per-thread heap. For small objects larger than 32KB (but less than 512KB), each thread will get only one object at a time, by aligning to 32KB as well.  This is why it is called ``incremental sharing''. 
+\NM{} allocates objects with different size classes to share the same huge page, to further reduce the memory fragmentation. 
+
+During the implementation, we observe that \NM{} actually will utilize huge pages for metadata, which may introduce unnecessary memory overhead since it only needs 8 bytes for ``PerBagSizeInfo'' used internally by \NM{}. To get rid of this overhead, we leverage the \texttt{madvise} system call to make the metadata memory allocate from normal pages. These are the basic reasons that \NM{} has much less memory consumption than Scalloc, as evaluated in Section~\ref{sec:memory}. 
 
 \subsection{Other Mechanisms}
 \label{sec:others}
 
 \NM{} also implements the following mechanisms in order to improve the performance.
 
-\subsubsection{Origin-Aware Memory Management} 
-\label{sec:origin}
 
-%\todo{In Section III-B, you talk about satisfying allocations from the "un-allocated region" as the last step. Is this memory that is not part of the interleaved heap? It would help to be more clear about what this is. }
-
-As described in Section~\ref{sec:overview}, \NM{} includes an origin-computable design that could quickly determine the origin of each object via the computation. 
-%On top of it, we further discuss other aspects of \NM{}'s origin-based memory management as follows.
-On top of it, \NM{} proposes an origin-aware deallocation that will always return a freed object to a freelist with the same origin. In particular, if a freed object is originated from a different node, it is returned to its original node's  freelist. Otherwise, a small object is returned back to the thread's freelist and a big object is returned back to the current node's freelist. Comparing to node-based freelist, there is no need to acquire a lock when operating on the per-thread freelist. Different from all existing work, \NM{} may return a freed object into the per-thread list or its original node's freelist, instead of simply putting into the per-thread list. That is, \NM{} considers the originality of objects for deallocations. 
-
-\NM{} always ensures node-local memory allocations. For small objects, it follows this order: (1) The per-thread's freelist will be checked first, since there is no need to acquire any lock and objects may be still hit in the cache (as they are just accessed by the thread). (2) If the per-thread freelist does not have available objects, \NM{} tries to allocate from the current node's freelist. As mentioned above, a node's freelist holds objects originated from this node. (3) If the previous two steps fail,  we will allocate the memory from the current node's un-allocated region, as shown by \textit{bpSmall} in Fig.~\ref{fig:overview}. 
-%Since the region is bound to the current node, and objects in the per-thread freelist and the per-node freelist are always originated from the current node, 
-%\NM{} ensures local allocations for small objects. 
-For big objects, allocation will be satisfied from per-node freelists or un-allocated region (pointed by bpBig pointer in Fig.~\ref{fig:overview}) of the current node, indicating local allocations for big objects. 
 
 \subsubsection{Interleaved Heap} 
 \NA{} proposes an interleaved heap that is inspired by existing profilers\cite{XuNuma, MemProf}: \textit{many NUMA performances issues are related to shared objects allocated in the main thread}. Due to the default first-touch policy~\cite{lameter2013numa, diener2015locality}, objects allocated and touched by the main thread are typically allocated in the node that the main thread is running on. However, these objects can be passed to multiple child threads and be accessed by these threads concurrently so that this node's memory controller becomes the performance bottleneck. 
-
 To reduce this issue, \NA{} reserves a range of memory for such objects, called ``Interleaved Heap'' as shown in Fig.~\ref{fig:overview}. \NA{} utilizes the \texttt{mbind} system call to specify that physical pages of this heap will be allocated from all nodes interleavedly. With this design, when these objects are passed to child threads, these threads may access objects that are allocated from multiple nodes, reducing interconnect congestion and load imbalance of a single node. 
-
-As we evaluated in Section~\ref{sec:interleavedheap}, the interleaved heap is beneficial to the performance for some applications. However, it may degrade the performance, especially when an application spends a lot of time in its serial phase. With the default first-touch policy, all accesses in the first serial phase will be local accesses, but the interleaved heap will turn some local accesses to remote ones. Therefore, the interleaved heap is provided as an option that can be enabled whenever necessary. 
-
-
-\subsubsection{Efficient Object Movement} 
-\label{sec:movement}
-%It is important to reduce memory blowup that freed objects by one thread cannot be utilized by other threads~\cite{Hoard}. 
-\NM{} requires to move freed objects between per-thread and per-node freelists frequently. An efficient mechanism is required to support frequent movement. However, existing allocators, such as TCMalloc~\cite{tcmalloc}, traverse the freelist to collect a specified number of objects, and then moves all of them at a time, which unfortunately have the following issues:  traversing a freed object will bring some data to the cache unnecessarily, when these objects are moved to other threads later; it will move recently-freed objects (and hot in cache), which is not good for the performance; the traverse of some shared lists may introduce significant lock contention. 
-
+As we evaluated in Section~\ref{sec:interleavedheap}, the interleaved heap is beneficial to the performance of some applications. However, the interleaved heap will turn some of the local accesses in the serial phase into remote ones, thus degrading the performance, especially when an application spends a lot of time in its serial phase. Therefore, the interleaved heap is provided as an option that can be enabled whenever necessary. 
+% However, it may degrade the performance, especially when an application spends a lot of time in its serial phase. Based on the first-touch policy, all accesses in the first serial phase for allocators using the interleaved heap will be local accesses. However, the interleaved heap will turn some of the local accesses in the serial phase into remote ones. Therefore, the interleaved heap is provided as an option that can be enabled whenever necessary. 
 
 \begin{figure}[!h]
 \centering
@@ -110,12 +97,26 @@ As we evaluated in Section~\ref{sec:interleavedheap}, the interleaved heap is be
 %\vspace{-0.1in}
 \end{figure}
 
+\begin{figure*}[!ht]
+    \centering
+    \includegraphics[width=7in]{SC2022/figure/8-node-parsec-perf.jpg}
+    \caption{Performance of different allocators, where all data is normalized to \\ that of the default Linux allocator. Here, a lower bar indicates a better performance.
+    \label{fig:perf}}
+ \end{figure*}
 
+\subsubsection{Efficient Object Movement} 
+\label{sec:movement}
+%It is important to reduce memory blowup that freed objects by one thread cannot be utilized by other threads~\cite{Hoard}. 
+\NM{} requires moving freed objects between per-thread and per-node freelists frequently to reduce memory blowup. 
+% An efficient mechanism is required to support the frequent movement. 
+Existing allocators, such as TCMalloc~\cite{tcmalloc}, traverse the freelist to collect a specified number of objects, and then move all of them at a time, which unfortunately has the following issues: (1) traversing a freed object will bring some unnecessary data to the cache when an allocator is reusing freed objects from the freelist. This loading wastes the cache resources and evicts cache lines with useful content in the future. 
+% The loading to the cache is wasted when these objects are moved to other lists later, which will evict cache lines with useful content in the future. 
+(2) Existing allocators will typically move recently-freed objects (and hot in cache) to other freelist, which is not good for the performance. (3) The traverse of the shared list may introduce significant lock contention, if multiple threads are waiting to move objects from the shared list. 
 \NM{} proposes an efficient mechanism with the following data structures. First, each per-thread freelist maintains two pointers that point to the least recently used objects, shown as the \texttt{Tail} pointer and the $nth$ pointer (counted from the tail) in the upper part of  Fig.~\ref{fig:perthreadlist}. 
 This structure avoids the traverse of freelist during the movement, and allows the movement of the least recently used objects (between $(n+1)th$ and $Tail$) to the per-node freelist. After the movement, the \texttt{Tail} pointer will be set to the original $nth$ object. 
-Second, \NM{} also proposes a circular array shown in the bottom part of Fig.~\ref{fig:perthreadlist} that helps move objects from per-node (shared) freelist to per-thread freelist. 
+Second, \NM{} also proposes a circular array shown in the bottom part of Fig.~\ref{fig:perthreadlist} that helps move objects from the shared per-node  freelist to per-thread freelists. 
 %As mentioned above, the per-node freelist could easily become the performance bottleneck, since multiple threads may compete for it concurrently. To address this issue, 
-Each per-node freelist actually consists of many sub-lists, where a \texttt{Head} pointer and a \texttt{Tail} pointer point to the header and the tail of each sub-list. When a thread is moving multiple objects from the per-node freelist, it could move all objects in a sub-list (pointed by a pair of \texttt{Head} and \texttt{Tail} pointer) at a time. Therefore, there is no need to traverse the whole list to obtain these objects for the movement, which could reduce the contention. 
+Each per-node freelist actually consists of many sub-lists, where a \texttt{Head} pointer and a \texttt{Tail} pointer point to the header and the tail of each sub-list. When a thread is moving multiple objects from the per-node freelist, it could move all objects in a sub-list (pointed by a pair of \texttt{Head} and \texttt{Tail} pointers) at a time. Therefore, there is no need to traverse the whole list to obtain these objects for the movement, which could reduce the contention. 
 
 
 %Note that this array does not increase the overhead of putting objects. If a thread puts a freed object to this array, the object can be placed into the current sub-list in a constant time. Similarly, a freelist could be appended to the current sub-list in a constant time. 
@@ -166,4 +167,5 @@ Each per-node freelist actually consists of many sub-lists, where a \texttt{Head
 
  
 %https://queue.acm.org/detail.cfm?id=2852078
-
+ 
+ 

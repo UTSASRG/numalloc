@@ -1,6 +1,8 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-\NM{} is a memory allocator that is specially designed for the NUMA architecture. Applications can be linked to \NM{} directly, without the change of code and the recompilation. \NM{} is different from existing memory allocators, as it is the first binding-based allocator. It further proposes threads-shared incremental allocation and origin-aware memory management to improve the locality. 
-Based on our extensive evaluation, \NM{} achieves a significantly better performance than other popular allocators on the NUMA architecture, which is running 15\% faster (and up to $2.9\times$ faster) than the second-best allocator.
+\NM{} is a memory allocator that is specially designed for the NUMA architecture. Applications can be linked to \NM{} directly, without the change of code and the recompilation. \NM{} is different from existing memory allocators, as it is the first binding-based allocator. 
+On top of it, it further proposes origin-aware memory management and incremental sharing to improve the locality and exploit huge pages. 
+% It further proposes threads-shared incremental allocation and origin-aware memory management to improve the locality. 
+Based on our extensive evaluation, \NM{} achieves a significantly better performance than other popular allocators on the NUMA architecture, which is running 15\% faster (and up to $6.8\times$ faster) than the second-best allocator.
 %\NM{} is available at https://github.com/XXX. 

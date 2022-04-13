@@ -1,56 +1,70 @@
 
-
-%\todo{We need to add the memory difference with and without the transparent memory.} 
-\begin{comment}
-\todo{
-1. verify the impact with and without origin-based deallocation (need to change few lines of code).
-
-2. TCMalloc-version. TBB version. 
-
-3. support the change of configurations via environment variables (binding, interleave heap). BTW, we don't need to check the size of objects any more. 
-
-4. Memory overhead (mostly due to huge page, origin-based allocation) 
-deallocations send back to the os when above some threadhold. 
-
-
-Maybe we should target Micro-2022 instead. Then we should add the hardware organization figure. 
-
-5. Let's claim our support of transparent page support as a novelty as well. 
-
-6. check where the performance improvement is coming from, such as transparent pages, region-aware allocations, and interleaved heap.
-
-7. If we don't ensure locality of deallocations, what is the performance impact. 
-}
-
-\end{comment}
-
 \section{Introduction}
 \label{sec:intro}
 
 %The Non-Uniform Memory Access (NUMA) architecture is a scalable hardware design. Compared to Uniform Memory Access (UMA) architecture, the NUMA architecture avoids the bottleneck of using one memory controller, where each processor (or node interchangeably) can access its own memory controller concurrently in theory. However, it is extremely challenging to achieve the expected scalability for multithreaded applications. One notorious issue is caused by remote accesses that a task accesses the memory located in a remote node, which hurts the application performance since the latency of remote accesses is much higher than that of local accesses~\cite{Blagodurov:2011:CNC:2002181.2002182}. In addition to that, node imbalance may actually introduce the congestion of memory controllers or interconnection ~\cite{Blagodurov:2011:CNC:2002181.2002182}. Therefore, it is critical to reducing remote accesses or node imbalance for multithreaded applications. Although programmers could employ the assistance of different profiling tools to fix NUMA performance issues within applications~\cite{Intel:VTune, Memphis, Lachaize:2012:MMP:2342821.2342826, XuNuma, NumaMMA, 7847070, NumaPerf}, they cannot fix NUMA performance issues caused by a memory allocator.
 %For instance, the latency of remote accesses is typically double to that of local accesses. 
-Non-Uniform Memory Access (NUMA) is the de-facto design for all modern hardware in order to address the scalability issues of increasing hardware cores. In NUMA architecture, each processor (or node interchangeably) has its own memory, allowing multiple nodes to access the memory concurrently. However, it is extremely challenging to achieve the expected scalability for multithreaded applications. One notorious issue is caused by remote accesses that a task accesses the memory located in a remote node, which hurts the application performance since the latency of remote accesses is much higher than that of local accesses~\cite{Blagodurov:2011:CNC:2002181.2002182}. 
+Non-Uniform Memory Access (NUMA) is the de-facto design for all modern hardware in order to address the scalability issues of increasing hardware cores. 
+%Effectively supporting NUMA architecture is becoming increasingly important as the number of cores and depth of memory hierarchies are increasing recently.
+%\todo{I think previous "de-facto design" is better, "Effectively supporting" is more suitable putting afterwards}
+In NUMA architecture, each processor (or node interchangeably) has its own memory, allowing multiple threads to access the memory concurrently. However, it is challenging to achieve the expected scalability. One notorious performance issue is caused by remote accesses that a task accesses the memory of a remote node,  since the latency of remote accesses is much higher than that of local accesses~\cite{Blagodurov:2011:CNC:2002181.2002182}. 
 %In addition to that, node imbalance may actually introduce the congestion of memory controllers or interconnection ~\cite{Blagodurov:2011:CNC:2002181.2002182}. Therefore, it is critical to reducing remote accesses or node imbalance for multithreaded applications. 
 Although programmers may employ profiling tools to identify NUMA issues of applications~\cite{Intel:VTune, Memphis, Lachaize:2012:MMP:2342821.2342826, XuNuma, NumaMMA, 7847070, NumaPerf}, they cannot fix the performance issues caused by a memory allocator.
 
 % Based on this guide https://libraryguides.vu.edu.au/ieeereferencing/gettingstarted#s-lg-box-wrapper-9930413, it's acceptable
 % \todo{The IEEE seems to have multiple references separately but I am not used to it. Double check it.}
 
-General-purpose memory allocators, such as dlmalloc~\cite{dlmalloc},  Hoard~\cite{Hoard}, TCMalloc~\cite{tcmalloc}, jemalloc~\cite{jemalloc}, SuperMalloc~\cite{supermalloc}, and  Scalloc~\cite{Scalloc}, were designed for symmetric multiprocessing machines. As a result, they cannot achieve good performance for NUMA architecture, based on existing work~\cite{tcmallocnew, yang2019jarena} and our evaluation. There exist some NUMA-aware allocators~\cite{tcmallocnew, tcmalloc2, kim2013node, yang2019jarena, mimalloc}. In particular, Kaminski built the first NUMA-aware memory allocator on top of TCMalloc in 2008~\cite{tcmallocnew}, called \TN{} in the remainder of this paper. \TN{} adds a freelist  and a page-span for each NUMA node so that threads can allocate objects from its per-node list/page-span. To reduce remote access, \TN{} allocates the physical memory of each page-span from the same node as the current thread, where mimalloc~\cite{mimalloc} and recent NUMA support of TCMalloc follows the similar idea.  However, \textit{none of these allocators achieve the full locality of memory allocations}, as they did not handle remote access caused by memory deallocations: a freed object is typically placed into the deallocating thread's local buffer, which will violate the locality if this object is originally allocated from a remote node  (e.g., in the producer-consumer model). More importantly, they do not consider the performance impact caused by potential thread migration, and  cannot take the full advantage of huge pages that are prevalent in modern hardware. Instead, \NM{} overcomes these issues as follows. 
+General-purpose memory allocators, such as dlmalloc~\cite{dlmalloc},  Hoard~\cite{Hoard}, TCMalloc~\cite{tcmalloc}, jemalloc~\cite{jemalloc}, SuperMalloc~\cite{supermalloc}, and  Scalloc~\cite{Scalloc}, were designed for symmetric multiprocessing machines. As a result, they cannot achieve good performance for NUMA architecture, based on existing work~\cite{tcmallocnew, yang2019jarena} and our evaluation. There exist some NUMA-aware allocators~\cite{tcmallocnew, tcmalloc2, kim2013node, yang2019jarena, mimalloc}. In particular, Kaminski built the first NUMA-aware memory allocator on top of TCMalloc in 2008~\cite{tcmallocnew}, called \TN{} in the remainder of this paper. \TN{} adds a freelist  and a page-span for each NUMA node so that threads can allocate objects from its per-node list/page-span. To reduce remote accesses, \TN{} allocates the physical memory of each page-span from the same node as the current thread, where mimalloc~\cite{mimalloc} and recent NUMA support of TCMalloc follow a similar idea.  However, \textit{none of these allocators achieve the full locality of memory allocations}, as they did not handle memory deallocations and thread migrations well: (1)  freed objects can be   placed into the free lists (holding freed objects) locating in a remote node, 
+%the deallocating thread's local buffer, 
+which will violate the locality;
+%if this object is originally allocated from a remote node; 
+(2) A thread migration will turn all local accesses of this thread to remote ones, introducing  remote accesses. Further, existing allocators cannot exploit huge pages that are prevalent in modern hardware. Instead, \NM{} overcomes these issues as follows. 
 
-\text{First}, it proposes the first \textbf{binding-based memory management} to eliminate unnecessary remote accesses caused by thread migrations. A thread's migration will turn all its previously-local accesses into remote ones, and therefore can significantly degrade the performance. Although the ``thread binding'' has been frequently employed to improve the performance of applications on NUMA architecture~\cite{li2013numa, XuNuma, Lepers:2015:TMP:2813767.2813788}, it has never been the \textit{first-class citizen} for the memory allocator design. That is, existing work  binds threads of applications externally,  but the memory allocator is not aware of the binding. In contrast, the proposed work still allow users to customize the binding via the configuration file or environment variable, but \textit{will exploit the binding to improve its memory management} as follows: (1) all metadata can be allocated in the local node, based on the binding; (2) It can locate the location of threads without invoking expensive system calls, enabling full locality of memory management as discussed below. Note that \NM{}'s thread binding does not exclude the OS scheduling, as it only binds threads to the NUMA node, but not a specific core. Section~\ref{sec:limit} further discusses its design trade-off.  
+First, \NM{} proposes a \textbf{binding-based memory management} to exploit the benefits of memory and thread binding. In particular, \NM{} binds every region of virtual memory and every thread to a physical node, but still allows the OS to perform the scheduling. 
+%enabling it to identify the physical node of each memory address and each thread inside user space. 
+The bindings enable \NM{} to obtain the origin (the physical node) of memory and threads with few instructions inside the user space, which is orders of magnitude lower than invoking system calls (around  $10,000$ cycles for getting the node of the memory). Therefore, it is infeasible to perform more advanced memory management, as the performance benefits of reducing remote accesses will be canceled out by the cost of getting the origin information via system calls.
+%without the binding, where the performance benefits of reducing remote accesses will be canceled out by the cost of getting the origin information.  
+%providing a strong foundation for \NM{}'s advanced memory management. 
+Further, the binding will eliminate remote accesses caused by thread migrations as discussed above, and ensure the locality for managing metadata.  Note that \textit{\NM{}'s novelty does not lie in its first uses of memory binding and thread binding}, since existing allocators~\cite{tcmallocnew, mimalloc} have used memory binding and some systems~\cite{li2013numa, XuNuma, Lepers:2015:TMP:2813767.2813788} also proposed thread binding to improve the performance for NUMA applications. However, \textif{\NM{} is the first memory allocator that takes the advantage of thread/memory binding to ensure the full locality of memory allocations and use huge pages} as further discussed in the following.  
+%Currently, \NM{} supports two types of thread binding, and user-customized thread binding. 
+%Without thread binding, these allocators cannot ensure the full locality, since thread migration from one node to another will turn all local accesses of this thread into remote ones.
+% Based on our understanding, these allocators cannot ensure the full locality due to no thread binding: thread migration from one node to another will turn all local accesses of this thread into remote ones; 
+% On the other hand, it is very expensive to identify whether an object is allocated from the same node as the thread, where a possible solution is to bind the memory address to a fixed node. \todo{?} 
+%On the other hand, identifying whether an object is allocated from the same node as a thread is very expensive, 
+% which requires an efficient way to determine which node the current thread is running on and the physical node of a memory address.
+%and one possible solution is to bind the memory address to a fixed node. \todo{Show we can compute it based on memory address, maybe not since we say it in the implementation part} In this way, a thread can easily find the node that allocated the object upon deallocation, making origin-aware memory management possible.
+%Compared to external binding from the application side, intrinsic binding within the allocator provides some additional benefits: (1) all metadata can be allocated locally to reduce remote access. (2) the allocator can identify the locations of threads with few instructions, without the need of expensive system calls, enabling origin-aware memory management and the sharing of huge pages.
+% Instead, the proposed work \textit{will exploit the binding to improve its memory management} as follows: (1) the allocator can identify the locations of threads with few instructions, without the need of invoking expensive system calls, enabling origin-aware memory management and the sharing of huge pages. (2) all metadata can be allocated in the local node based on the binding, which could reduce remote accesses. 
+%Overall, \NM{} is built on top of these bindings to perform its efficient memory management.
+%Note that \NM{}'s thread binding does not exclude the OS scheduling, as it only binds threads to the NUMA node, but not a specific core. Section~\ref{sec:limit} further discusses its design trade-off.  
 
+%still allows users to customize the binding via the configuration file or environment variable, but
+
+%the proposed work still allows users to customize the binding via the configuration file or environment variable, but \textit{will exploit the binding to improve its memory management} as follows: 
+%, helping eliminate unnecessary remote accesses caused by thread migrations. A thread's migration will turn all its previously-local accesses into remote ones, and therefore can significantly degrade the performance.
 
 %The thread binding allows \NM{} to check each node's origin quickly. Further,  the virtual address space of the heap is divided into multiple blocks, where each block is bound to a physical node, allowing to track each object's origin by the address's range. \NM{} also ensures the origin-based allocation that always allocate an object from the same node (physically) as the request thread, combining the above-mentioned mechanisms altogether to ensure the locality of allocations. 
 
-Second, \NM{} proposes \textbf{threads-shared incremental allocation} to take advantage of ``Transparent Huge Pages'' (THP) of modern OS/hardware~\cite{hugepage}. Huge pages are expected to significantly reduce Translation Lookaside Buffer (TLB) misses, as each page table entry could cover a larger range of virtual addresses (e.g., 2MB instead of 4KB). However, most of the existing allocators~\cite{dlmalloc, Hoard, tcmalloc, mimalloc} could not take advantage of huge pages, where Scalloc even suggests that ``make sure that transparent huge pages are disabled'' due to its large memory overhead~\cite{scallochugepage}. TEMERAIRE~\cite{TEMERAIRE} and LLAMA~\cite{LLAMA} support huge pages with complicated mechanisms. Instead, the proposed work designs a simple mechanism for managing huge pages: it maps huge regions (with the size larger than a huge page) of memory initially so that these regions will be backed by huge pages physically inside the OS; Further, it utilizes the same region to serve allocations with different size classes of different threads so that each thread only allocates a small number of objects from a huge region, called as ``incremental allocation''. Incremental allocations actually reduces the memory wastes, comparing to Scalloc that always allocates a big chunk of memory to each requested thread. 
-Overall, \NM{} combines the best of both worlds that it takes the performance advantage of huge pages but does not compromise its memory consumption. 
+Second, \NM{} ensures the full locality of memory allocations with its \textbf{origin-aware memory management},  built on top of its binding-based mechanism. Memory locality is defined as
+whether an object is allocated from the local physical node of the requesting thread. Existing numa-aware allocators only ensure the locality of every object’s first memory allocation~\cite{tcmalloc, mimalloc, yang2019jarena}. Additionally, \NM{} ensures the locality of all freed objects, eliminating the confusion caused by memory reuse (a very common behavior). Different from existing work, \NM{} guarantees that a freed object will be always placed into a freelist with the same origin as the current thread. That is, an object is returned to the deallocating thread \textit{only if} the object is originated from the same node that the current thread is running on; otherwise, it will be returned to its original node. 
+Note that \NM{}'s origin-aware mechanism is different from mimalloc~\cite{mimalloc} or snmalloc~\cite{Snmalloc} that simply return freed objects to their original free lists, which is easier to achieve. 
+
+Third, \NM{} proposes a new \textbf{incremental sharing} to take advantage of the ``Transparent Huge Pages'' (THP) of modern OS/hardware~\cite{hugepage}. Huge pages are expected to significantly reduce Translation Lookaside Buffer (TLB) misses, as each page table entry could cover a larger range of virtual addresses (e.g., 2MB instead of 4KB). However, most existing allocators~\cite{dlmalloc, Hoard, Scalloc} could not support huge pages, or even require to disable huge pages~\cite{scallochugepage}. Few allocators support huge pages, but with their shortcomings: LLAMA~\cite{LLAMA} allocates objects on huge pages based on the liveness of objects, but requires expensive analysis and profiling;  TEMERAIRE~\cite{TEMERAIRE} allocates both small and big objects from huge pages, but without sharing huge pages between different threads, possibly due to no node information of threads. That is,  mistakenly letting two remote threads share the same huge page may impose some performance degradation.  
+In contrast, \NM{} enables the sharing of huge pages among different threads with different size classes running on the same physical node, based on its explicit thread binding. 
+The proposed work supports the ``\textbf{incremental sharing}'' that each thread will get few objects at a time, instead of one whole huge page, in order to reduce memory fragmentation. 
+%As it is very expensive to track whether a huge page with small objects is completely deallocated, the proposed work will use different huge pages for big and small objects separately, which allows us to only track the full status of huge pages for big objects. 
+In order to make the OS use huge pages inherently, \NM{} maps a large region of memory (larger than the size of a huge page) for each node initially. Overall, \NM{} combines the best of both worlds that it takes the performance advantage of huge pages but does not deteriorate the memory consumption. 
+
+%To support 
+%big objects, as it has larger benefits   there is no need to track the filled status of huge pages 
+%designs a simple mechanism for managing huge pages: it maps a large region of memory for each node initially, and these regions will be backed by huge pages physically inside the OS. Further, it utilizes the same region to serve allocations with different size classes from different threads that running on the same node. In this way, each thread only gets a small number of objects from a huge region, called as ``incremental allocation''.
+
 %a better balance between performance and memory consumption.
 
-\todo{Both TEMERAIRE~\cite{TEMERAIRE} and LLAMA~\cite{LLAMA} support huge pages, but with complicated mechanisms. Instead, the proposed work designs a simple mechanism for managing huge pages: it maps a large region of memory for each node initially, and these regions will be backed by huge pages physically inside the OS. Further, it utilizes the same region to serve allocations with different size classes from different threads that running on the same node. In this way, each thread only gets a small number of objects from a huge region, called as ``incremental allocation''.}
-
 %However, on the one side, most existing allocators, such as dlmalloc~\cite{dlmalloc}, Hoard~\cite{Hoard}, TCMalloc~\cite{tcmalloc}, jemalloc~\cite{jemalloc}, do not take advantage of THP, as they typically map small chunks of memory (e.g., multiple kilobytes) each time that will be satisfied from small pages. On the other side, some allocators, such as Scalloc~\cite{Scalloc} and mimalloc~\cite{mimalloc}, consumes up to $7\times$ (as shown in Table~\ref{tab:memory_consumption}) more memory without a THP-friendly design. 
-\NM{} also has other novelty designs. (1) It proposes the \textbf{origin-aware memory management} to ensure the full memory locality built on top of its binding-based mechanism: \NM{} guarantees that a freed object will be returned to the deallocating thread \textit{only if} the object is originated from the same node that the current thread is running on; otherwise, it will be returned back to its original node. (2) It designs \textbf{an interleaved heap} for allocating heap objects of the main thread from all nodes evenly, helping reduce the congestion caused by concurrent accesses from multiple children threads. This design is inspired by existing profilers' finding that shared objects allocated from the initial/main thread are the most common source of performance degradation in the NUMA architecture~\cite{XuNuma, MemProf}. The interleaved heap will be a beneficial option for some applications. (3) It designs an efficient mechanism that could move objects between different freelists, without traversing all objects in the freelist as TCMalloc~\cite{tcmalloc}, as discussed in Section~\ref{sec:movement}. 
+\NM{} also has other implementation novelty. 
+%(1) It proposes the \textbf{origin-aware memory management} to ensure the full memory locality built on top of its binding-based mechanism: \NM{} guarantees that a freed object will be returned to the deallocating thread \textit{only if} the object is originated from the same node that the current thread is running on; otherwise, it will be returned back to its original node.
+(1) It designs an interleaved heap for allocating heap objects of the main thread from all nodes evenly, helping reduce the congestion caused by concurrent accesses from multiple children threads. This design is inspired by existing profilers' finding that shared objects allocated from the initial/main thread are the most common source of performance degradation in the NUMA architecture~\cite{XuNuma, MemProf}. The interleaved heap will be a beneficial option for some applications. (2) It designs an efficient mechanism that could move objects between different freelists, without traversing all objects in the freelist as TCMalloc~\cite{tcmalloc}, as discussed in Section~\ref{sec:movement}. 
 
 %. Memory locality is defined as whether an object is allocated from the local physical node of the requesting thread. Most existing NUMA-aware allocators only ensure the locality of every object's first memory allocation~\cite{tcmallocnew, kim2013node, yang2019jarena}.  Instead, \NM{} additionally ensures the locality of all freed objects, eliminating the confusion caused by memory reuse (a very common behavior). \NM{} guarantees that a freed object will not be placed into a freelist belonging to a remote node. In particular, \NM{}'s thread binding allows it to determine the thread's physical node, and \NM{}'s origin-computable design can quickly identify each object's origin by the address's range. Then a freed object will be placed into the deallocating thread's local buffer (heap) \textit{only if} it is originated from the same node that the current thread is running on; otherwise, it will be returned back to its original node. 
 
@@ -66,15 +80,23 @@ Overall, this paper makes the following contributions:
 
 \begin{itemize}
 
-\item It proposes a \textbf{binding-based memory management} to eliminate unnecessary remote accesses caused by thread migrations.
+ \item It proposes the first \textbf{binding-based memory management} to support NUMA architecture.
 
-%\item It proposes an \textbf{origin-aware memory management} to ensure full locality of memory allocations. 
+\item It proposes an \textbf{origin-aware memory management} to ensure the full locality of memory allocations. 
 
-\item It proposes a \textbf{threads-shared incremental allocation} to achieve a better balance between the performance and memory consumption of huge pages. 
+\item It proposes an \textbf{incremental sharing} to achieve a better balance between the performance and memory consumption for huge pages. 
 
-%\item It further proposes some other mechanism
+%\item \NM{} proposes a binding-based memory allocator that supports NUMA architecture.
 
-\item It presents the design and implementation of \NM{}, which has a better performance and scalability than even widely-used commercial allocators. Overall, applications with \NM{} are running about 17\% faster than those with TCMalloc, but without using more memory.
+%\item Multiple mechanisms are proposed on top of binding, including incremental sharing, origin-aware memory management and interleaved heap. 
+
+\item Experimental results show applications with \NM{} have better performance and scalability than all widely-used commercial allocators. 
+
+% \item It further proposes multiple mechanisms, including origin-aware memory management, interleaved heap, and efficient data structure for  moving objects between different freelists. 
+
+% \item It presents the design and implementation of \NM{}, which has a better performance and scalability than all widely-used commercial allocators. 
+% Overall, applications with \NM{} are running about 18\% faster than the second-best allocator, but with a reasonable memory overhead.
+
 %, such as TCMalloc, jemalloc, and Intel TBB, based on our extensive evaluation.  
 
 \end{itemize}
