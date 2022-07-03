@@ -1,0 +1,10 @@
+(1) We could further change this into a journal paper. 
+
+There are the following things to do:
+1. We will reduce the memory overhead, by checking the size of freeobjects (large objects), and then we could 
+release the memory to the OS.  
+2. Track the number of freed objects for each bag. When all objects are freed, then the bag can be utilized for other size. 
+3. Check the balance of bag size and memory overhead.
+4. Every node will maintain a temporal list for other node's size class, then each thread will not return the object into the other node's directly, since it may introduce a lot of remote accesses (by using the remote node). Instead, the objects will be placed into the local node at first, and then move it to remote objects at one time.
+5. Maybe it helps the performance by binding the first thread to a node with sufficient physical memory. Also, it may help the performance by tracking the physical memory usage of each node by determining where to put threads.
+6. Whether there is a way to improve the performance when there are only partial cores will be utilized, such as using the environment variable.   
