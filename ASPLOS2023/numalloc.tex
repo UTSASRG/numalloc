@@ -1,5 +1,10 @@
-\documentclass[conference]{IEEEtran}
-\IEEEoverridecommandlockouts
+\documentclass[pageno]{jpaper}
+
+%replace XXX with the submission number you are given from the ASPLOS submission site.
+\newcommand{\asplossubmissionnumber}{351}
+
+\usepackage[normalem]{ulem}
+
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
@@ -34,8 +39,6 @@
 \pdfpagewidth=8.5in
 \pdfpageheight=11in
 
-% \newcommand{\hpcasubmissionnumber}{N69}
-
 \newcommand{\cmark}{\ding{51}}%
 \newcommand{\xmark}{\ding{55}}%
 %\newcommand{\NEW}[1]{{\color{blue}\bfseries #1}}
@@ -67,31 +70,31 @@
 
 \begin{document}
 
-\title{Revision: NUMAlloc: A Faster NUMA Memory Allocator} 
+\title{NUMAlloc: A Faster NUMA Memory Allocator} 
 
-% \author{{\normalsize{HPCA 2022 Submission
-%       \textbf{\#\hpcasubmissionnumber} -- Confidential Draft -- Do NOT Distribute!!}}}
-
+\date{}
 \maketitle
 
+\thispagestyle{empty}
+
 \begin{abstract}
-\input{SC2022/abstract}
+\input{abstract}
 \end{abstract}
 
-\begin{IEEEkeywords}
-Memory Management, NUMA Architecture, Memory Allocator
-\end{IEEEkeywords}
+% \begin{IEEEkeywords}
+% Memory Management, NUMA Architecture, Memory Allocator
+% \end{IEEEkeywords}
 
 \thispagestyle{plain}
 \pagestyle{plain}
 
-\input{SC2022/intro}
-\input{SC2022/overview}
-\input{SC2022/implementation}
-\input{SC2022/evaluation}
-\input{SC2022/discussion}
-\input{SC2022/relatedwork}
-\input{SC2022/conclusion}
+\input{intro}
+\input{overview}
+\input{implementation}
+\input{evaluation}
+\input{discussion}
+\input{relatedwork}
+\input{conclusion}
 
 % \todo{the number order of reference has a issue, check 49, 50 later}
 
