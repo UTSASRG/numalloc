@@ -1,7 +1,10 @@
 \section{Limitation}
 \label{sec:limit}
 
-This section describes some limitations of \NM{}. First, \NM{} may consume more memory than some popular allocators, especially when transparent huge pages are enabled. \NM{} currently allocates a big chunk (larger than a huge page) from the OS, then the OS will satisfy the memory allocations with huge pages when transparent huge pages are enabled. Although this method reduces the possible system call overhead and enjoys the performance benefits caused by reducing TLB misses, it does introduce more memory consumption. That is, the whole huge page will be wasted even if applications only use a small portion of huge pages. However, we believe that this shortcoming is tolerable, when memory is not the major concern. 
+
+This section describes some limitations of \NM{}. First, \NM{} may consume more memory than some popular allocators, especially when transparent huge pages are enabled. \NM{} currently allocates a big chunk (larger than a huge page) from the OS, then the OS will satisfy the memory allocations with huge pages when transparent huge pages are enabled. Although this method reduces the possible system call overhead and enjoys the performance benefits caused by reducing TLB misses, it does introduce more memory consumption. That is, the whole huge page will be wasted even if applications only use a small portion of huge pages. 
+However, we believe that the memory overhead can be further reduced by more fine-grained management, such as TEMERAIRE's mechanism. We leave this implementation to our future work.
+% However, we believe that this shortcoming is tolerable, when memory is not the major concern. 
 %As shown in Figure~\ref{fig:remoteAccess}, \NM{} significantly reduces the number of TLB misses by trading with medium memory consumption. 
 
 
