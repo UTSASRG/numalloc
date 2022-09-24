@@ -1,0 +1,70 @@
+\section{Related Work}
+
+\label{sec:related}
+
+This section discusses some related work with \NM{}. 
+
+\paragraph{General Purpose Allocators}
+ There exists a large number of allocators~\cite{dlmalloc,Hoard,tcmalloc,jemalloc,Scalloc}, but they are not designed for the NUMA architecture. Based on the management of small objects, allocators can be further classified into multiple types, such as sequential, BiBOP, and region-based allocators~\cite{Gay:1998:MME:277650.277748,  DieHarder}. Region-based allocators are suitable for special situations where all allocated objects within the same region can be deallocated at once~\cite{Gay:1998:MME:277650.277748}. For sequential allocators, subsequent memory allocations are satisfied in the continuous memory area, such as the Linux allocator~\cite{dlmalloc} and Windows allocator~\cite{DieHarder}. That is, objects of different sizes can be placed continuously. For BiBOP-style allocators, one or multiple continuous pages are treated as a ``bag'', holding objects with the same size class. \NM{} also belongs to BiBOP-style allocators, as do many other high-performance and security-focused allocators ~\cite{tcmalloc, jemalloc, Hoard, Scalloc, DieHarder}. But \NM{}
+  proposes multiple special designs for the NUMA architecture.
+ 
+ %\todo{Adding supermalloc and mimalloc}
+
+\paragraph{NUMA-aware Allocators} TCMalloc-NUMA adds additional node-based freelists and free spans to store freed objects and pages belonging to the same node~\cite{tcmallocnuma}, which is similar to \NM{}. It also invokes the \texttt{mbind} system call to bind physical memory allocations to the node that the current thread is running on, which is similar to JArena~\cite{yang2019jarena}. But JArena requires the co-design of applications, runtime system and the underlying OS, which is not transparent to users~\cite{yang2019jarena}. Also, both of them invoke too many \texttt{mbind} system calls, and do not handle the metadata's locality. nMART proposes a NUMA-aware memory allocation for soft real-time systems~\cite{kim2013node}. It proposes a node-oriented allocation policy to minimize the access latency, and ensures temporal and spatial guarantee for real-time systems. nMART requires the change of the underlying OS, which is different from \NM{}. nMART also has a different target as 
+%\NM{} that tries to meet the time requirement of real-time systems, and \NM{} focuses more on the performance. 
+mimalloc also supports NUMA memory management~\cite{mimalloc}. It records the associated NUMA node for each segment, and tries to obtain a segment from the same node when reusing segments between threads. mimalloc proposes a page-based freelist that could only serve a thread at a time~\cite{mimalloc}, where all objects will be returned to the same page-based freelist upon deallocations. By allocating the physical memory of each page locally, mimalloc has achieved some level of locality. However, mimalloc cannot ensure local allocations when a thread is migrated. \NM{} overcomes these issues, and further balances the memory accesses from different nodes via its node-balanced thread binding. 
+
+
+\paragraph{NUMA-Aware Java Heap Management} Some approaches focus on improving the performance of Java applications, but they are not general-purpose memory allocators. Ogasawara et al. focus on finding the preferred node location for JAVA objects during the garbage collection and memory allocations~\cite{Ogasawara}, via thread stack, synchronization information, and object reference graph. Tikir et al. propose to employ hardware performance counters to collect the runtime information of Java applications, and then migrate an object to the closet node with most accesses~\cite{1419934}. 
+NumaGiC reduces remote accesses in garbage collection phases with a mostly distributed design so that each GC thread will mostly collect memory references locally, and utilize a work-stealing mode only when no local references are available~\cite{NumaGiC}.
+
+
+\paragraph{Combination of Task Scheduling and Memory Management} Redline integrates task scheduling and memory management inside the OS level~\cite{Redline}, to support interactive applications. 
+Majo et al. propose to consider both data locality and cache contention to achieve better performance for the NUMA applications~\cite{Majo:2011:MMN:1993478.1993481}. Wagle observed that dynamic memory allocations, thread placement and scheduling, memory placement policies, OS configurations may help improve the query performance of in-memory databases~\cite{wagle2015numa}.  Majo et al. propose to set task-to-thread affinity, and pin threads to specific cores to achieve a better performance~\cite{Majo:2015:LPC:2688500.2688509}. Diener proposes a new kernel framework to combine task management and memory management together to achieve better performance~\cite{diener2015automatic}. 
+Debes et al. propose the combination of enhanced work-pushing and deferred allocation together to improve the performance for data-parallel tasks, but focus on special programming models~\cite{DBLP:conf/IEEEpact/DrebesPH0D16}. They inspire \NM{}'s binding-based memory management. But \NM{} is the first work that exploits the benefits of binding inside a memory allocator. 
+
+\paragraph{Huge Page Support of Memory Allocators}
+SuperMalloc~\cite{supermalloc} is possibly the first allocator that supports huge pages. To reduce memory waste, it only utilizes huge pages for large objects. LLAMA~\cite{LLAMA} allocates memory objects with a similar expiration time to the same huge pages, and utilizes machine learning to identify the lifetime of memory objects from each callsite. That is, LLAMA requires the profiling to adjust its memory allocations for each application, which could be expensive or inconvenient to do so. TEMERAIRE~\cite{TEMERAIRE}, which is the default setting of TCMalloc, maximizes the usage of huge pages. It allocates big objects from huge pages, and also allocates small objects from partially-filled huge pages. However, based on our investigation, TEMERAIRE does not allow different threads to share the same huge page, 
+%: continuous memory allocations from different threads will be satisfied from different huge pages. This is 
+possibly caused by the reason that TCMalloc is not a binding-based allocator, then making different threads share the same huge page could potentially introduce too many remote accesses.  
+%\todo{That is, small allocations before a medium/large allocation (e.g., larger than 1MB) will be satisfied from small pages. }    
+Instead, \NM{} allows the sharing of huge pages from different threads and objects with different size classes, which helps reduce the internal memory fragmentation. It is worth noting that \NM{} did not utilize some sophisticated mechanisms (such as TEMERAIRE or LLAMA) to manage huge pages, but achieved a similar memory overhead with TCMalloc. 
+%We believe that the major reason is caused by allowing different threads to share the same huge page. 
+%all memory (except the interleaved heap) from huge pages,  but reducing the fragmentation by making different size classes to share the same huge page. 
+\NM{} could be further improved by borrowing some sophisticated mechanisms of LLAMA and TEMERAIRE in the future. 
+%In theory, \NM{} may introduce higher overhead, as it utilize huge pages for all memory objects, preventing the returning of huge pages back to the OS. 
+
+
+
+\paragraph{NUMA Libraries}
+Cantalupo et al. propose multiple APIs that allow users to manage their memory in fine granularity by combining with multiple existing system calls~\cite{cantalupo2015memkind}. However, they are not targeting a general-purpose allocator, since it requires programmers to manage the memory explicitly.  Majo et al. propose multiple source-code based  algorithmic changes in order to improve data sharing and memory access patterns for NUMA architectures~\cite{6704666}. Williams et al. propose to group data structures that can be migrated together with arenas~\cite{WilliamsI0L18}. 
+Shoal also proposes a set of APIs that allow the user to specify memory access patterns~\cite{Kaestle:2015:SSA:2813767.2813787}. 
+%Then it could automatically replicate or distribute the memory to different NUMA nodes automatically. 
+But both of them need significant manual effort to employ this. 
+%XPV extends virtualization technique by considering NUMA-topology and extending virtualization to SRLs ~\cite{Bui:2019:EPV:3302424.3303960}.
+
+%\todo{Changing the following two paragraphs}
+\paragraph{Reactive Systems for NUMA Architecture} Some systems migrate tasks or physical pages reactively based on memory access patterns or other hardware characteristics~\cite{simplenuma, Blagodurov:2011:CNC:2002181.2002182, AutoNUMA, Dashti:2013:TMH:2451116.2451157, Lepers:2015:TMP:2813767.2813788}. 
+%They improve the performance automatically without human involvement. However, these systems impose additional overhead (sometimes unnecessarily)  by migrating tasks or physical pages reactively. Further, a reactive approach cannot reduce remote accesses by the migration, if objects of the same page are concurrently accessed by multiple threads in multiple nodes~\cite{Gaud:2014:LPM:2643634.2643659}. 
+\NM{} belongs to a proactive approach that does not require explicit and page migration, which is complementary to these reactive systems. 
+%It is possible to combine these two together to achieve better performance. 
+
+%The second approach relies on programmers to manage memory allocations and task assignments explicitly~\cite{Kaestle:2015:SSA:2813767.2813787, Lin:2016:MTP:2872362.2872401, Majo:2017:LPC:3057718.3040222}. Although they could improve the performance greatly, they typically require significant human effort to rewrite the programs, where legacy systems cannot benefit automatically. 
+\begin{comment}
+\todo{
+snmalloc: A Message Passing Allocator (ISMM ’19)
+Timescale Functions for Parallel Memory Allocation (ISMM ’19)
+
+Poseidon: Safe, Fast and Scalable Persistent Memory Allocator (Middleware '20)
+
+POSTER: Understanding and Optimizing Persistent Memory Allocation (PPoPP '20)
+
+
+HALO: Post-Link Heap-Layout Optimisation (CGO ’20)
+
+A lock-free coalescing-capable mechanism for memory management (ISMM 2019)
+
+SlimGuard: A Secure and Memory-Efficient Heap Allocator
+}
+
+\end{comment}

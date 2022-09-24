@@ -1,0 +1,104 @@
+\documentclass[pageno]{jpaper}
+
+%replace XXX with the submission number you are given from the ASPLOS submission site.
+\newcommand{\asplossubmissionnumber}{351}
+
+\usepackage[normalem]{ulem}
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+
+\usepackage{subfig}
+\usepackage{url}
+% \usepackage{hyperref}
+% I don't want the borders of hyper links
+\usepackage[hidelinks]{hyperref} 
+\usepackage{xcolor}
+\usepackage{txfonts}
+\usepackage{pifont}
+
+%\usepackage{bbding}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage[justification=centering]{caption}
+\usepackage{xspace}
+\usepackage{comment}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{calc}
+%\usepackage{fancyvrb}
+\usepackage[keeplastbox]{flushend}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+% Ensure letter paper
+\pdfpagewidth=8.5in
+\pdfpageheight=11in
+
+\newcommand{\cmark}{\ding{51}}%
+\newcommand{\xmark}{\ding{55}}%
+%\newcommand{\NEW}[1]{{\color{blue}\bfseries #1}}
+\newcommand{\NEW}{ }
+\newcommand{\todo}[1]{{\color{red}\bfseries [[#1]]}}
+\newcommand{\toconfirm}[1]{{\color{blue}\bfseries #1}}
+\newcommand{\TP}[1]{{\color{red}\bfseries [[#1]]}}
+
+\newcommand{\Watcher}{{Watcher}}
+\newcommand{\WA}{{Watcher}}
+\newcommand{\ASAN}{{ASan}}
+\newcommand{\DT}{{DoubleTake}}
+
+\newcommand{\OB}{\texttt{OpenBSD}}
+\newcommand{\DieHarder}{\texttt{DieHarder}}
+\newcommand{\DL}{\texttt{DLmalloc}}
+\newcommand{\JE}{\texttt{jemalloc}}
+\newcommand{\NA}{\texttt{NUMAlloc}}
+\newcommand{\NM}{\texttt{NUMAlloc}}
+\newcommand{\TN}{TCMalloc-NUMA}
+
+\newcommand{\pthread}{\texttt{pthread}}
+\newcommand{\pthreads}{\texttt{pthreads}}
+\newcommand{\specialcell}[2][c]{%
+  \begin{tabular}[#1]{@{}c@{}}#2\end{tabular}}
+
+
+\pagenumbering{arabic}
+
+\begin{document}
+
+\title{NUMAlloc: A Faster NUMA Memory Allocator} 
+
+\date{}
+\maketitle
+
+\thispagestyle{empty}
+
+\begin{abstract}
+\input{abstract}
+\end{abstract}
+
+% \begin{IEEEkeywords}
+% Memory Management, NUMA Architecture, Memory Allocator
+% \end{IEEEkeywords}
+
+\thispagestyle{plain}
+\pagestyle{plain}
+
+\input{intro}
+\input{overview}
+\input{implementation}
+\input{evaluation}
+\input{discussion}
+\input{relatedwork}
+\input{conclusion}
+
+% \todo{the number order of reference has a issue, check 49, 50 later}
+
+\bibliographystyle{IEEEtranS}
+\bibliography{ref,emery,tongping}
+
+\end{document}
