@@ -28,7 +28,9 @@ SuperMalloc~\cite{supermalloc} is possibly the first allocator that supports hug
 %: continuous memory allocations from different threads will be satisfied from different huge pages. This is 
 possibly caused by the reason that TCMalloc is not a binding-based allocator, then making different threads share the same huge page could potentially introduce too many remote accesses.  
 %\todo{That is, small allocations before a medium/large allocation (e.g., larger than 1MB) will be satisfied from small pages. }    
-Instead, \NM{} allows the sharing of huge pages from different threads and objects with different size classes, which helps reduce the internal memory fragmentation. It is worth noting that \NM{} did not utilize some sophisticated mechanisms (such as TEMERAIRE or LLAMA) to manage huge pages, but achieved a similar memory overhead with TCMalloc. 
+Instead, \NM{} allows the sharing of huge pages from different threads 
+% and objects with different size classes
+, which helps reduce the internal memory fragmentation. It is worth noting that \NM{} did not utilize some sophisticated mechanisms (such as TEMERAIRE or LLAMA) to manage huge pages, but achieved a similar memory overhead with TCMalloc. 
 %We believe that the major reason is caused by allowing different threads to share the same huge page. 
 %all memory (except the interleaved heap) from huge pages,  but reducing the fragmentation by making different size classes to share the same huge page. 
 \NM{} could be further improved by borrowing some sophisticated mechanisms of LLAMA and TEMERAIRE in the future. 
