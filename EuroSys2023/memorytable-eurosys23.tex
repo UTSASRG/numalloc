@@ -1,0 +1,69 @@
+%\renewcommand{\arraystretch}{1.5}
+\begin{table*}[tp]
+\footnotesize
+%	\setlength{\tabcolsep}{0.3em}
+  \centering
+    \begin{tabular}{|l|r|rr|rrrrrr|}
+    \hline
+    \multirow{3}{*}{Apps}&
+    \multicolumn{9}{c|}{Memory Usage (MB)}\\
+    \cline{2-10}
+    &\multirow{2}{*}{Glibc}&\multicolumn{2}{c|}{\NM{}}&\multirow{2}{*}{TCMalloc}&\multirow{2}{*}{TCMalloc-NUMA}&\multirow{2}{*}{jemalloc}&\multirow{2}{*}{TBB}&\multirow{2}{*}{Scalloc}&\multirow{2}{*}{mimalloc} \\ \cline{3-4} 
+    && w/ THP & w/o THP &&&&&& \\ \hline
+    \hline
+    % \multicolumn{10}{|c|}{Large Footprint ($>$ 500MB)}\\ \hline
+
+% blackscholes&615&779&615&635&622&633&615&631&622\\ \hline
+% canneal&888&825&770&884&757&1286&889&9323&891\\ \hline
+% dedup&907&1200&1097&1111&1005&1397&910&10228&1592\\ \hline
+% facesim&2630&3428&2726&2973&2742&3540&2630&9102&3177\\ \hline
+% freqmine&1877&1433&1342&1913&2658&1899&1859&1870&3084\\ \hline
+% Pbzip2&525&898&823&1088&859&1161&534&5413&7213\\ \hline
+% Pfscan&522&526&523&537&528&535&522&554&524\\ \hline
+% raytrace&1287&1445&1429&1115&1414&1287&1288&9177&1392\\ \hline
+% x264&2856&3019&2721&3480&3064&3720&2860&5433&4094\\ \hline
+% \hline
+% Normalized Geomean &{\bf 1.00}&{\bf 1.13}&{\bf 1.03}&{\bf 1.14}&{\bf 1.12}&{\bf 1.28}&{\bf 1.00}&{\bf 3.41}&{\bf 1.62}\\ \hline
+
+% \multicolumn{10}{|c|}{Small Footprint ($<$ 500MB)}\\ \hline
+% Aget&8&53&4&38&47&94&42&122&44\\ \hline
+% Apache&4&4&4&10&19&10&4&42&4\\ \hline
+% bodytrack&35&95&42&129&43&566&35&2019&46\\ \hline
+% ferret&211&319&217&348&213&652&182&3424&647\\ \hline
+% fluidanimate&470&543&325&492&482&480&470&5371&476\\ \hline
+% Memcached&16&28&18&25&54&41&18&305&32\\ \hline
+% Mysql&282&429&216&327&609&854&282&&975\\ \hline
+% Sqlite3&45&113&81&119&75&143&46&686&109\\ \hline
+% streamcluster&112&132&111&160&123&127&113&195&138\\ \hline
+% swaptions&41&182&13&111&22&547&41&1817&14\\ \hline
+% vips&225&487&287&451&268&776&225&3666&983\\ \hline
+
+% Normalized Geomean &{\bf 1.00}&{\bf 2.05}&{\bf 0.89}&{\bf 2.06}&{\bf 1.68}&{\bf 3.73}&{\bf 1.18}&{\bf 15.12}&{\bf 1.81}\\ \hline
+blackscholes&615&779&615&635&622&633&615&631&622\\ \hline
+bodytrack&35&95&46&129&43&566&35&2019&46\\ \hline
+canneal&888&825&770&884&757&1286&889&9323&891\\ \hline
+dedup&907&1200&1097&1111&1005&1397&910&10228&1592\\ \hline
+facesim&2630&3428&2726&2973&2742&3540&2630&9102&3177\\ \hline
+ferret&211&319&220&348&213&652&182&3424&647\\ \hline
+fluidanimate&470&543&342&492&482&480&470&5371&476\\ \hline
+freqmine&1877&1433&1342&1913&2658&1899&1859&1870&3084\\ \hline
+raytrace&1287&1445&1627&1115&1414&1287&1288&9177&1392\\ \hline
+streamcluster&112&132&111&160&123&127&113&195&138\\ \hline
+swaptions&41&182&19&111&22&547&41&1817&14\\ \hline
+vips&225&487&287&451&268&776&225&3666&983\\ \hline
+x264&2856&3019&2721&3480&3064&3720&2860&5433&4094\\ \hline
+\hline
+Aget&8&53&5&38&47&94&42&122&44\\ \hline
+Apache&4&4&4&10&19&10&4&42&4\\ \hline
+Memcached&16&28&18&25&54&41&18&305&32\\ \hline
+Mysql&282&429&243&327&609&854&282&&975\\ \hline
+Pbzip2&525&898&823&1088&859&1161&534&5413&7213\\ \hline
+Pfscan&522&526&523&537&528&535&522&554&524\\ \hline
+Sqlite3&45&113&83&119&75&143&46&686&109\\ \hline
+\hline
+Normalized Geomean &{\bf 1.00}&{\bf 1.56}&{\bf 0.99}&{\bf 1.57}&{\bf 1.40}&{\bf 2.30}&{\bf 1.09}&{\bf 7.47}&{\bf 1.72}\\ \hline
+Total&{\bf 13556}&{\bf 15938}&{\bf 13622}&{\bf 15946}&{\bf 15604}&{\bf 19748}&{\bf 13565}&{\bf 69378}&{\bf 26057}\cr \hline
+    \end{tabular}
+  \caption{Memory consumption of different allocators. \\Note that \NM{}'s memory overhead is significantly reduced when THP support is disabled. \label{tab:memory_consumption}}
+\end{table*}
+

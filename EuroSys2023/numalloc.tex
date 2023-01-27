@@ -1,7 +1,9 @@
-\documentclass[conference]{IEEEtran}
-\IEEEoverridecommandlockouts
+\documentclass[sigplan,review,anonymous]{acmart}
+\acmSubmissionID{14}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\settopmatter{printfolios=true,printacmref=false}
 
-\usepackage{cite}
+% \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
 \usepackage{graphicx}
@@ -9,12 +11,15 @@
 
 \usepackage{subfig}
 \usepackage{url}
-% \usepackage{hyperref}
+\usepackage{hyperref}
 % I don't want the borders of hyper links
-\usepackage[hidelinks]{hyperref} 
+% \usepackage[hidelinks]{hyperref} 
 \usepackage{xcolor}
 \usepackage{txfonts}
 \usepackage{pifont}
+
+% for texttt{} line break
+\usepackage[htt]{hyphenat}
 
 %\usepackage{bbding}
 \usepackage{multirow}
@@ -69,13 +74,15 @@
 \title{NUMAlloc: A Faster NUMA Memory Allocator} 
 
 \date{}
-\maketitle
+
 
 \thispagestyle{empty}
 
 \begin{abstract}
 \input{abstract}
 \end{abstract}
+
+\maketitle
 
 % \begin{IEEEkeywords}
 % Memory Management, NUMA Architecture, Memory Allocator
