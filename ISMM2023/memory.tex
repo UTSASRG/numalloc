@@ -1,0 +1,6 @@
+WE have multiple improvement on the memory consumption. 
+1. We will avoid the use of huge pages for metadata, which significantly reduce the memory consumption for small-footprint applications. 
+
+2. We will allocate the memory from the same huge page, even if they are different size classes. 
+
+3. We will try to minimize the pages for medium-size objects, by introducing the bitmaps. 
