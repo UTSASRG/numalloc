@@ -43,10 +43,8 @@ namespace Real {
 		INIT_WRAPPER(calloc, RTLD_NEXT);
 		INIT_WRAPPER(realloc, RTLD_NEXT);
 
-    // FIXME about the flags
-		void *pthread_handle = dlopen("libpthread.so.0", RTLD_NOW | RTLD_GLOBAL | RTLD_NOLOAD);
-		INIT_WRAPPER(pthread_create, pthread_handle);
-		INIT_WRAPPER(pthread_join, pthread_handle);
-		INIT_WRAPPER(pthread_kill, pthread_handle);
+		INIT_WRAPPER(pthread_create, RTLD_NEXT);
+		INIT_WRAPPER(pthread_join, RTLD_NEXT);
+		INIT_WRAPPER(pthread_kill, RTLD_NEXT);
 	}
 }
